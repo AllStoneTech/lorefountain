@@ -16,7 +16,7 @@ async function main() {
     bundle: true,
     format: 'cjs',
     platform: 'node',
-    target: 'node20',
+    target: 'node22',
     outfile: 'dist/extension.js',
     external: ['vscode'],
     minify: production,

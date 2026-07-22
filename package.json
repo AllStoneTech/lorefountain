@@ -15,7 +15,7 @@
   },
   "homepage": "https://github.com/AllStoneTech/lorefountain#readme",
   "engines": {
-    "vscode": "^1.90.0"
+    "vscode": "^1.125.0"
   },
   "categories": [
     "Other"
@@ -67,15 +67,19 @@
     "test:unit": "vitest run",
     "package": "vsce package"
   },
+  "dependencies": {
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
+  },
   "devDependencies": {
-    "@eslint/js": "^9.9.0",
-    "@types/node": "^20.14.0",
-    "@types/vscode": "^1.90.0",
-    "@vscode/vsce": "^2.31.0",
-    "esbuild": "^0.23.0",
-    "eslint": "^9.9.0",
-    "typescript": "^5.5.0",
-    "typescript-eslint": "^8.0.0",
-    "vitest": "^2.0.0"
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.125.0",
+    "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.28.1",
+    "eslint": "^10.7.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.65.0",
+    "vitest": "^4.1.10"
   }
 }
