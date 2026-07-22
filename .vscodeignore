@@ -1,0 +1,20 @@
+# Everything here is excluded from the packaged .vsix.
+# The bundled output in dist/ is the only code shipped.
+
+.vscode/**
+.vscode-test/**
+src/**
+test/**
+out/**
+node_modules/**
+docs/**
+coverage/**
+
+.gitignore
+.vscodeignore
+esbuild.js
+eslint.config.mjs
+tsconfig.json
+
+**/*.ts
+**/*.map

@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+*.vsix
+
+# Test runner
+.vscode-test/
+coverage/
+
+# Rebuildable local index (Spec Section 2.2) — machine-local, never versioned
+*.lorefountain.db
+*.lorefountain.db-journal
+.lorefountain/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db

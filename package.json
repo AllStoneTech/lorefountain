@@ -1,0 +1,81 @@
+{
+  "name": "lorefountain",
+  "displayName": "LoreFountain",
+  "description": "A Fountain-native worldbuilding layer for VS Code: link character cues and scene headings to structured entity files with typed relationships, hover previews, and backlinks.",
+  "version": "0.0.1",
+  "publisher": "allstonetech",
+  "author": "the project owner (All Stone Tech)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AllStoneTech/lorefountain.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AllStoneTech/lorefountain/issues"
+  },
+  "homepage": "https://github.com/AllStoneTech/lorefountain#readme",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "fountain",
+    "screenwriting",
+    "worldbuilding",
+    "audio drama",
+    "markdown"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "commands": [
+      {
+        "command": "lorefountain.reindexWorkspace",
+        "title": "Rebuild Index",
+        "category": "LoreFountain"
+      }
+    ],
+    "configuration": {
+      "title": "LoreFountain",
+      "properties": {
+        "lorefountain.folders.scripts": {
+          "type": "string",
+          "default": "scripts",
+          "markdownDescription": "Workspace-relative folder containing `.fountain` scripts (Spec §5)."
+        },
+        "lorefountain.folders.world": {
+          "type": "string",
+          "default": "world",
+          "markdownDescription": "Workspace-relative folder containing entity `.md` files. The `glossary/`, `timeline/`, and `notes/` subfolders live under this (Spec §5)."
+        },
+        "lorefountain.folders.imports": {
+          "type": "string",
+          "default": "imports",
+          "markdownDescription": "Workspace-relative drop-zone for existing source docs/bibles to migrate. Input only — never indexed as entities (Spec §5 & §13.5)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build -- --production",
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test:unit": "vitest run",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.0",
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^2.31.0",
+    "esbuild": "^0.23.0",
+    "eslint": "^9.9.0",
+    "typescript": "^5.5.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^2.0.0"
+  }
+}
