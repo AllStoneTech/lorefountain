@@ -6,6 +6,62 @@ revisit.
 
 ---
 
+## ADR-0008 — Phase C scope: hover/completion broader than literal spec wording; no syntax grammar yet
+
+**Date:** 2026-07-23 · **Status:** Accepted
+
+**Decisions made while implementing Phase C (parse, hover, completion, backlinks):**
+
+1. **Hover fires on any recognized mention anywhere in a `.fountain` file**
+   (character cues, dialogue, action lines, scene headings, `[[wikilinks]]`) —
+   not literally restricted to "character cue" as §6's table row names it.
+   Mentions are already defined as automatic/lightweight/no-manual-step
+   (§4.5); restricting hover to only one syntactic position would be an
+   arbitrary carve-out of that same mechanism, not a meaningfully different
+   feature. Implemented as one pass over the raw document text via
+   `index/mentions.ts`'s `findMentionOccurrences` — no Fountain-structural
+   parsing needed to find a hover target.
+
+2. **Wikilink completion (`[[`) is registered for `{ language: 'markdown' }`
+   broadly**, not narrowed to files under the configured `world/` folder
+   specifically, even though §13.2 frames it as "inside scripts and inside
+   world files." A dynamic per-workspace glob (since `world/` is a
+   user-configurable path, ADR-0006) would need re-registration on every
+   config change for marginal benefit — offering entity links from any
+   Markdown note in a LoreFountain-enabled workspace is a reasonable,
+   low-risk superset, not a meaningfully wrong behavior.
+
+3. **No TextMate grammar shipped yet.** ADR-0003 committed to eventually
+   shipping our own syntax highlighting (with a `lorefountain.highlighting.enabled`
+   toggle, mechanism TBD). Phase C ships the `fountain` language
+   registration + `language-configuration.json` (needed for hover/completion
+   to target the language at all) but not the grammar itself — a
+   `.fountain` file with only this extension installed shows as unstyled
+   plain text. This is a real, visible gap for a user without Better
+   Fountain also installed, not hidden — revisit before considering the free
+   tier UI-complete.
+
+**C1 (`src/fountain/parse.ts`) is built but not yet consumed by hover/completion** —
+those work directly against raw text via `mentions.ts`, which needs no
+Fountain-structural awareness to find a match. The parse module (token
+stream + position recovery, verified against dual dialogue, a `(V.O.)`
+extension, and boneyard-comment exclusion) exists as promised groundwork for
+future structural features (outline, folding, a presence/cue index), per its
+own module doc comment.
+
+**C4 extends mentions to `.fountain` scripts** as mention *sources* (never
+targets, never stored as a record) — a script contributing to an entity's
+backlinks the same way an entity/glossary body does. Verified manually: a
+script's own repeated mentions of an entity correctly appear once in that
+entity's "Mentioned in" hover line.
+
+**Revisit if:** dogfooding on the real ORUN corpus shows hover firing on
+every scene-heading location name is noisy rather than useful, or shows
+completion polluting unrelated Markdown notes — both are easy to narrow later
+since the underlying candidate/matching logic doesn't change.
+
+---
+
 ## ADR-0007 — Mentions (Spec §4.5): full rebuild is exact, incremental reindex is per-file only
 
 **Date:** 2026-07-23 · **Status:** Accepted

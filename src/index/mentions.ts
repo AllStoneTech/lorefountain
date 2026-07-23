@@ -7,22 +7,31 @@
  * No manual step required: this scans a body of text against every known
  * entity/glossary name and reports which ones appear.
  *
- * Scope, deliberately: only the Markdown body is scanned, not frontmatter
- * fields — mentions are for cross-referencing prose, not structured data.
- * Matching is whole-word (Unicode-aware: a match can't be immediately
- * adjacent to another letter/number/mark, so "Esu" doesn't match inside
- * "Esux" or "xEsu") and case-insensitive. A name that is itself a substring
- * of another candidate's name (e.g. "Ark" within "The Ark") matches both
- * independently if both are real candidates — this is accepted, not a bug.
+ * Scope, deliberately: only the Markdown body (or, for scripts, the raw
+ * `.fountain` text) is scanned, not entity frontmatter fields — mentions are
+ * for cross-referencing prose, not structured data. Matching is whole-word
+ * (Unicode-aware: a match can't be immediately adjacent to another
+ * letter/number/mark, so "Esu" doesn't match inside "Esux" or "xEsu") and
+ * case-insensitive. A name that is itself a substring of another candidate's
+ * name (e.g. "Ark" within "The Ark") matches both independently if both are
+ * real candidates — this is accepted, not a bug. A `[[wikilink]]`-wrapped
+ * name matches the same way, with no special-casing needed: the brackets
+ * themselves already satisfy the word-boundary check.
+ *
+ * {@link findMentionOccurrences} is the position-aware primitive (every
+ * match, with its character range) — used by the hover provider, which needs
+ * to know exactly which span the cursor is over. {@link extractMentionTargets}
+ * is a deduplicating wrapper over it, used where only "does source X mention
+ * target Y at all" matters (building the index's mention edges).
  */
 
-export type MentionKind = 'entity' | 'glossary';
+export type MentionKind = 'entity' | 'glossary' | 'script';
 
-/** One entity or glossary term, as a source of mentionable name strings. */
+/** One entity, glossary term, or script, as a source of mentionable name strings. */
 export interface MentionCandidate {
   id: string;
   kind: MentionKind;
-  /** Every string that counts as a mention of this candidate: name/term + aliases. */
+  /** Every string that counts as a mention of this candidate: name/term + aliases. Empty for scripts (scripts are never mention targets). */
   names: string[];
 }
 
@@ -32,22 +41,32 @@ export interface MentionTarget {
   kind: MentionKind;
 }
 
+/** One mention match at a specific location in the scanned text. */
+export interface MentionOccurrence {
+  targets: MentionTarget[];
+  /** 0-based character offset where the match starts. */
+  start: number;
+  /** 0-based character offset where the match ends (exclusive). */
+  end: number;
+}
+
 /** Characters that count as "part of a word" for the Unicode-aware boundary check. */
 const WORD_CHAR_CLASS = '\\p{L}\\p{N}\\p{M}';
 
 /**
- * Find every candidate mentioned in `text`.
+ * Find every occurrence of a candidate's name/alias in `text`, with its
+ * character range.
  *
- * @param text - The body text to scan (e.g. an entity's Markdown body).
+ * @param text - The text to scan (an entity/glossary body, or raw script text).
  * @param candidates - Every known entity/glossary candidate to match against.
  * @param excludeId - A candidate id to skip (an entity never mentions itself).
- * @returns Deduplicated mention targets, in first-occurrence order.
+ * @returns Every match, in document order, each naming every candidate that shares that exact name string.
  */
-export function extractMentionTargets(
+export function findMentionOccurrences(
   text: string,
   candidates: readonly MentionCandidate[],
   excludeId?: string,
-): MentionTarget[] {
+): MentionOccurrence[] {
   const targetsByName = new Map<string, MentionTarget[]>();
   const patterns: string[] = [];
 
@@ -80,12 +99,34 @@ export function extractMentionTargets(
     'giu',
   );
 
-  const seen = new Set<string>();
-  const results: MentionTarget[] = [];
+  const occurrences: MentionOccurrence[] = [];
   for (const match of text.matchAll(regex)) {
     const targets = targetsByName.get(match[0].toLowerCase());
-    if (!targets) continue;
-    for (const target of targets) {
+    if (!targets || match.index === undefined) continue;
+    occurrences.push({ targets, start: match.index, end: match.index + match[0].length });
+  }
+  return occurrences;
+}
+
+/**
+ * Find every candidate mentioned in `text`, deduplicated — for callers that
+ * only care about the resulting set of mention edges, not where in the text
+ * each occurrence is (e.g. building the index).
+ *
+ * @param text - The body text to scan (e.g. an entity's Markdown body).
+ * @param candidates - Every known entity/glossary candidate to match against.
+ * @param excludeId - A candidate id to skip (an entity never mentions itself).
+ * @returns Deduplicated mention targets, in first-occurrence order.
+ */
+export function extractMentionTargets(
+  text: string,
+  candidates: readonly MentionCandidate[],
+  excludeId?: string,
+): MentionTarget[] {
+  const seen = new Set<string>();
+  const results: MentionTarget[] = [];
+  for (const occurrence of findMentionOccurrences(text, candidates, excludeId)) {
+    for (const target of occurrence.targets) {
       const key = `${target.kind}:${target.id}`;
       if (seen.has(key)) continue;
       seen.add(key);

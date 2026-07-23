@@ -4,16 +4,18 @@
  * Owns one {@link WorkspaceIndex} per open workspace folder — built from disk
  * on activation and kept current by a file watcher — the
  * `lorefountain.reindexWorkspace` command for a manual, safe full rebuild
- * (Spec §2.2, §23), and the `lorefountain.initializeWorkspace` command that
- * scaffolds a brand-new project's standard folders and config file.
+ * (Spec §2.2, §23), the `lorefountain.initializeWorkspace` command that
+ * scaffolds a brand-new project's standard folders and config file, and the
+ * hover (§6) + wikilink completion (§6, §13.2) providers, each individually
+ * toggleable via `lorefountain.hover.enabled`/`lorefountain.completion.enabled`
+ * (ADR-0003 — never depend on Better Fountain, but let a user defer to it).
  *
- * The extension activates on `workspaceContains:**\/*.fountain` or the
- * presence of `lorefountain.config.json` (ADR-0006) — but a completely fresh,
- * empty workspace has neither yet. Command Palette invocation activates an
- * extension regardless of `activationEvents`, so `initializeWorkspace` is the
- * bootstrap path for that case. Multi-root workspaces get one independent
- * index per folder. Feature wiring beyond the index (hover, completion,
- * Story Card editor) is added in later build phases.
+ * The extension activates on `workspaceContains:**\/*.fountain`, the presence
+ * of `lorefountain.config.json` (ADR-0006), or opening any document with the
+ * `fountain` language id — but a completely fresh, empty workspace has none
+ * of those yet. Command Palette invocation activates an extension regardless
+ * of `activationEvents`, so `initializeWorkspace` is the bootstrap path for
+ * that case. Multi-root workspaces get one independent index per folder.
  */
 
 import * as fsp from 'node:fs/promises';
@@ -21,9 +23,14 @@ import * as vscode from 'vscode';
 import { writeDefaultConfigIfAbsent } from './config/configFile';
 import { getWorkspaceFolders } from './config/workspaceConfig';
 import { WorkspaceIndex } from './index/workspaceIndex';
+import type { IndexStore } from './index/store';
+import { createFountainHoverProvider } from './providers/hoverProvider';
+import { createWikilinkCompletionProvider } from './providers/completionProvider';
 
 let outputChannel: vscode.OutputChannel;
 const indexes = new Map<string, WorkspaceIndex>();
+let hoverRegistration: vscode.Disposable | undefined;
+let completionRegistration: vscode.Disposable | undefined;
 
 /**
  * Called by VS Code when the extension is activated.
@@ -50,6 +57,18 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
+  updateProviderRegistrations();
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (
+        event.affectsConfiguration('lorefountain.hover') ||
+        event.affectsConfiguration('lorefountain.completion')
+      ) {
+        updateProviderRegistrations();
+      }
+    }),
+  );
+
   for (const folder of vscode.workspace.workspaceFolders ?? []) {
     void addIndexFor(folder);
   }
@@ -57,13 +76,46 @@ export function activate(context: vscode.ExtensionContext): void {
 
 /**
  * Called by VS Code when the extension is deactivated. Disposes every
- * per-folder index (closing its sql.js database and file watcher).
+ * per-folder index (closing its sql.js database and file watcher) and any
+ * registered providers.
  */
 export function deactivate(): void {
   for (const index of indexes.values()) {
     index.dispose();
   }
   indexes.clear();
+  hoverRegistration?.dispose();
+  completionRegistration?.dispose();
+}
+
+/** Resolve the {@link IndexStore} for a document's workspace folder, if it has one. */
+function findStoreForDocument(document: vscode.TextDocument): IndexStore | undefined {
+  const folder = vscode.workspace.getWorkspaceFolder(document.uri);
+  if (!folder) return undefined;
+  return indexes.get(folder.uri.toString())?.store;
+}
+
+/**
+ * (Re)register the hover and completion providers according to their current
+ * `lorefountain.*.enabled` settings. Called on activation and whenever either
+ * setting changes.
+ */
+function updateProviderRegistrations(): void {
+  const config = vscode.workspace.getConfiguration('lorefountain');
+
+  hoverRegistration?.dispose();
+  hoverRegistration = config.get<boolean>('hover.enabled', true)
+    ? vscode.languages.registerHoverProvider({ language: 'fountain' }, createFountainHoverProvider(findStoreForDocument))
+    : undefined;
+
+  completionRegistration?.dispose();
+  completionRegistration = config.get<boolean>('completion.enabled', true)
+    ? vscode.languages.registerCompletionItemProvider(
+        [{ language: 'fountain' }, { language: 'markdown' }],
+        createWikilinkCompletionProvider(findStoreForDocument),
+        '[',
+      )
+    : undefined;
 }
 
 async function addIndexFor(folder: vscode.WorkspaceFolder): Promise<void> {
@@ -90,20 +142,18 @@ async function rebuildAllWorkspaceIndexes(): Promise<void> {
     return;
   }
 
-  for (const index of indexes.values()) {
-    await index.rebuild();
-  }
-
   let entityCount = 0;
   let glossaryCount = 0;
+  let scriptCount = 0;
   for (const index of indexes.values()) {
-    const stats = index.store.stats();
-    entityCount += stats.entityCount;
-    glossaryCount += stats.glossaryCount;
+    const summary = await index.rebuild();
+    entityCount += summary.entityCount;
+    glossaryCount += summary.glossaryCount;
+    scriptCount += summary.scriptCount;
   }
 
   void vscode.window.showInformationMessage(
-    `LoreFountain: indexed ${entityCount} entities and ${glossaryCount} glossary terms. ` +
+    `LoreFountain: indexed ${entityCount} entities, ${glossaryCount} glossary terms, and ${scriptCount} scripts. ` +
       'See the "LoreFountain" output channel for details.',
   );
 }

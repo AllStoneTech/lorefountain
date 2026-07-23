@@ -43,6 +43,7 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      scripts: path.join(tmpRoot, 'scripts'),
     });
 
     expect(summary.entityCount).toBe(2);
@@ -56,6 +57,7 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      scripts: path.join(tmpRoot, 'scripts'),
     });
 
     expect(summary.entityCount).toBe(1);
@@ -71,6 +73,7 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      scripts: path.join(tmpRoot, 'scripts'),
     });
 
     expect(summary.entityCount).toBe(1);
@@ -83,6 +86,7 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      scripts: path.join(tmpRoot, 'scripts'),
     });
 
     expect(summary.glossaryCount).toBe(1);
@@ -97,6 +101,7 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      scripts: path.join(tmpRoot, 'scripts'),
     });
 
     expect(summary.entityCount).toBe(1);
@@ -114,6 +119,7 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      scripts: path.join(tmpRoot, 'scripts'),
     });
 
     expect(summary.entityCount).toBe(1);
@@ -125,10 +131,12 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      scripts: path.join(tmpRoot, 'scripts'),
     });
     expect(summary).toEqual({
       entityCount: 0,
       glossaryCount: 0,
+      scriptCount: 0,
       malformed: [],
       warnings: [],
       danglingRelations: [],
@@ -150,6 +158,7 @@ describe('buildIndexFromDisk', () => {
     await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      scripts: path.join(tmpRoot, 'scripts'),
     });
 
     const backlinks = store.getBacklinks({ id: 'sango', kind: 'entity' });
@@ -176,6 +185,7 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      scripts: path.join(tmpRoot, 'scripts'),
     });
 
     expect(summary.danglingRelations).toHaveLength(1);
@@ -205,9 +215,42 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      scripts: path.join(tmpRoot, 'scripts'),
     });
 
     expect(summary.danglingRelations).toEqual([]);
+  });
+
+  it('indexes .fountain scripts as mention sources, resolvable via backlinks', async () => {
+    await writeFile(tmpRoot, 'world/sango.md', characterMd('Sango'));
+    await writeFile(
+      tmpRoot,
+      'scripts/1x01.fountain',
+      ['INT. THE ARK - NIGHT', '', 'SANGO', 'I am here.'].join('\n'),
+    );
+
+    const summary = await buildIndexFromDisk(store, {
+      world: path.join(tmpRoot, 'world'),
+      glossary: path.join(tmpRoot, 'world', 'glossary'),
+      scripts: path.join(tmpRoot, 'scripts'),
+    });
+
+    expect(summary.scriptCount).toBe(1);
+    const backlinks = store.getBacklinks({ id: 'sango', kind: 'entity' });
+    expect(backlinks).toEqual([
+      { id: '1x01', kind: 'script', name: '1x01.fountain', filePath: expect.stringContaining('1x01.fountain') },
+    ]);
+  });
+
+  it('does not index .fountain files as entities, and excludes notes/ scripts are unaffected by that exclusion', async () => {
+    await writeFile(tmpRoot, 'scripts/1x01.fountain', 'INT. SOMEWHERE - DAY\n\nAction line.');
+    const summary = await buildIndexFromDisk(store, {
+      world: path.join(tmpRoot, 'world'),
+      glossary: path.join(tmpRoot, 'world', 'glossary'),
+      scripts: path.join(tmpRoot, 'scripts'),
+    });
+    expect(summary.entityCount).toBe(0);
+    expect(summary.scriptCount).toBe(1);
   });
 });
 
@@ -309,6 +352,31 @@ describe('reindexFile and removeFileFromIndex', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.danglingRelations).toEqual([]);
+    expect(store.getBacklinks({ id: 'sango', kind: 'entity' })).toEqual([]);
+  });
+
+  it('reindexes a single .fountain script as a mention source', async () => {
+    await writeFile(tmpRoot, 'world/sango.md', characterMd('Sango'));
+    await reindexFile(store, path.join(tmpRoot, 'world', 'sango.md'), 'entity');
+
+    const scriptPath = await writeFile(tmpRoot, 'scripts/1x01.fountain', 'SANGO\nI am here.');
+    const result = await reindexFile(store, scriptPath, 'script');
+    expect(result.ok).toBe(true);
+
+    expect(store.getBacklinks({ id: 'sango', kind: 'entity' })).toEqual([
+      { id: '1x01', kind: 'script', name: '1x01.fountain', filePath: scriptPath },
+    ]);
+  });
+
+  it('removeFileFromIndex removes a script\'s outgoing mentions', async () => {
+    await writeFile(tmpRoot, 'world/sango.md', characterMd('Sango'));
+    await reindexFile(store, path.join(tmpRoot, 'world', 'sango.md'), 'entity');
+
+    const scriptPath = await writeFile(tmpRoot, 'scripts/1x01.fountain', 'SANGO\nI am here.');
+    await reindexFile(store, scriptPath, 'script');
+    expect(store.getBacklinks({ id: 'sango', kind: 'entity' })).toHaveLength(1);
+
+    removeFileFromIndex(store, scriptPath, 'script');
     expect(store.getBacklinks({ id: 'sango', kind: 'entity' })).toEqual([]);
   });
 });

@@ -57,10 +57,26 @@ export interface ListEntitiesFilter {
   type?: EntityType;
 }
 
-/** A mention edge's source or target: which entity/glossary record it points at. */
+/**
+ * A mention edge's target — which entity/glossary record it points at.
+ * Scripts are only ever a mention *source*, never a target: nothing links
+ * "to" a script.
+ */
 export interface MentionEndpoint {
   id: string;
   kind: MentionKind;
+}
+
+/**
+ * A mention edge's source, for writing (Spec §4.5). Carries `filePath`
+ * because a script source has no other table row to resolve display info
+ * from — unlike an entity/glossary source, whose name is looked up via a
+ * join at read time (Spec §2.2).
+ */
+export interface MentionSource {
+  id: string;
+  kind: MentionKind;
+  filePath: string;
 }
 
 /** One resolved backlink: a source that mentions the queried target, with display info. */
@@ -125,7 +141,7 @@ export interface IndexStore {
    * entities/glossary terms. Call after (re)computing a file's mentions;
    * always replaces the full set for that source, never appends.
    */
-  setMentionsForSource(source: MentionEndpoint, targets: readonly MentionTarget[]): void;
+  setMentionsForSource(source: MentionSource, targets: readonly MentionTarget[]): void;
 
   /** Remove every outgoing mention edge for a source. Used when its file is removed from the index. */
   removeMentionsForSource(source: MentionEndpoint): void;

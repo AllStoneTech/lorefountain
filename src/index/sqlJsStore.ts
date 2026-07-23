@@ -9,6 +9,7 @@
  * there is nothing to persist across sessions (see ADR-0001).
  */
 
+import { basename } from 'node:path';
 import initSqlJs, { type Database, type SqlValue } from 'sql.js';
 import type { Entity, EntityFrontmatter, EntityType } from '../model/entity';
 import type { GlossaryTerm, GlossaryTermFrontmatter } from '../model/glossary';
@@ -23,6 +24,7 @@ import type {
   ListEntitiesFilter,
   MentionBacklink,
   MentionEndpoint,
+  MentionSource,
 } from './store';
 
 const SCHEMA_SQL = `
@@ -53,6 +55,7 @@ CREATE VIRTUAL TABLE glossary_fts USING fts3(id, term, body);
 CREATE TABLE mentions (
   source_id TEXT NOT NULL,
   source_kind TEXT NOT NULL,
+  source_file_path TEXT NOT NULL,
   target_id TEXT NOT NULL,
   target_kind TEXT NOT NULL,
   PRIMARY KEY (source_id, source_kind, target_id, target_kind)
@@ -186,12 +189,13 @@ class SqlJsIndexStore implements IndexStore {
     return rows.map((row) => ({ id: row.id, term: row.term, filePath: row.file_path }));
   }
 
-  setMentionsForSource(source: MentionEndpoint, targets: readonly MentionTarget[]): void {
+  setMentionsForSource(source: MentionSource, targets: readonly MentionTarget[]): void {
     this.removeMentionsForSource(source);
     for (const target of targets) {
       this.db.run(
-        'INSERT INTO mentions (source_id, source_kind, target_id, target_kind) VALUES (?, ?, ?, ?)',
-        [source.id, source.kind, target.id, target.kind],
+        `INSERT INTO mentions (source_id, source_kind, source_file_path, target_id, target_kind)
+         VALUES (?, ?, ?, ?, ?)`,
+        [source.id, source.kind, source.filePath, target.id, target.kind],
       );
     }
   }
@@ -201,21 +205,23 @@ class SqlJsIndexStore implements IndexStore {
   }
 
   getBacklinks(target: MentionEndpoint): MentionBacklink[] {
-    const rows = this.queryAll<{ id: string; kind: string; name: string; file_path: string }>(
-      `SELECT e.id AS id, 'entity' AS kind, e.name AS name, e.file_path AS file_path
-       FROM mentions m JOIN entities e ON e.id = m.source_id AND m.source_kind = 'entity'
+    // A script source has no entities/glossary row to resolve a display name
+    // from — e.name/g.term are NULL for it, so the caller falls back to the
+    // file's basename.
+    const rows = this.queryAll<{ id: string; kind: string; file_path: string; name: string | null }>(
+      `SELECT m.source_id AS id, m.source_kind AS kind, m.source_file_path AS file_path,
+              COALESCE(e.name, g.term) AS name
+       FROM mentions m
+       LEFT JOIN entities e ON e.id = m.source_id AND m.source_kind = 'entity'
+       LEFT JOIN glossary g ON g.id = m.source_id AND m.source_kind = 'glossary'
        WHERE m.target_id = ? AND m.target_kind = ?
-       UNION ALL
-       SELECT g.id AS id, 'glossary' AS kind, g.term AS name, g.file_path AS file_path
-       FROM mentions m JOIN glossary g ON g.id = m.source_id AND m.source_kind = 'glossary'
-       WHERE m.target_id = ? AND m.target_kind = ?
-       ORDER BY name`,
-      [target.id, target.kind, target.id, target.kind],
+       ORDER BY COALESCE(e.name, g.term, m.source_file_path)`,
+      [target.id, target.kind],
     );
     return rows.map((row) => ({
       id: row.id,
       kind: row.kind as MentionKind,
-      name: row.name,
+      name: row.name ?? basename(row.file_path),
       filePath: row.file_path,
     }));
   }

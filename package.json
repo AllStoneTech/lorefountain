@@ -30,9 +30,23 @@
   "main": "./dist/extension.js",
   "activationEvents": [
     "workspaceContains:**/*.fountain",
-    "workspaceContains:lorefountain.config.json"
+    "workspaceContains:lorefountain.config.json",
+    "onLanguage:fountain"
   ],
   "contributes": {
+    "languages": [
+      {
+        "id": "fountain",
+        "extensions": [
+          ".fountain",
+          ".spmd"
+        ],
+        "aliases": [
+          "Fountain"
+        ],
+        "configuration": "./resources/fountain-language-configuration.json"
+      }
+    ],
     "commands": [
       {
         "command": "lorefountain.reindexWorkspace",
@@ -45,6 +59,21 @@
         "category": "LoreFountain"
       }
     ],
+    "configuration": {
+      "title": "LoreFountain",
+      "properties": {
+        "lorefountain.hover.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show a Story Card preview on hover over a recognized entity/glossary mention in `.fountain` scripts. Disable if you'd rather rely on another extension's hover."
+        },
+        "lorefountain.completion.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Offer entity/glossary name autocomplete after typing `[[` in scripts and world Markdown files (Spec §6, §13.2)."
+        }
+      }
+    },
     "jsonValidation": [
       {
         "fileMatch": "lorefountain.config.json",
@@ -62,6 +91,7 @@
     "package": "vsce package"
   },
   "dependencies": {
+    "fountain-js": "^1.2.4",
     "sql.js": "^1.14.1",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"

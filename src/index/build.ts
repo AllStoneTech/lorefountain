@@ -5,6 +5,12 @@
  * mentions (Spec §4.5) and detects dangling relation targets after every
  * (re)index.
  *
+ * `.fountain` scripts are indexed too (Spec §4.5/§13.6 — a script's presence
+ * as a mention source, not just entity/glossary bodies): a script is a
+ * mention *source* only, never a target and never a stored record — it
+ * contributes outgoing mention edges (so it shows up in an entity's
+ * backlinks) but has no frontmatter/schema to validate.
+ *
  * A full build never throws on a bad file: malformed YAML, schema violations,
  * and filesystem read errors are all collected and reported in the returned
  * summary so the index rebuild can skip/flag rather than crash (Spec §23).
@@ -21,7 +27,7 @@
  * plain prose won't retroactively gain a mention edge until they are
  * themselves reindexed or a full rebuild runs. This is a deliberate v1
  * simplification, not an oversight: "Rebuild Index" is the always-correct
- * escape valve.
+ * escape valve (ADR-0007).
  */
 
 import * as fsp from 'node:fs/promises';
@@ -62,13 +68,14 @@ export interface IndexBuildDanglingRelation {
 export interface IndexBuildSummary {
   entityCount: number;
   glossaryCount: number;
+  scriptCount: number;
   malformed: IndexBuildIssue[];
   warnings: IndexBuildWarning[];
   danglingRelations: IndexBuildDanglingRelation[];
 }
 
-/** The two kinds of `.md` file the index tracks. Notes (§13.4) are never indexed. */
-export type IndexableFileKind = 'entity' | 'glossary';
+/** The three kinds of file the index tracks. Notes (§13.4) are never indexed. */
+export type IndexableFileKind = 'entity' | 'glossary' | 'script';
 
 /** Outcome of {@link reindexFile}. */
 export type ReindexFileResult =
@@ -77,29 +84,31 @@ export type ReindexFileResult =
 
 /**
  * Rebuild the index by walking `folders.world` (for entities, excluding the
- * reserved `glossary/`, `timeline/`, and `notes/` subfolders) and
- * `folders.glossary` (for glossary terms), upserting every file that parses.
+ * reserved `glossary/`, `timeline/`, and `notes/` subfolders), `folders.glossary`
+ * (for glossary terms), and `folders.scripts` (for `.fountain` scripts as
+ * mention sources), upserting/registering every file that parses/reads.
  *
  * Safe to call against a workspace where these folders don't exist yet — an
  * absent folder simply contributes zero files, not an error.
  *
  * @param store - The index to populate.
- * @param folders - Absolute paths to the `world` and `glossary` folders.
+ * @param folders - Absolute paths to the `world`, `glossary`, and `scripts` folders.
  * @returns Counts of what was indexed, plus any malformed files or warnings.
  */
 export async function buildIndexFromDisk(
   store: IndexStore,
-  folders: { world: string; glossary: string },
+  folders: { world: string; glossary: string; scripts: string },
 ): Promise<IndexBuildSummary> {
   const summary: IndexBuildSummary = {
     entityCount: 0,
     glossaryCount: 0,
+    scriptCount: 0,
     malformed: [],
     warnings: [],
     danglingRelations: [],
   };
 
-  const entityFiles = await listMarkdownFiles(folders.world, ENTITY_EXCLUDED_SUBDIRS);
+  const entityFiles = await listFilesWithExtension(folders.world, '.md', ENTITY_EXCLUDED_SUBDIRS);
   for (const filePath of entityFiles) {
     const result = await reindexFile(store, filePath, 'entity', { recomputeMentions: false });
     if (result.ok) {
@@ -112,7 +121,7 @@ export async function buildIndexFromDisk(
     }
   }
 
-  const glossaryFiles = await listMarkdownFiles(folders.glossary);
+  const glossaryFiles = await listFilesWithExtension(folders.glossary, '.md');
   for (const filePath of glossaryFiles) {
     const result = await reindexFile(store, filePath, 'glossary', { recomputeMentions: false });
     if (result.ok) {
@@ -122,21 +131,36 @@ export async function buildIndexFromDisk(
     }
   }
 
+  // Scripts have no schema to validate and nothing to upsert — just read the
+  // text now and defer mention computation to the one full pass below
+  // (avoids computing against a still-partial candidate list, and avoids
+  // reading each script file twice).
+  const scriptFiles = await listFilesWithExtension(folders.scripts, '.fountain');
+  const scriptTexts = new Map<string, string>();
+  for (const filePath of scriptFiles) {
+    try {
+      scriptTexts.set(filePath, await fsp.readFile(filePath, 'utf8'));
+      summary.scriptCount += 1;
+    } catch (err) {
+      summary.malformed.push({ filePath, reason: 'read-error', message: errorMessage(err) });
+    }
+  }
+
   // A single pass over the now-complete candidate list, after every file has
   // been upserted — see the module doc comment on why this differs from the
   // per-file recompute an incremental `reindexFile` call does on its own.
-  summary.danglingRelations = recomputeAllMentionsAndFindDanglingRelations(store);
+  summary.danglingRelations = recomputeAllMentionsAndFindDanglingRelations(store, scriptTexts);
 
   return summary;
 }
 
 /**
- * Re-parse a single file and upsert it into the index. Used both by the full
- * disk build and by incremental file-watcher updates on save.
+ * Re-parse/re-read a single file and update the index accordingly. Used both
+ * by the full disk build and by incremental file-watcher updates on save.
  *
  * @param store - The index to update.
  * @param filePath - Absolute path to the changed file.
- * @param kind - Whether the file is an entity or a glossary term.
+ * @param kind - Whether the file is an entity, a glossary term, or a script.
  * @param options - `recomputeMentions` (default `true`) recomputes this
  *   file's own outgoing mentions and dangling relations against the store's
  *   current candidates. {@link buildIndexFromDisk} passes `false` per-file and
@@ -159,6 +183,15 @@ export async function reindexFile(
   }
 
   const id = idFromFilePath(filePath);
+
+  if (kind === 'script') {
+    if (recomputeMentions) {
+      const candidates = buildMentionCandidates(store);
+      store.setMentionsForSource({ id, kind: 'script', filePath }, extractMentionTargets(text, candidates));
+    }
+    return { ok: true, warnings: [], danglingRelations: [] };
+  }
+
   if (kind === 'entity') {
     const result = parseEntityFile(text, { id, filePath });
     if (!result.ok) {
@@ -170,7 +203,7 @@ export async function reindexFile(
     if (recomputeMentions) {
       const candidates = buildMentionCandidates(store);
       store.setMentionsForSource(
-        { id: result.entity.id, kind: 'entity' },
+        { id: result.entity.id, kind: 'entity', filePath },
         extractMentionTargets(result.entity.body, candidates, result.entity.id),
       );
       const knownEntityIds = new Set(store.listEntities().map((e) => e.id));
@@ -190,7 +223,7 @@ export async function reindexFile(
   if (recomputeMentions) {
     const candidates = buildMentionCandidates(store);
     store.setMentionsForSource(
-      { id: result.term.id, kind: 'glossary' },
+      { id: result.term.id, kind: 'glossary', filePath },
       extractMentionTargets(result.term.body, candidates, result.term.id),
     );
   }
@@ -198,23 +231,30 @@ export async function reindexFile(
 }
 
 /**
- * Remove a deleted file's row from the index. Safe to call even if the file
- * was never indexed (e.g. it was malformed, or is outside the indexed folders).
+ * Remove a deleted file's row/mentions from the index. Safe to call even if
+ * the file was never indexed (e.g. it was malformed, or is outside the
+ * indexed folders).
  *
  * @param store - The index to update.
  * @param filePath - Absolute path to the deleted file.
- * @param kind - Whether the file was an entity or a glossary term.
+ * @param kind - Whether the file was an entity, a glossary term, or a script.
  */
 export function removeFileFromIndex(store: IndexStore, filePath: string, kind: IndexableFileKind): void {
   if (kind === 'entity') {
     store.removeEntityByPath(filePath);
-  } else {
+  } else if (kind === 'glossary') {
     store.removeGlossaryTermByPath(filePath);
+  } else {
+    store.removeMentionsForSource({ id: idFromFilePath(filePath), kind: 'script' });
   }
 }
 
-/** Build the full mention-candidate list from every entity and glossary term currently in the store. */
-function buildMentionCandidates(store: IndexStore): MentionCandidate[] {
+/**
+ * Build the full mention-candidate list from every entity and glossary term
+ * currently in the store. Exported for the hover/completion providers
+ * (Phase C), which need the same candidate list to match against.
+ */
+export function buildMentionCandidates(store: IndexStore): MentionCandidate[] {
   const candidates: MentionCandidate[] = [];
   for (const entity of store.listEntities()) {
     candidates.push({ id: entity.id, kind: 'entity', names: [entity.name, ...(entity.data.aliases ?? [])] });
@@ -226,12 +266,16 @@ function buildMentionCandidates(store: IndexStore): MentionCandidate[] {
 }
 
 /**
- * Recompute every entity's and glossary term's outgoing mentions against the
- * store's complete, current candidate list, and detect dangling relation
- * targets across every entity. Intended to run once, after every file in a
- * full disk build has already been upserted (see the module doc comment).
+ * Recompute every entity's, glossary term's, and script's outgoing mentions
+ * against the store's complete, current candidate list, and detect dangling
+ * relation targets across every entity. Intended to run once, after every
+ * file in a full disk build has already been upserted/read (see the module
+ * doc comment).
  */
-function recomputeAllMentionsAndFindDanglingRelations(store: IndexStore): IndexBuildDanglingRelation[] {
+function recomputeAllMentionsAndFindDanglingRelations(
+  store: IndexStore,
+  scriptTexts: ReadonlyMap<string, string>,
+): IndexBuildDanglingRelation[] {
   const candidates = buildMentionCandidates(store);
   const entities = store.listEntities();
   const knownEntityIds = new Set(entities.map((entity) => entity.id));
@@ -239,7 +283,7 @@ function recomputeAllMentionsAndFindDanglingRelations(store: IndexStore): IndexB
 
   for (const entity of entities) {
     store.setMentionsForSource(
-      { id: entity.id, kind: 'entity' },
+      { id: entity.id, kind: 'entity', filePath: entity.filePath },
       extractMentionTargets(entity.body, candidates, entity.id),
     );
     for (const relation of findDanglingRelations(entity.data.relations, knownEntityIds)) {
@@ -253,8 +297,15 @@ function recomputeAllMentionsAndFindDanglingRelations(store: IndexStore): IndexB
 
   for (const term of store.listGlossaryTerms()) {
     store.setMentionsForSource(
-      { id: term.id, kind: 'glossary' },
+      { id: term.id, kind: 'glossary', filePath: term.filePath },
       extractMentionTargets(term.body, candidates, term.id),
+    );
+  }
+
+  for (const [filePath, text] of scriptTexts) {
+    store.setMentionsForSource(
+      { id: idFromFilePath(filePath), kind: 'script', filePath },
+      extractMentionTargets(text, candidates),
     );
   }
 
@@ -262,18 +313,22 @@ function recomputeAllMentionsAndFindDanglingRelations(store: IndexStore): IndexB
 }
 
 /**
- * Recursively collect `.md` file paths under `dir`, skipping any directory
- * whose name appears in `excludeSubdirNames` at any depth. Returns an empty
- * array if `dir` does not exist.
+ * Recursively collect file paths under `dir` whose name ends with `extension`,
+ * skipping any directory whose name appears in `excludeSubdirNames` at any
+ * depth. Returns an empty array if `dir` does not exist.
  */
-async function listMarkdownFiles(dir: string, excludeSubdirNames: string[] = []): Promise<string[]> {
+async function listFilesWithExtension(
+  dir: string,
+  extension: string,
+  excludeSubdirNames: string[] = [],
+): Promise<string[]> {
   const excluded = new Set(excludeSubdirNames);
   const results: string[] = [];
-  await walk(dir, excluded, results);
+  await walk(dir, extension, excluded, results);
   return results;
 }
 
-async function walk(dir: string, excluded: Set<string>, out: string[]): Promise<void> {
+async function walk(dir: string, extension: string, excluded: Set<string>, out: string[]): Promise<void> {
   let entries: import('node:fs').Dirent[];
   try {
     entries = await fsp.readdir(dir, { withFileTypes: true });
@@ -285,8 +340,8 @@ async function walk(dir: string, excluded: Set<string>, out: string[]): Promise<
   for (const entry of entries) {
     if (entry.isDirectory()) {
       if (excluded.has(entry.name)) continue;
-      await walk(path.join(dir, entry.name), excluded, out);
-    } else if (entry.isFile() && entry.name.endsWith('.md')) {
+      await walk(path.join(dir, entry.name), extension, excluded, out);
+    } else if (entry.isFile() && entry.name.endsWith(extension)) {
       out.push(path.join(dir, entry.name));
     }
   }

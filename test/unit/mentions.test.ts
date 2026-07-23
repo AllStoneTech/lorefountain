@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { extractMentionTargets, type MentionCandidate } from '../../src/index/mentions';
+import { extractMentionTargets, findMentionOccurrences, type MentionCandidate } from '../../src/index/mentions';
 
 const candidates: MentionCandidate[] = [
   { id: 'sango', kind: 'entity', names: ['Sango', 'Shango'] },
@@ -93,5 +93,46 @@ describe('extractMentionTargets', () => {
   it('ignores empty or whitespace-only names among a candidate\'s names', () => {
     const withBlank: MentionCandidate[] = [{ id: 'x', kind: 'entity', names: ['', '  ', 'Sango'] }];
     expect(extractMentionTargets('Sango spoke.', withBlank)).toEqual([{ id: 'x', kind: 'entity' }]);
+  });
+
+  it('supports a script as a mention source kind', () => {
+    const scriptCandidates: MentionCandidate[] = [...candidates, { id: '1x01', kind: 'script', names: [] }];
+    expect(extractMentionTargets('Sango spoke.', scriptCandidates)).toEqual([{ id: 'sango', kind: 'entity' }]);
+  });
+});
+
+describe('findMentionOccurrences', () => {
+  it('reports the exact character range of a match', () => {
+    const text = 'Sango spoke of the future.';
+    const occurrences = findMentionOccurrences(text, candidates);
+    expect(occurrences).toHaveLength(1);
+    expect(occurrences[0].start).toBe(0);
+    expect(occurrences[0].end).toBe(5);
+    expect(text.slice(occurrences[0].start, occurrences[0].end)).toBe('Sango');
+    expect(occurrences[0].targets).toEqual([{ id: 'sango', kind: 'entity' }]);
+  });
+
+  it('does NOT deduplicate repeated occurrences (unlike extractMentionTargets)', () => {
+    const occurrences = findMentionOccurrences('Sango, Sango, Sango.', candidates);
+    expect(occurrences).toHaveLength(3);
+    expect(occurrences.map((o) => o.start)).toEqual([0, 7, 14]);
+  });
+
+  it('reports a range that correctly covers a name inside a [[wikilink]]', () => {
+    const text = 'He mentioned [[Sango]] in passing.';
+    const occurrences = findMentionOccurrences(text, candidates);
+    expect(occurrences).toHaveLength(1);
+    expect(text.slice(occurrences[0].start, occurrences[0].end)).toBe('Sango');
+  });
+
+  it('reports every occurrence in document order across multiple mentions', () => {
+    const text = 'Sango and Esu argued on The Ark.';
+    const occurrences = findMentionOccurrences(text, candidates);
+    expect(occurrences.map((o) => o.targets[0].id)).toEqual(['sango', 'esu', 'the-ark']);
+    expect(occurrences.every((o, i) => i === 0 || o.start > occurrences[i - 1].start)).toBe(true);
+  });
+
+  it('returns an empty array when nothing matches', () => {
+    expect(findMentionOccurrences('No mentions here.', candidates)).toEqual([]);
   });
 });
