@@ -57,6 +57,48 @@
         "command": "lorefountain.initializeWorkspace",
         "title": "Initialize Workspace",
         "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.newCharacter",
+        "title": "New Character",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.newLocation",
+        "title": "New Location",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.newFaction",
+        "title": "New Faction",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.newObject",
+        "title": "New Object",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.newConcept",
+        "title": "New Concept",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.newGlossaryTerm",
+        "title": "New Glossary Term",
+        "category": "LoreFountain"
+      }
+    ],
+    "customEditors": [
+      {
+        "viewType": "lorefountain.storyCard",
+        "displayName": "LoreFountain Story Card",
+        "selector": [
+          {
+            "filenamePattern": "**/world/*.md"
+          }
+        ],
+        "priority": "default"
       }
     ],
     "configuration": {
@@ -79,7 +121,65 @@
         "fileMatch": "lorefountain.config.json",
         "url": "./resources/lorefountain.config.schema.json"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "lorefountain",
+          "title": "LoreFountain",
+          "icon": "resources/activity-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "lorefountain": [
+        {
+          "id": "lorefountain.worldView",
+          "name": "World"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "lorefountain.reindexWorkspace",
+          "when": "view == lorefountain.worldView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "lorefountain.newCharacter",
+          "when": "view == lorefountain.worldView && viewItem == lorefountain.category.character",
+          "group": "inline"
+        },
+        {
+          "command": "lorefountain.newLocation",
+          "when": "view == lorefountain.worldView && viewItem == lorefountain.category.location",
+          "group": "inline"
+        },
+        {
+          "command": "lorefountain.newFaction",
+          "when": "view == lorefountain.worldView && viewItem == lorefountain.category.faction",
+          "group": "inline"
+        },
+        {
+          "command": "lorefountain.newObject",
+          "when": "view == lorefountain.worldView && viewItem == lorefountain.category.object",
+          "group": "inline"
+        },
+        {
+          "command": "lorefountain.newConcept",
+          "when": "view == lorefountain.worldView && viewItem == lorefountain.category.concept",
+          "group": "inline"
+        },
+        {
+          "command": "lorefountain.newGlossaryTerm",
+          "when": "view == lorefountain.worldView && viewItem == lorefountain.category.glossary",
+          "group": "inline"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run build -- --production",

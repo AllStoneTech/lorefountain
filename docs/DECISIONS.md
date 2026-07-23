@@ -6,6 +6,62 @@ revisit.
 
 ---
 
+## ADR-0009 — Phase D scope: Story Card editor is entity-only; selector matches the default `world/` layout only
+
+**Date:** 2026-07-23 · **Status:** Accepted
+
+**Decisions made while implementing Phase D (entity CRUD, creation commands,
+the Story Card custom editor, the World TreeView):**
+
+1. **The Story Card `CustomTextEditorProvider` is entity-only** — glossary
+   terms (Spec §4.7) stay plain Markdown with no custom editor, consistent
+   with their own "lightweight... just a definition" characterization.
+   Building a second, lighter-weight custom editor for glossary terms was
+   judged not worth the additional surface for what §4.7 already frames as a
+   file simple enough to hand-edit directly. Creating a term via the tree's
+   "New Glossary Term" command opens it as plain text, not a form.
+
+2. **`customEditors` selector matches `**/world/*.md`** (direct children of a
+   folder named `world` only) rather than `**/world/**/*.md`. This is
+   deliberate, not an oversight: VS Code's `customEditors` contribution is
+   static (evaluated before the extension activates), so it can't be scoped
+   to the user's *configured* `world` folder name (ADR-0006) at runtime — this
+   selector targets the *documented default* layout. The specific glob was
+   chosen because a single `*` (not `**`) between `world/` and the filename
+   naturally excludes `world/glossary/`, `world/timeline/`, and `world/notes/`
+   (all one level deeper) without needing negative-match glob syntax, which
+   `filenamePattern` doesn't support. The known gap: an entity file nested in
+   a user-created subfolder under `world/` (e.g. `world/characters/sango.md`
+   — which `build.ts`'s recursive walk already indexes fine) won't get the
+   Story Card editor as its *default*, though "Reopen Editor With…" still
+   works for any `.md` file broadly speaking once the extension is active.
+   Revisit if real dogfooding shows subfolder organization is common enough
+   to be worth a dynamic, per-workspace registration.
+
+3. **The TreeView (Spec §6) omits the "Timeline" category** the spec's table
+   names alongside Characters/Locations/Factions — no Event/timeline entity
+   model exists yet (`world/timeline/` has been explicitly unindexed since
+   Phase B). Shown once that model exists, not as an empty placeholder now.
+
+**Verified manually in the real Extension Development Host** (click-based
+checks only — text-input edits and the creation commands' name-prompt flow
+are blocked by this session's click-tier sandboxing, not exercised live):
+the World tree renders all 6 categories with correct icons and inline
+"New X" buttons; a Character and a Location entity both opened correct,
+fully-populated Story Cards with the right type-specific fields shown/hidden;
+the relationship picker listed every entity across all types; editing it via
+clicks (add/select-target/save) round-tripped correctly to disk, including
+the exact "drop a relation row missing a relation type" rule confirmed by
+unit tests; a glossary term opened as plain text, not a Story Card.
+
+**Revisit if:** the entity-creation commands' name-prompt flow (`showInputBox`)
+turns out to have an issue only visible via real typed input — this remains
+the one meaningfully untested path in Phase D and should get a pass whenever
+this session's tooling allows typed interaction, or via the user's own
+dogfooding.
+
+---
+
 ## ADR-0008 — Phase C scope: hover/completion broader than literal spec wording; no syntax grammar yet
 
 **Date:** 2026-07-23 · **Status:** Accepted

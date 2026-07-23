@@ -20,17 +20,21 @@
 
 import * as fsp from 'node:fs/promises';
 import * as vscode from 'vscode';
+import { registerEntityCreationCommands } from './commands/createEntity';
 import { writeDefaultConfigIfAbsent } from './config/configFile';
 import { getWorkspaceFolders } from './config/workspaceConfig';
 import { WorkspaceIndex } from './index/workspaceIndex';
 import type { IndexStore } from './index/store';
 import { createFountainHoverProvider } from './providers/hoverProvider';
 import { createWikilinkCompletionProvider } from './providers/completionProvider';
+import { createStoryCardEditorProvider, STORY_CARD_VIEW_TYPE } from './providers/storyCardEditorProvider';
+import { WorldTreeProvider } from './providers/worldTreeProvider';
 
 let outputChannel: vscode.OutputChannel;
 const indexes = new Map<string, WorkspaceIndex>();
 let hoverRegistration: vscode.Disposable | undefined;
 let completionRegistration: vscode.Disposable | undefined;
+let treeProvider: WorldTreeProvider;
 
 /**
  * Called by VS Code when the extension is activated.
@@ -45,6 +49,18 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('lorefountain.reindexWorkspace', () => void rebuildAllWorkspaceIndexes()),
     vscode.commands.registerCommand('lorefountain.initializeWorkspace', () => void initializeWorkspace()),
   );
+  registerEntityCreationCommands(context, pickTargetWorkspaceFolder);
+
+  context.subscriptions.push(
+    vscode.window.registerCustomEditorProvider(
+      STORY_CARD_VIEW_TYPE,
+      createStoryCardEditorProvider(findStoreForDocument),
+      { webviewOptions: { retainContextWhenHidden: true } },
+    ),
+  );
+
+  treeProvider = new WorldTreeProvider(findStoreForFolder);
+  context.subscriptions.push(vscode.window.registerTreeDataProvider('lorefountain.worldView', treeProvider));
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeWorkspaceFolders((event) => {
@@ -95,6 +111,11 @@ function findStoreForDocument(document: vscode.TextDocument): IndexStore | undef
   return indexes.get(folder.uri.toString())?.store;
 }
 
+/** Resolve the {@link IndexStore} for a workspace folder directly (used by the TreeView). */
+function findStoreForFolder(folder: vscode.WorkspaceFolder): IndexStore | undefined {
+  return indexes.get(folder.uri.toString())?.store;
+}
+
 /**
  * (Re)register the hover and completion providers according to their current
  * `lorefountain.*.enabled` settings. Called on activation and whenever either
@@ -122,6 +143,7 @@ async function addIndexFor(folder: vscode.WorkspaceFolder): Promise<void> {
   try {
     const index = await WorkspaceIndex.create(folder, outputChannel);
     indexes.set(folder.uri.toString(), index);
+    index.onDidChangeIndex(() => treeProvider.refresh());
     await index.rebuild();
   } catch (err) {
     outputChannel.appendLine(

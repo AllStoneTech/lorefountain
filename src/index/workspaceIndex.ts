@@ -20,6 +20,10 @@ type WorldFileKind = 'entity' | 'glossary' | 'skip';
 
 export class WorkspaceIndex implements vscode.Disposable {
   private readonly disposables: vscode.Disposable[] = [];
+  private readonly changeEmitter = new vscode.EventEmitter<void>();
+
+  /** Fires after any rebuild or incremental reindex/removal — e.g. so the TreeView (Phase D4) can refresh. */
+  readonly onDidChangeIndex = this.changeEmitter.event;
 
   private constructor(
     public readonly folder: vscode.WorkspaceFolder,
@@ -58,6 +62,7 @@ export class WorkspaceIndex implements vscode.Disposable {
       scripts: folders.scripts,
     });
     this.logSummary(summary);
+    this.changeEmitter.fire();
     return summary;
   }
 
@@ -65,6 +70,7 @@ export class WorkspaceIndex implements vscode.Disposable {
     for (const disposable of this.disposables) {
       disposable.dispose();
     }
+    this.changeEmitter.dispose();
     this.store.dispose();
   }
 
@@ -82,7 +88,10 @@ export class WorkspaceIndex implements vscode.Disposable {
     const scriptsWatcher = vscode.workspace.createFileSystemWatcher(scriptsPattern);
     scriptsWatcher.onDidCreate((uri) => void this.handleReindex(uri.fsPath, 'script'));
     scriptsWatcher.onDidChange((uri) => void this.handleReindex(uri.fsPath, 'script'));
-    scriptsWatcher.onDidDelete((uri) => removeFileFromIndex(this.store, uri.fsPath, 'script'));
+    scriptsWatcher.onDidDelete((uri) => {
+      removeFileFromIndex(this.store, uri.fsPath, 'script');
+      this.changeEmitter.fire();
+    });
     this.disposables.push(scriptsWatcher);
   }
 
@@ -96,6 +105,7 @@ export class WorkspaceIndex implements vscode.Disposable {
     const kind = classifyWorldFile(uri.fsPath, worldPath);
     if (kind === 'skip') return;
     removeFileFromIndex(this.store, uri.fsPath, kind);
+    this.changeEmitter.fire();
   }
 
   private async handleReindex(filePath: string, kind: 'entity' | 'glossary' | 'script'): Promise<void> {
@@ -112,6 +122,7 @@ export class WorkspaceIndex implements vscode.Disposable {
         `[LoreFountain] WARNING ${filePath}: relation "${relation.relationType}" targets unknown entity "${relation.target}".`,
       );
     }
+    this.changeEmitter.fire();
   }
 
   private logSummary(summary: IndexBuildSummary): void {
