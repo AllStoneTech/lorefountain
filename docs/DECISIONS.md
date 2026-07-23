@@ -6,6 +6,95 @@ revisit.
 
 ---
 
+## ADR-0006 — `lorefountain.config.json` replaces VS Code settings for project config; activation triggers on it (or a bare `.fountain` script)
+
+**Date:** 2026-07-22 · **Status:** Accepted
+
+**Decision.** All customizable LoreFountain options (currently just `folders`)
+live in a single project-owned `lorefountain.config.json` at the workspace
+root, not VS Code's `lorefountain.folders.*` settings (removed). The extension
+activates on `workspaceContains:lorefountain.config.json` **or**
+`workspaceContains:**/*.fountain` (the project owner, 2026-07-22, chose the OR over
+config-file-only, to smooth onboarding for an existing script-only project).
+A `lorefountain.initializeWorkspace` command scaffolds the standard folders and
+writes a default config file for a brand-new, completely empty workspace —
+necessary because activation events can't fire on a workspace with neither
+signal yet, but VS Code auto-activates any extension the moment one of its
+contributed commands is invoked from the Command Palette, independent of
+`activationEvents`.
+
+**Why the pivot.** The original `activationEvents` (`workspaceContains:world/**`,
+`workspaceContains:scripts/**`) were a real bug, caught via manual testing in
+the Extension Development Host: `scripts/` is an extremely common folder name
+in totally unrelated JS/TS/Python repos (build/deploy scripts), so the
+extension would have activated in countless projects that have nothing to do
+with LoreFountain. A dedicated config file is a deliberate, precise signal
+instead of a folder-name heuristic — and, per Spec §2.1's files-as-truth
+principle, a plain project-owned JSON file is more portable and more
+AI-agent-readable than editor-specific settings.json.
+
+**Supporting pieces added:**
+- `src/config/configFile.ts` — pure, tolerant read (`readLoreFountainConfig`,
+  never throws on missing/malformed/invalid-schema) and
+  `writeDefaultConfigIfAbsent` (never clobbers an existing file).
+- `resources/lorefountain.config.schema.json` + a `contributes.jsonValidation`
+  manifest entry, so editing the file in VS Code gets autocomplete/validation
+  without needing an in-file `$schema` reference (which can't portably point
+  at the extension's own install path from the user's workspace).
+
+**Verified (manual, Extension Development Host, 2026-07-22):** a workspace
+with only a generic `scripts/` folder + `package.json` no longer activates the
+extension (confirmed absent from Running Extensions). A workspace with a
+hand-authored config setting `folders.world` to `"bible"` activated and
+correctly indexed the entity file found there (not under `world/`).
+
+**Revisit if:** more config keys are added beyond `folders` — the schema/Zod
+validation is already structured to extend without a breaking change
+(`catchall(z.unknown())` preserves unknown keys today).
+
+---
+
+## ADR-0005 — Full-text search: FTS3 (via sql.js) for v1, not FTS5
+
+**Date:** 2026-07-22 · **Status:** Accepted
+
+**Decision.** The local index's full-text search (Spec §2.2) uses FTS3, not
+FTS5, for v1 — keeping `sql.js` (ADR-0001) rather than swapping engines.
+
+**Context.** Implementing B3 surfaced that the default `sql.js` npm package is
+compiled with `ENABLE_FTS3` but not `ENABLE_FTS5` (see the correction on
+ADR-0001). Two ways to get real FTS5 were evaluated:
+- `sql.js-fts5` (community fork, MIT) — last published 2022, unmaintained; ruled
+  out.
+- [`@sqlite.org/sqlite-wasm`](https://github.com/sqlite/sqlite-wasm) — the
+  official SQLite project's own WASM build, actively maintained, zero
+  transitive dependencies, confirmed working (FTS5 + `DELETE ... WHERE
+  unindexed_col = ?` + JSON1 all tested directly). The blocker: its Node entry
+  relies on `import.meta.url` internally, which breaks once esbuild bundles it
+  into our CJS `dist/extension.js` (confirmed via a standalone bundle repro —
+  fails with `ERR_INVALID_ARG_VALUE` on `createRequire(import.meta.url)`). It
+  would have to stay external and ship as a real `node_modules` folder inside
+  the `.vsix`, loaded via a runtime dynamic `import()` — a permanent, one-off
+  exception to the "everything bundled" packaging model used everywhere else.
+
+**Why FTS3 instead.** FTS is only load-bearing for the structured search
+feature (§13.6), which is Phase E — not the core loop, not the dogfood path.
+The indexed corpus is small (hundreds of rows per workspace), where FTS5's
+headline advantage — `bm25()` relevance ranking — matters far less than at
+scale. FTS3 still supports `MATCH`, phrase, and prefix queries. The one
+concrete risk considered was FTS5's `unicode61` tokenizer folding diacritics
+(relevant to ORUN's Yoruba terms, e.g. matching "Orunmila" against
+"Ọ̀rúnmìlà") — but that only matters inside the not-yet-built §13.6 feature,
+so it's deferred to be tested against the real ORUN corpus rather than
+decided on a hypothetical now.
+
+**Revisit if:** building §13.6 against the real ORUN corpus shows FTS3 cannot
+adequately match diacritic variants or another concrete search-quality gap
+appears. The `IndexStore` interface (`src/index/store.ts`) exists precisely so
+swapping the engine at that point doesn't touch callers.
+
+---
+
 ## Toolchain note — `moduleResolution: "bundler"` requires explicit `types: ["node"]`
 
 **Date:** 2026-07-22
@@ -162,10 +251,19 @@ break older/ lagging forks — against Spec §11 and §2.3; (2) it is still flag
 each fork's SQLite build (true today, not guaranteed for future forks).
 
 `sql.js` runs identically on any host Node with no floor bump, ships a known-good
-SQLite build (guaranteed FTS5 + JSON1), and needs no native binaries — directly
-serving the cross-fork requirement. The index is explicitly *disposable and
-small* (§2.2), so sql.js's in-memory + rebuild-from-files model is a clean fit;
-the manual-persistence downside barely applies.
+SQLite build, and needs no native binaries — directly serving the cross-fork
+requirement. The index is explicitly *disposable and small* (§2.2), so sql.js's
+in-memory + rebuild-from-files model is a clean fit; the manual-persistence
+downside barely applies.
+
+**Correction (2026-07-22, during B3 implementation):** this ADR originally
+claimed sql.js gives "guaranteed FTS5 + JSON1." That was wrong. Empirically
+testing the actual npm `sql.js` package (v1.14.1) during B3 showed its default
+WASM build's `PRAGMA compile_options` includes `ENABLE_FTS3` but **not**
+`ENABLE_FTS5` — `CREATE VIRTUAL TABLE ... USING fts5(...)` fails with
+`no such module: fts5`. JSON1 is unaffected (SQLite's JSON functions are
+built in by default since 3.38, independent of the FTS compile flag). See
+ADR-0005 for the resulting decision to use FTS3 rather than swap engines.
 
 **Revisit if:** the supported `engines.vscode` floor rises past ~1.102 across all
 target forks and `node:sqlite` is stable there (native perf, real on-disk file),

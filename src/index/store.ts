@@ -1,0 +1,113 @@
+/**
+ * Storage-agnostic contract for the local LoreFountain index (Spec §2.2).
+ *
+ * The index is a derived, disposable cache built by parsing on-disk entity and
+ * glossary files — it is never authoritative, and deleting/rebuilding it must
+ * always be safe and lossless. This interface exists so the concrete engine
+ * (sql.js today; `node:sqlite` or Postgres potentially later, see ADR-0001) can
+ * be swapped without touching callers. All methods are synchronous, matching
+ * both sql.js and `node:sqlite`'s APIs; only acquiring/opening a store is async
+ * (loading the sql.js WASM module).
+ */
+
+import type { Entity, EntityType, EntityFrontmatter } from '../model/entity';
+import type { GlossaryTerm, GlossaryTermFrontmatter } from '../model/glossary';
+
+/** A stored, indexed entity row plus its full validated frontmatter. */
+export interface EntityRecord {
+  id: string;
+  type: EntityType;
+  name: string;
+  filePath: string;
+  tags: string[];
+  schemaVersion: number;
+  /** Full validated frontmatter, the JSON1-backed column (Spec §2.2). */
+  data: EntityFrontmatter;
+  body: string;
+}
+
+/** A stored, indexed glossary term row plus its full validated frontmatter. */
+export interface GlossaryRecord {
+  id: string;
+  term: string;
+  filePath: string;
+  schemaVersion: number;
+  data: GlossaryTermFrontmatter;
+  body: string;
+}
+
+/** One full-text search match against entities. */
+export interface EntitySearchHit {
+  id: string;
+  name: string;
+  type: EntityType;
+  filePath: string;
+}
+
+/** One full-text search match against glossary terms. */
+export interface GlossarySearchHit {
+  id: string;
+  term: string;
+  filePath: string;
+}
+
+/** Optional filters for {@link IndexStore.listEntities}. */
+export interface ListEntitiesFilter {
+  type?: EntityType;
+}
+
+/** Aggregate counts for the current index contents. */
+export interface IndexStats {
+  entityCount: number;
+  glossaryCount: number;
+}
+
+/**
+ * The local index's storage contract (Spec §2.2). Every write is an upsert
+ * keyed by file path — re-indexing the same file replaces its prior row,
+ * matching the file-watcher incremental-update model where a save always
+ * re-parses and re-upserts, never appends a duplicate.
+ */
+export interface IndexStore {
+  /**
+   * Insert or replace an entity row.
+   *
+   * Matched (and replaced) by *either* `entity.filePath` or `entity.id` —
+   * covering both the normal re-save case and a rename, where the file path
+   * is unchanged but the id changes, or vice versa.
+   */
+  upsertEntity(entity: Entity): void;
+
+  /** Remove the entity row for a given file path, if any. Safe to call when absent. */
+  removeEntityByPath(filePath: string): void;
+
+  getEntityById(id: string): EntityRecord | undefined;
+  getEntityByPath(filePath: string): EntityRecord | undefined;
+  listEntities(filter?: ListEntitiesFilter): EntityRecord[];
+
+  /**
+   * Full-text search over entity name + body (Spec §2.2). Backed by FTS3
+   * rather than FTS5 for v1 — see ADR-0005.
+   */
+  searchEntities(query: string, limit?: number): EntitySearchHit[];
+
+  /** Insert or replace a glossary term row, matched by either `term.filePath` or `term.id`. */
+  upsertGlossaryTerm(term: GlossaryTerm): void;
+
+  /** Remove the glossary row for a given file path, if any. Safe to call when absent. */
+  removeGlossaryTermByPath(filePath: string): void;
+
+  getGlossaryTermById(id: string): GlossaryRecord | undefined;
+  listGlossaryTerms(): GlossaryRecord[];
+
+  /** Full-text search over glossary term + gloss + body. See ADR-0005 (FTS3, not FTS5). */
+  searchGlossary(query: string, limit?: number): GlossarySearchHit[];
+
+  stats(): IndexStats;
+
+  /** Remove every row, without recreating the schema. Used before a full rebuild. */
+  clear(): void;
+
+  /** Release underlying engine resources (e.g. close the sql.js database). */
+  dispose(): void;
+}

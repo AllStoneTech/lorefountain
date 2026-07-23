@@ -1,0 +1,306 @@
+/**
+ * sql.js-backed implementation of {@link IndexStore} (Spec §2.2, ADR-0001).
+ *
+ * Strict relational columns for id/type/name/file_path/tags/schema_version,
+ * plus a JSON1-backed `data` column holding the full validated frontmatter,
+ * plus an FTS3 shadow table per entity type for full-text search (FTS3, not
+ * FTS5 — the default sql.js build has no FTS5 module; see ADR-0005). The whole
+ * database is in-memory: the index is disposable and rebuilt from disk, so
+ * there is nothing to persist across sessions (see ADR-0001).
+ */
+
+import initSqlJs, { type Database, type SqlValue } from 'sql.js';
+import type { Entity, EntityFrontmatter, EntityType } from '../model/entity';
+import type { GlossaryTerm, GlossaryTermFrontmatter } from '../model/glossary';
+import type {
+  EntityRecord,
+  EntitySearchHit,
+  GlossaryRecord,
+  GlossarySearchHit,
+  IndexStats,
+  IndexStore,
+  ListEntitiesFilter,
+} from './store';
+
+const SCHEMA_SQL = `
+CREATE TABLE entities (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  name TEXT NOT NULL,
+  file_path TEXT NOT NULL UNIQUE,
+  tags TEXT NOT NULL,
+  schema_version INTEGER NOT NULL,
+  data TEXT NOT NULL,
+  body TEXT NOT NULL
+);
+
+CREATE VIRTUAL TABLE entities_fts USING fts3(id, name, body);
+
+CREATE TABLE glossary (
+  id TEXT PRIMARY KEY,
+  term TEXT NOT NULL,
+  file_path TEXT NOT NULL UNIQUE,
+  schema_version INTEGER NOT NULL,
+  data TEXT NOT NULL,
+  body TEXT NOT NULL
+);
+
+CREATE VIRTUAL TABLE glossary_fts USING fts3(id, term, body);
+`;
+
+/**
+ * Create a new sql.js-backed {@link IndexStore}.
+ *
+ * Loading the sql.js WASM module is asynchronous; every method on the
+ * returned store is synchronous.
+ *
+ * @returns A freshly-opened, empty index store.
+ */
+export async function createSqlJsIndexStore(): Promise<IndexStore> {
+  const SQL = await initSqlJs();
+  const db = new SQL.Database();
+  db.run(SCHEMA_SQL);
+  return new SqlJsIndexStore(db);
+}
+
+class SqlJsIndexStore implements IndexStore {
+  constructor(private readonly db: Database) {}
+
+  upsertEntity(entity: Entity): void {
+    this.deleteEntityRows(entity.id, entity.filePath);
+    const tags = (entity.frontmatter as { tags?: string[] }).tags ?? [];
+    this.db.run(
+      `INSERT INTO entities (id, type, name, file_path, tags, schema_version, data, body)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        entity.id,
+        entity.frontmatter.type,
+        entity.frontmatter.name,
+        entity.filePath,
+        JSON.stringify(tags),
+        entity.frontmatter.schema_version,
+        JSON.stringify(entity.frontmatter),
+        entity.body,
+      ],
+    );
+    this.db.run('INSERT INTO entities_fts (id, name, body) VALUES (?, ?, ?)', [
+      entity.id,
+      entity.frontmatter.name,
+      entity.body,
+    ]);
+  }
+
+  removeEntityByPath(filePath: string): void {
+    const id = this.singleValue<string>('SELECT id FROM entities WHERE file_path = ?', [filePath]);
+    if (id === undefined) return;
+    this.deleteEntityRows(id, filePath);
+  }
+
+  getEntityById(id: string): EntityRecord | undefined {
+    return this.queryOneEntity('SELECT * FROM entities WHERE id = ?', [id]);
+  }
+
+  getEntityByPath(filePath: string): EntityRecord | undefined {
+    return this.queryOneEntity('SELECT * FROM entities WHERE file_path = ?', [filePath]);
+  }
+
+  listEntities(filter?: ListEntitiesFilter): EntityRecord[] {
+    if (filter?.type) {
+      return this.queryEntities('SELECT * FROM entities WHERE type = ? ORDER BY name', [filter.type]);
+    }
+    return this.queryEntities('SELECT * FROM entities ORDER BY name');
+  }
+
+  searchEntities(query: string, limit = 20): EntitySearchHit[] {
+    const rows = this.queryAll<{ id: string; name: string; type: string; file_path: string }>(
+      `SELECT e.id AS id, e.name AS name, e.type AS type, e.file_path AS file_path
+       FROM entities_fts JOIN entities e ON e.id = entities_fts.id
+       WHERE entities_fts MATCH ? LIMIT ?`,
+      [query, limit],
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      type: row.type as EntityType,
+      filePath: row.file_path,
+    }));
+  }
+
+  upsertGlossaryTerm(term: GlossaryTerm): void {
+    this.deleteGlossaryRows(term.id, term.filePath);
+    this.db.run(
+      `INSERT INTO glossary (id, term, file_path, schema_version, data, body)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        term.id,
+        term.frontmatter.term,
+        term.filePath,
+        term.frontmatter.schema_version,
+        JSON.stringify(term.frontmatter),
+        term.body,
+      ],
+    );
+    this.db.run('INSERT INTO glossary_fts (id, term, body) VALUES (?, ?, ?)', [
+      term.id,
+      term.frontmatter.term,
+      term.body,
+    ]);
+  }
+
+  removeGlossaryTermByPath(filePath: string): void {
+    const id = this.singleValue<string>('SELECT id FROM glossary WHERE file_path = ?', [filePath]);
+    if (id === undefined) return;
+    this.deleteGlossaryRows(id, filePath);
+  }
+
+  getGlossaryTermById(id: string): GlossaryRecord | undefined {
+    return this.queryOneGlossary('SELECT * FROM glossary WHERE id = ?', [id]);
+  }
+
+  listGlossaryTerms(): GlossaryRecord[] {
+    return this.queryGlossary('SELECT * FROM glossary ORDER BY term');
+  }
+
+  searchGlossary(query: string, limit = 20): GlossarySearchHit[] {
+    const rows = this.queryAll<{ id: string; term: string; file_path: string }>(
+      `SELECT g.id AS id, g.term AS term, g.file_path AS file_path
+       FROM glossary_fts JOIN glossary g ON g.id = glossary_fts.id
+       WHERE glossary_fts MATCH ? LIMIT ?`,
+      [query, limit],
+    );
+    return rows.map((row) => ({ id: row.id, term: row.term, filePath: row.file_path }));
+  }
+
+  stats(): IndexStats {
+    return {
+      entityCount: this.singleValue<number>('SELECT COUNT(*) FROM entities') ?? 0,
+      glossaryCount: this.singleValue<number>('SELECT COUNT(*) FROM glossary') ?? 0,
+    };
+  }
+
+  clear(): void {
+    this.db.run('DELETE FROM entities; DELETE FROM entities_fts; DELETE FROM glossary; DELETE FROM glossary_fts;');
+  }
+
+  dispose(): void {
+    this.db.close();
+  }
+
+  /** Remove any entity row matching `id` OR `filePath`, from both the entities table and its FTS shadow. */
+  private deleteEntityRows(id: string, filePath: string): void {
+    const staleIds = this.queryAll<{ id: string }>(
+      'SELECT id FROM entities WHERE id = ? OR file_path = ?',
+      [id, filePath],
+    ).map((row) => row.id);
+    for (const staleId of staleIds) {
+      this.db.run('DELETE FROM entities WHERE id = ?', [staleId]);
+      this.db.run('DELETE FROM entities_fts WHERE id = ?', [staleId]);
+    }
+  }
+
+  /** Remove any glossary row matching `id` OR `filePath`, from both the glossary table and its FTS shadow. */
+  private deleteGlossaryRows(id: string, filePath: string): void {
+    const staleIds = this.queryAll<{ id: string }>(
+      'SELECT id FROM glossary WHERE id = ? OR file_path = ?',
+      [id, filePath],
+    ).map((row) => row.id);
+    for (const staleId of staleIds) {
+      this.db.run('DELETE FROM glossary WHERE id = ?', [staleId]);
+      this.db.run('DELETE FROM glossary_fts WHERE id = ?', [staleId]);
+    }
+  }
+
+  private queryOneEntity(sql: string, params: SqlValue[]): EntityRecord | undefined {
+    return this.queryEntities(sql, params)[0];
+  }
+
+  private queryEntities(sql: string, params: SqlValue[] = []): EntityRecord[] {
+    return this.queryAll<EntityRow>(sql, params).map(rowToEntityRecord);
+  }
+
+  private queryOneGlossary(sql: string, params: SqlValue[]): GlossaryRecord | undefined {
+    return this.queryGlossary(sql, params)[0];
+  }
+
+  private queryGlossary(sql: string, params: SqlValue[] = []): GlossaryRecord[] {
+    return this.queryAll<GlossaryRow>(sql, params).map(rowToGlossaryRecord);
+  }
+
+  /** Run a query and return every result row as a plain object, typed by the caller. */
+  private queryAll<T>(sql: string, params: SqlValue[] = []): T[] {
+    const stmt = this.db.prepare(sql);
+    try {
+      stmt.bind(params);
+      const rows: T[] = [];
+      while (stmt.step()) {
+        rows.push(stmt.getAsObject() as T);
+      }
+      return rows;
+    } finally {
+      stmt.free();
+    }
+  }
+
+  /** Run a query expected to return at most one row with one column, and return that value. */
+  private singleValue<T>(sql: string, params: SqlValue[] = []): T | undefined {
+    const stmt = this.db.prepare(sql);
+    try {
+      stmt.bind(params);
+      if (!stmt.step()) return undefined;
+      const row = stmt.getAsObject() as Record<string, unknown>;
+      return Object.values(row)[0] as T;
+    } finally {
+      stmt.free();
+    }
+  }
+}
+
+interface EntityRow {
+  id: string;
+  type: string;
+  name: string;
+  file_path: string;
+  tags: string;
+  schema_version: number;
+  data: string;
+  body: string;
+}
+
+interface GlossaryRow {
+  id: string;
+  term: string;
+  file_path: string;
+  schema_version: number;
+  data: string;
+  body: string;
+}
+
+/**
+ * Map a raw entities-table row to an {@link EntityRecord}. `data` was written
+ * from an already Zod-validated {@link EntityFrontmatter} at upsert time, so
+ * it is trusted on read rather than re-validated.
+ */
+function rowToEntityRecord(row: EntityRow): EntityRecord {
+  return {
+    id: row.id,
+    type: row.type as EntityType,
+    name: row.name,
+    filePath: row.file_path,
+    tags: JSON.parse(row.tags) as string[],
+    schemaVersion: row.schema_version,
+    data: JSON.parse(row.data) as EntityFrontmatter,
+    body: row.body,
+  };
+}
+
+/** Map a raw glossary-table row to a {@link GlossaryRecord}. Same trust boundary as {@link rowToEntityRecord}. */
+function rowToGlossaryRecord(row: GlossaryRow): GlossaryRecord {
+  return {
+    id: row.id,
+    term: row.term,
+    filePath: row.file_path,
+    schemaVersion: row.schema_version,
+    data: JSON.parse(row.data) as GlossaryTermFrontmatter,
+    body: row.body,
+  };
+}

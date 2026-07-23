@@ -1,17 +1,16 @@
 /**
  * Workspace folder-path resolution (Spec §5).
  *
- * Reads the `lorefountain.folders.*` workspace settings and resolves them to
- * absolute paths under a given workspace root, falling back to the documented
- * defaults (`scripts/`, `world/`, `imports/`) for anything unset. Pure
- * path-joining logic with no `vscode` dependency, so it stays unit-testable;
- * the thin `vscode`-facing wrapper that reads `workspace.getConfiguration`
- * lives in `src/config/workspaceConfig.ts`.
+ * Resolves the `folders` section of `lorefountain.config.json` (see
+ * `src/config/configFile.ts`) to absolute paths under a given workspace root,
+ * falling back to the documented defaults (`scripts/`, `world/`, `imports/`)
+ * for anything unset. Pure path-joining logic with no `vscode` dependency, so
+ * it stays unit-testable independent of where the settings came from.
  */
 
 import * as path from 'node:path';
 
-/** Raw folder settings as read from `lorefountain.folders.*` (all optional; defaults apply). */
+/** Raw folder settings, from `lorefountain.config.json`'s `folders` field (all optional; defaults apply). */
 export interface FolderSettings {
   scripts?: string;
   world?: string;

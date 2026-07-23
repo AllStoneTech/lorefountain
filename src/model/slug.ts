@@ -6,6 +6,8 @@
  * Yoruba characters — survive rather than being stripped to noise.
  */
 
+import * as path from 'node:path';
+
 /**
  * Convert an arbitrary string into a lowercase, hyphen-separated slug.
  *
@@ -23,4 +25,15 @@ export function slugify(input: string): string {
     .toLowerCase()
     .replace(/[^\p{L}\p{N}\p{M}]+/gu, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Derive an entity/glossary id from a file path: the filename without its
+ * extension, slugified (Spec §4.2 — "Stable identifier, derived from filename").
+ *
+ * @param filePath - Path to the `.md` file (absolute or relative).
+ * @returns The derived slug id.
+ */
+export function idFromFilePath(filePath: string): string {
+  return slugify(path.basename(filePath, path.extname(filePath)));
 }

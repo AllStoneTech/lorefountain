@@ -28,35 +28,29 @@
     "markdown"
   ],
   "main": "./dist/extension.js",
-  "activationEvents": [],
+  "activationEvents": [
+    "workspaceContains:**/*.fountain",
+    "workspaceContains:lorefountain.config.json"
+  ],
   "contributes": {
     "commands": [
       {
         "command": "lorefountain.reindexWorkspace",
         "title": "Rebuild Index",
         "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.initializeWorkspace",
+        "title": "Initialize Workspace",
+        "category": "LoreFountain"
       }
     ],
-    "configuration": {
-      "title": "LoreFountain",
-      "properties": {
-        "lorefountain.folders.scripts": {
-          "type": "string",
-          "default": "scripts",
-          "markdownDescription": "Workspace-relative folder containing `.fountain` scripts (Spec §5)."
-        },
-        "lorefountain.folders.world": {
-          "type": "string",
-          "default": "world",
-          "markdownDescription": "Workspace-relative folder containing entity `.md` files. The `glossary/`, `timeline/`, and `notes/` subfolders live under this (Spec §5)."
-        },
-        "lorefountain.folders.imports": {
-          "type": "string",
-          "default": "imports",
-          "markdownDescription": "Workspace-relative drop-zone for existing source docs/bibles to migrate. Input only — never indexed as entities (Spec §5 & §13.5)."
-        }
+    "jsonValidation": [
+      {
+        "fileMatch": "lorefountain.config.json",
+        "url": "./resources/lorefountain.config.schema.json"
       }
-    }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run build -- --production",
@@ -68,12 +62,14 @@
     "package": "vsce package"
   },
   "dependencies": {
+    "sql.js": "^1.14.1",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^22.0.0",
+    "@types/sql.js": "^1.4.11",
     "@types/vscode": "^1.125.0",
     "@vscode/vsce": "^3.9.2",
     "esbuild": "^0.28.1",

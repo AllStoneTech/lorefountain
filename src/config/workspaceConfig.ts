@@ -1,31 +1,47 @@
 /**
- * VS Code-facing configuration reader for `lorefountain.folders.*`.
+ * VS Code-facing configuration reader for `lorefountain.config.json`.
  *
- * Thin adapter over `vscode.workspace.getConfiguration`: reads the raw
- * settings for a given workspace folder and resolves them to absolute paths
- * via {@link resolveWorkspaceFolders}. Kept separate from `folders.ts` so the
- * path-resolution logic itself has no `vscode` dependency and stays
- * unit-testable without the extension host.
+ * Thin adapter over the pure `configFile.ts`/`folders.ts` logic: reads the
+ * config file for a given workspace folder and resolves it to absolute
+ * folder paths. Kept separate so the underlying logic has no `vscode`
+ * dependency and stays unit-testable without the extension host.
  */
 
 import * as vscode from 'vscode';
-import { resolveWorkspaceFolders, type FolderSettings, type WorkspaceFolders } from './folders';
+import { folderSettingsFromConfig, readLoreFountainConfig } from './configFile';
+import { resolveWorkspaceFolders, type WorkspaceFolders } from './folders';
 
-const CONFIG_SECTION = 'lorefountain.folders';
+/** Result of {@link getWorkspaceFolders}: resolved paths, plus any config-file problem to report. */
+export interface WorkspaceFoldersResult {
+  folders: WorkspaceFolders;
+  /** Set when `lorefountain.config.json` exists but failed to parse/validate; folders still fall back to defaults. */
+  configIssue?: string;
+}
 
 /**
  * Resolve absolute LoreFountain folder paths for a workspace folder, reading
- * `lorefountain.folders.*` from that folder's configuration scope.
+ * `lorefountain.config.json` from that folder's root.
+ *
+ * A missing config file is not a problem — folders fall back to documented
+ * defaults, since the extension may activate off a bare `.fountain` script
+ * before any config file exists (ADR-0006). A malformed/invalid config file
+ * is reported via `configIssue` but still resolves to defaults, never throws.
  *
  * @param workspaceFolder - The VS Code workspace folder to resolve paths for.
- * @returns Resolved absolute paths for scripts, world (+ glossary/timeline/notes), and imports.
+ * @returns Resolved folder paths, plus any config-file issue to log.
  */
-export function getWorkspaceFolders(workspaceFolder: vscode.WorkspaceFolder): WorkspaceFolders {
-  const config = vscode.workspace.getConfiguration(CONFIG_SECTION, workspaceFolder);
-  const settings: FolderSettings = {
-    scripts: config.get<string>('scripts'),
-    world: config.get<string>('world'),
-    imports: config.get<string>('imports'),
-  };
-  return resolveWorkspaceFolders(workspaceFolder.uri.fsPath, settings);
+export async function getWorkspaceFolders(
+  workspaceFolder: vscode.WorkspaceFolder,
+): Promise<WorkspaceFoldersResult> {
+  const root = workspaceFolder.uri.fsPath;
+  const result = await readLoreFountainConfig(root);
+
+  if (!result.ok) {
+    return {
+      folders: resolveWorkspaceFolders(root),
+      configIssue: `lorefountain.config.json (${result.reason}): ${result.message}`,
+    };
+  }
+
+  return { folders: resolveWorkspaceFolders(root, folderSettingsFromConfig(result.config)) };
 }

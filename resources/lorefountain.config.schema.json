@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LoreFountain Workspace Configuration",
+  "description": "Project-owned configuration for the LoreFountain VS Code extension. Lives at the workspace root as lorefountain.config.json.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional JSON Schema reference, for editors/tools that resolve it independently of VS Code's own schema association."
+    },
+    "folders": {
+      "type": "object",
+      "description": "Workspace-relative folder names. Any field left unset uses its documented default.",
+      "properties": {
+        "world": {
+          "type": "string",
+          "default": "world",
+          "description": "Folder containing entity .md files (characters, locations, factions, objects, concepts), plus the glossary/, timeline/, and notes/ subfolders."
+        },
+        "scripts": {
+          "type": "string",
+          "default": "scripts",
+          "description": "Folder containing .fountain scripts."
+        },
+        "imports": {
+          "type": "string",
+          "default": "imports",
+          "description": "Drop-zone folder for existing source docs/bibles to migrate via the 'Migrate Existing Lore' command."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}
