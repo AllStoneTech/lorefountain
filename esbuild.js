@@ -41,9 +41,21 @@ async function main() {
     logLevel: 'info',
     plugins: [
       {
+        // Prints an explicit begin/end line pair on every build, including
+        // every watch-mode rebuild (not just the first) — .vscode/tasks.json
+        // matches these literal lines with its own problem matcher so VS
+        // Code knows when the "watch" background task has finished a build
+        // cycle, without depending on the connor4312.esbuild-problem-matchers
+        // extension's "$esbuild-watch" shorthand.
         name: 'copy-sql-wasm',
         setup(build) {
-          build.onEnd(copySqlWasm);
+          build.onStart(() => {
+            console.log('[esbuild] build started');
+          });
+          build.onEnd(() => {
+            copySqlWasm();
+            console.log('[esbuild] build finished');
+          });
         },
       },
     ],

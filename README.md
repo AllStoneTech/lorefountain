@@ -40,9 +40,9 @@ npm run test:unit  # vitest (pure-logic tests)
 ```
 
 Press <kbd>F5</kbd> in VS Code to launch the **Run Extension** configuration in an
-Extension Development Host. The `esbuild-problem-matchers`
-(`connor4312.esbuild-problem-matchers`) extension is recommended for clean watch-task
-output but not required.
+Extension Development Host. The `watch` task's problem matcher is self-contained
+(`.vscode/tasks.json`, tied to explicit begin/end lines `esbuild.js` prints on every
+build) — no third-party extension is required for F5 to work.
 
 ## License
 
