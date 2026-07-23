@@ -151,6 +151,86 @@ describe('SqlJsIndexStore', () => {
     });
   });
 
+  describe('mentions and backlinks', () => {
+    it('resolves backlinks for a target with no mentions as an empty array', () => {
+      store.upsertEntity(entity({ id: 'sango', filePath: '/world/sango.md' }));
+      expect(store.getBacklinks({ id: 'sango', kind: 'entity' })).toEqual([]);
+    });
+
+    it('resolves an entity-to-entity mention as a backlink with display info', () => {
+      store.upsertEntity(entity({ id: 'sango', filePath: '/world/sango.md', frontmatter: { name: 'Sango', type: 'character' } }));
+      store.upsertEntity(entity({ id: 'esu', filePath: '/world/esu.md', frontmatter: { name: 'Esu', type: 'character' } }));
+      store.setMentionsForSource({ id: 'esu', kind: 'entity' }, [{ id: 'sango', kind: 'entity' }]);
+
+      const backlinks = store.getBacklinks({ id: 'sango', kind: 'entity' });
+      expect(backlinks).toEqual([{ id: 'esu', kind: 'entity', name: 'Esu', filePath: '/world/esu.md' }]);
+    });
+
+    it('resolves a glossary-to-entity mention as a backlink', () => {
+      store.upsertEntity(entity({ id: 'sango', filePath: '/world/sango.md', frontmatter: { name: 'Sango', type: 'character' } }));
+      store.upsertGlossaryTerm(glossaryTerm({ id: 'ase', filePath: '/world/glossary/ase.md', frontmatter: { term: 'Ase' } }));
+      store.setMentionsForSource({ id: 'ase', kind: 'glossary' }, [{ id: 'sango', kind: 'entity' }]);
+
+      const backlinks = store.getBacklinks({ id: 'sango', kind: 'entity' });
+      expect(backlinks).toEqual([{ id: 'ase', kind: 'glossary', name: 'Ase', filePath: '/world/glossary/ase.md' }]);
+    });
+
+    it('setMentionsForSource replaces the full set rather than appending', () => {
+      store.upsertEntity(entity({ id: 'sango', filePath: '/world/sango.md' }));
+      store.upsertEntity(entity({ id: 'esu', filePath: '/world/esu.md', frontmatter: { name: 'Esu', type: 'character' } }));
+      store.upsertEntity(entity({ id: 'oya', filePath: '/world/oya.md', frontmatter: { name: 'Oya', type: 'character' } }));
+
+      store.setMentionsForSource({ id: 'esu', kind: 'entity' }, [
+        { id: 'sango', kind: 'entity' },
+        { id: 'oya', kind: 'entity' },
+      ]);
+      expect(store.getBacklinks({ id: 'sango', kind: 'entity' }).map((b) => b.id)).toEqual(['esu']);
+      expect(store.getBacklinks({ id: 'oya', kind: 'entity' }).map((b) => b.id)).toEqual(['esu']);
+
+      // Re-run with a smaller target set (as if the file was edited to remove a mention).
+      store.setMentionsForSource({ id: 'esu', kind: 'entity' }, [{ id: 'sango', kind: 'entity' }]);
+      expect(store.getBacklinks({ id: 'sango', kind: 'entity' }).map((b) => b.id)).toEqual(['esu']);
+      expect(store.getBacklinks({ id: 'oya', kind: 'entity' })).toEqual([]);
+    });
+
+    it('removeMentionsForSource clears outgoing mentions for that source', () => {
+      store.upsertEntity(entity({ id: 'sango', filePath: '/world/sango.md' }));
+      store.upsertEntity(entity({ id: 'esu', filePath: '/world/esu.md', frontmatter: { name: 'Esu', type: 'character' } }));
+      store.setMentionsForSource({ id: 'esu', kind: 'entity' }, [{ id: 'sango', kind: 'entity' }]);
+
+      store.removeMentionsForSource({ id: 'esu', kind: 'entity' });
+      expect(store.getBacklinks({ id: 'sango', kind: 'entity' })).toEqual([]);
+    });
+
+    it('removeEntityByPath also removes that entity\'s outgoing mentions', () => {
+      store.upsertEntity(entity({ id: 'sango', filePath: '/world/sango.md' }));
+      store.upsertEntity(entity({ id: 'esu', filePath: '/world/esu.md', frontmatter: { name: 'Esu', type: 'character' } }));
+      store.setMentionsForSource({ id: 'esu', kind: 'entity' }, [{ id: 'sango', kind: 'entity' }]);
+
+      store.removeEntityByPath('/world/esu.md');
+      expect(store.getBacklinks({ id: 'sango', kind: 'entity' })).toEqual([]);
+    });
+
+    it('removeGlossaryTermByPath also removes that term\'s outgoing mentions', () => {
+      store.upsertEntity(entity({ id: 'sango', filePath: '/world/sango.md' }));
+      store.upsertGlossaryTerm(glossaryTerm({ id: 'ase', filePath: '/world/glossary/ase.md' }));
+      store.setMentionsForSource({ id: 'ase', kind: 'glossary' }, [{ id: 'sango', kind: 'entity' }]);
+
+      store.removeGlossaryTermByPath('/world/glossary/ase.md');
+      expect(store.getBacklinks({ id: 'sango', kind: 'entity' })).toEqual([]);
+    });
+
+    it('clear() also empties the mentions table', () => {
+      store.upsertEntity(entity({ id: 'sango', filePath: '/world/sango.md' }));
+      store.upsertEntity(entity({ id: 'esu', filePath: '/world/esu.md', frontmatter: { name: 'Esu', type: 'character' } }));
+      store.setMentionsForSource({ id: 'esu', kind: 'entity' }, [{ id: 'sango', kind: 'entity' }]);
+
+      store.clear();
+      store.upsertEntity(entity({ id: 'sango', filePath: '/world/sango.md' }));
+      expect(store.getBacklinks({ id: 'sango', kind: 'entity' })).toEqual([]);
+    });
+  });
+
   describe('stats and clear', () => {
     it('reports accurate counts', () => {
       store.upsertEntity(entity({ id: 'sango', filePath: '/world/sango.md' }));

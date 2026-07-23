@@ -12,6 +12,7 @@
 import initSqlJs, { type Database, type SqlValue } from 'sql.js';
 import type { Entity, EntityFrontmatter, EntityType } from '../model/entity';
 import type { GlossaryTerm, GlossaryTermFrontmatter } from '../model/glossary';
+import type { MentionKind, MentionTarget } from './mentions';
 import type {
   EntityRecord,
   EntitySearchHit,
@@ -20,6 +21,8 @@ import type {
   IndexStats,
   IndexStore,
   ListEntitiesFilter,
+  MentionBacklink,
+  MentionEndpoint,
 } from './store';
 
 const SCHEMA_SQL = `
@@ -46,6 +49,16 @@ CREATE TABLE glossary (
 );
 
 CREATE VIRTUAL TABLE glossary_fts USING fts3(id, term, body);
+
+CREATE TABLE mentions (
+  source_id TEXT NOT NULL,
+  source_kind TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  target_kind TEXT NOT NULL,
+  PRIMARY KEY (source_id, source_kind, target_id, target_kind)
+);
+
+CREATE INDEX mentions_target_idx ON mentions (target_id, target_kind);
 `;
 
 /**
@@ -94,6 +107,7 @@ class SqlJsIndexStore implements IndexStore {
     const id = this.singleValue<string>('SELECT id FROM entities WHERE file_path = ?', [filePath]);
     if (id === undefined) return;
     this.deleteEntityRows(id, filePath);
+    this.removeMentionsForSource({ id, kind: 'entity' });
   }
 
   getEntityById(id: string): EntityRecord | undefined {
@@ -151,6 +165,7 @@ class SqlJsIndexStore implements IndexStore {
     const id = this.singleValue<string>('SELECT id FROM glossary WHERE file_path = ?', [filePath]);
     if (id === undefined) return;
     this.deleteGlossaryRows(id, filePath);
+    this.removeMentionsForSource({ id, kind: 'glossary' });
   }
 
   getGlossaryTermById(id: string): GlossaryRecord | undefined {
@@ -171,6 +186,40 @@ class SqlJsIndexStore implements IndexStore {
     return rows.map((row) => ({ id: row.id, term: row.term, filePath: row.file_path }));
   }
 
+  setMentionsForSource(source: MentionEndpoint, targets: readonly MentionTarget[]): void {
+    this.removeMentionsForSource(source);
+    for (const target of targets) {
+      this.db.run(
+        'INSERT INTO mentions (source_id, source_kind, target_id, target_kind) VALUES (?, ?, ?, ?)',
+        [source.id, source.kind, target.id, target.kind],
+      );
+    }
+  }
+
+  removeMentionsForSource(source: MentionEndpoint): void {
+    this.db.run('DELETE FROM mentions WHERE source_id = ? AND source_kind = ?', [source.id, source.kind]);
+  }
+
+  getBacklinks(target: MentionEndpoint): MentionBacklink[] {
+    const rows = this.queryAll<{ id: string; kind: string; name: string; file_path: string }>(
+      `SELECT e.id AS id, 'entity' AS kind, e.name AS name, e.file_path AS file_path
+       FROM mentions m JOIN entities e ON e.id = m.source_id AND m.source_kind = 'entity'
+       WHERE m.target_id = ? AND m.target_kind = ?
+       UNION ALL
+       SELECT g.id AS id, 'glossary' AS kind, g.term AS name, g.file_path AS file_path
+       FROM mentions m JOIN glossary g ON g.id = m.source_id AND m.source_kind = 'glossary'
+       WHERE m.target_id = ? AND m.target_kind = ?
+       ORDER BY name`,
+      [target.id, target.kind, target.id, target.kind],
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      kind: row.kind as MentionKind,
+      name: row.name,
+      filePath: row.file_path,
+    }));
+  }
+
   stats(): IndexStats {
     return {
       entityCount: this.singleValue<number>('SELECT COUNT(*) FROM entities') ?? 0,
@@ -179,7 +228,9 @@ class SqlJsIndexStore implements IndexStore {
   }
 
   clear(): void {
-    this.db.run('DELETE FROM entities; DELETE FROM entities_fts; DELETE FROM glossary; DELETE FROM glossary_fts;');
+    this.db.run(
+      'DELETE FROM entities; DELETE FROM entities_fts; DELETE FROM glossary; DELETE FROM glossary_fts; DELETE FROM mentions;',
+    );
   }
 
   dispose(): void {

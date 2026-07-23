@@ -1,7 +1,9 @@
 /**
  * Disk <-> index integration: build the index by walking workspace folders,
  * and incrementally re-index or remove a single file (Spec §2.2 — "build from
- * files" + "incremental updates on file save").
+ * files" + "incremental updates on file save"). Also recomputes automatic
+ * mentions (Spec §4.5) and detects dangling relation targets after every
+ * (re)index.
  *
  * A full build never throws on a bad file: malformed YAML, schema violations,
  * and filesystem read errors are all collected and reported in the returned
@@ -9,6 +11,17 @@
  * The actual `vscode.FileSystemWatcher` wiring that calls {@link reindexFile}
  * and {@link removeFileFromIndex} on save/delete lives in the extension
  * activation layer, not here — this module has no `vscode` dependency.
+ *
+ * Mentions consistency note: a full {@link buildIndexFromDisk} always
+ * recomputes every source's mentions against the complete, final candidate
+ * list, so cross-file mentions are exactly correct after a full rebuild. An
+ * incremental {@link reindexFile} only recomputes the *changed* file's own
+ * outgoing mentions against whatever is currently known — if that file
+ * introduces a brand-new entity name, files that already mention that name in
+ * plain prose won't retroactively gain a mention edge until they are
+ * themselves reindexed or a full rebuild runs. This is a deliberate v1
+ * simplification, not an oversight: "Rebuild Index" is the always-correct
+ * escape valve.
  */
 
 import * as fsp from 'node:fs/promises';
@@ -17,6 +30,8 @@ import type { ValidationIssue } from '../model/errors';
 import { parseEntityFile, type EntityWarning } from '../model/entity';
 import { parseGlossaryFile } from '../model/glossary';
 import { idFromFilePath } from '../model/slug';
+import { extractMentionTargets, type MentionCandidate } from './mentions';
+import { findDanglingRelations } from './relations';
 import type { IndexStore } from './store';
 
 /** Subfolders of `world/` that are never walked for entity files (Spec §5). */
@@ -36,12 +51,20 @@ export interface IndexBuildWarning {
   warnings: EntityWarning[];
 }
 
+/** One relation (Spec §4.5) whose `target` doesn't resolve to a known entity id. */
+export interface IndexBuildDanglingRelation {
+  filePath: string;
+  target: string;
+  relationType: string;
+}
+
 /** Summary of a full {@link buildIndexFromDisk} pass. */
 export interface IndexBuildSummary {
   entityCount: number;
   glossaryCount: number;
   malformed: IndexBuildIssue[];
   warnings: IndexBuildWarning[];
+  danglingRelations: IndexBuildDanglingRelation[];
 }
 
 /** The two kinds of `.md` file the index tracks. Notes (§13.4) are never indexed. */
@@ -49,7 +72,7 @@ export type IndexableFileKind = 'entity' | 'glossary';
 
 /** Outcome of {@link reindexFile}. */
 export type ReindexFileResult =
-  | { ok: true; warnings: EntityWarning[] }
+  | { ok: true; warnings: EntityWarning[]; danglingRelations: IndexBuildDanglingRelation[] }
   | { ok: false; reason: IndexBuildIssue['reason']; message: string; issues?: ValidationIssue[] };
 
 /**
@@ -68,11 +91,17 @@ export async function buildIndexFromDisk(
   store: IndexStore,
   folders: { world: string; glossary: string },
 ): Promise<IndexBuildSummary> {
-  const summary: IndexBuildSummary = { entityCount: 0, glossaryCount: 0, malformed: [], warnings: [] };
+  const summary: IndexBuildSummary = {
+    entityCount: 0,
+    glossaryCount: 0,
+    malformed: [],
+    warnings: [],
+    danglingRelations: [],
+  };
 
   const entityFiles = await listMarkdownFiles(folders.world, ENTITY_EXCLUDED_SUBDIRS);
   for (const filePath of entityFiles) {
-    const result = await reindexFile(store, filePath, 'entity');
+    const result = await reindexFile(store, filePath, 'entity', { recomputeMentions: false });
     if (result.ok) {
       summary.entityCount += 1;
       if (result.warnings.length > 0) {
@@ -85,13 +114,18 @@ export async function buildIndexFromDisk(
 
   const glossaryFiles = await listMarkdownFiles(folders.glossary);
   for (const filePath of glossaryFiles) {
-    const result = await reindexFile(store, filePath, 'glossary');
+    const result = await reindexFile(store, filePath, 'glossary', { recomputeMentions: false });
     if (result.ok) {
       summary.glossaryCount += 1;
     } else {
       summary.malformed.push({ filePath, reason: result.reason, message: result.message, issues: result.issues });
     }
   }
+
+  // A single pass over the now-complete candidate list, after every file has
+  // been upserted — see the module doc comment on why this differs from the
+  // per-file recompute an incremental `reindexFile` call does on its own.
+  summary.danglingRelations = recomputeAllMentionsAndFindDanglingRelations(store);
 
   return summary;
 }
@@ -103,13 +137,20 @@ export async function buildIndexFromDisk(
  * @param store - The index to update.
  * @param filePath - Absolute path to the changed file.
  * @param kind - Whether the file is an entity or a glossary term.
- * @returns Success with any warnings, or a described, non-throwing failure.
+ * @param options - `recomputeMentions` (default `true`) recomputes this
+ *   file's own outgoing mentions and dangling relations against the store's
+ *   current candidates. {@link buildIndexFromDisk} passes `false` per-file and
+ *   does one correct pass over the complete set afterward instead.
+ * @returns Success with any warnings/dangling relations, or a described, non-throwing failure.
  */
 export async function reindexFile(
   store: IndexStore,
   filePath: string,
   kind: IndexableFileKind,
+  options: { recomputeMentions?: boolean } = {},
 ): Promise<ReindexFileResult> {
+  const recomputeMentions = options.recomputeMentions ?? true;
+
   let text: string;
   try {
     text = await fsp.readFile(filePath, 'utf8');
@@ -124,7 +165,20 @@ export async function reindexFile(
       return { ok: false, reason: result.reason, message: result.message, issues: result.issues };
     }
     store.upsertEntity(result.entity);
-    return { ok: true, warnings: result.warnings };
+
+    let danglingRelations: IndexBuildDanglingRelation[] = [];
+    if (recomputeMentions) {
+      const candidates = buildMentionCandidates(store);
+      store.setMentionsForSource(
+        { id: result.entity.id, kind: 'entity' },
+        extractMentionTargets(result.entity.body, candidates, result.entity.id),
+      );
+      const knownEntityIds = new Set(store.listEntities().map((e) => e.id));
+      danglingRelations = findDanglingRelations(result.entity.frontmatter.relations, knownEntityIds).map(
+        (relation) => ({ filePath, target: relation.target, relationType: relation.relationType }),
+      );
+    }
+    return { ok: true, warnings: result.warnings, danglingRelations };
   }
 
   const result = parseGlossaryFile(text, { id, filePath });
@@ -132,7 +186,15 @@ export async function reindexFile(
     return { ok: false, reason: result.reason, message: result.message, issues: result.issues };
   }
   store.upsertGlossaryTerm(result.term);
-  return { ok: true, warnings: [] };
+
+  if (recomputeMentions) {
+    const candidates = buildMentionCandidates(store);
+    store.setMentionsForSource(
+      { id: result.term.id, kind: 'glossary' },
+      extractMentionTargets(result.term.body, candidates, result.term.id),
+    );
+  }
+  return { ok: true, warnings: [], danglingRelations: [] };
 }
 
 /**
@@ -149,6 +211,54 @@ export function removeFileFromIndex(store: IndexStore, filePath: string, kind: I
   } else {
     store.removeGlossaryTermByPath(filePath);
   }
+}
+
+/** Build the full mention-candidate list from every entity and glossary term currently in the store. */
+function buildMentionCandidates(store: IndexStore): MentionCandidate[] {
+  const candidates: MentionCandidate[] = [];
+  for (const entity of store.listEntities()) {
+    candidates.push({ id: entity.id, kind: 'entity', names: [entity.name, ...(entity.data.aliases ?? [])] });
+  }
+  for (const term of store.listGlossaryTerms()) {
+    candidates.push({ id: term.id, kind: 'glossary', names: [term.term, ...(term.data.aliases ?? [])] });
+  }
+  return candidates;
+}
+
+/**
+ * Recompute every entity's and glossary term's outgoing mentions against the
+ * store's complete, current candidate list, and detect dangling relation
+ * targets across every entity. Intended to run once, after every file in a
+ * full disk build has already been upserted (see the module doc comment).
+ */
+function recomputeAllMentionsAndFindDanglingRelations(store: IndexStore): IndexBuildDanglingRelation[] {
+  const candidates = buildMentionCandidates(store);
+  const entities = store.listEntities();
+  const knownEntityIds = new Set(entities.map((entity) => entity.id));
+  const danglingRelations: IndexBuildDanglingRelation[] = [];
+
+  for (const entity of entities) {
+    store.setMentionsForSource(
+      { id: entity.id, kind: 'entity' },
+      extractMentionTargets(entity.body, candidates, entity.id),
+    );
+    for (const relation of findDanglingRelations(entity.data.relations, knownEntityIds)) {
+      danglingRelations.push({
+        filePath: entity.filePath,
+        target: relation.target,
+        relationType: relation.relationType,
+      });
+    }
+  }
+
+  for (const term of store.listGlossaryTerms()) {
+    store.setMentionsForSource(
+      { id: term.id, kind: 'glossary' },
+      extractMentionTargets(term.body, candidates, term.id),
+    );
+  }
+
+  return danglingRelations;
 }
 
 /**

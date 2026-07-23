@@ -88,6 +88,11 @@ export class WorkspaceIndex implements vscode.Disposable {
     for (const warning of result.warnings) {
       this.outputChannel.appendLine(`[LoreFountain] WARNING ${uri.fsPath}: ${warning.message}`);
     }
+    for (const relation of result.danglingRelations) {
+      this.outputChannel.appendLine(
+        `[LoreFountain] WARNING ${uri.fsPath}: relation "${relation.relationType}" targets unknown entity "${relation.target}".`,
+      );
+    }
   }
 
   private handleDelete(uri: vscode.Uri, worldPath: string): void {
@@ -107,6 +112,11 @@ export class WorkspaceIndex implements vscode.Disposable {
       for (const warning of entry.warnings) {
         this.outputChannel.appendLine(`[LoreFountain] WARNING ${entry.filePath}: ${warning.message}`);
       }
+    }
+    for (const relation of summary.danglingRelations) {
+      this.outputChannel.appendLine(
+        `[LoreFountain] WARNING ${relation.filePath}: relation "${relation.relationType}" targets unknown entity "${relation.target}".`,
+      );
     }
   }
 }

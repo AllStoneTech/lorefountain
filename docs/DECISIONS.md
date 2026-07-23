@@ -6,6 +6,48 @@ revisit.
 
 ---
 
+## ADR-0007 — Mentions (Spec §4.5): full rebuild is exact, incremental reindex is per-file only
+
+**Date:** 2026-07-23 · **Status:** Accepted
+
+**Decision.** `src/index/mentions.ts` detects automatic mentions via a single
+Unicode-aware, whole-word, case-insensitive regex built from every known
+entity/glossary name + alias (`src/index/build.ts`'s `buildMentionCandidates`).
+A full `buildIndexFromDisk` pass always recomputes every source's outgoing
+mentions against the complete, final candidate list — cross-file mentions are
+exactly correct after a full rebuild. An incremental `reindexFile` (the
+file-watcher path) only recomputes the *changed* file's own outgoing mentions
+against whatever candidates are currently known. If that file introduces a
+brand-new entity name, other files that already mention that name in plain
+prose do not retroactively gain a mention edge until they are themselves
+reindexed or a full rebuild runs.
+
+**Why.** This is a deliberate v1 simplification, not an oversight. Recomputing
+every other file's mentions whenever one entity is added/renamed would mean
+re-reading and re-scanning the entire indexed corpus on every keystroke-driven
+save — disproportionate cost for a case (an old file's plain-text mention of a
+name that only later became a real entity) that's inherently rare and already
+self-corrects on the next full rebuild. "Rebuild Index" is the documented,
+always-correct escape valve, consistent with the index being disposable and
+rebuildable by design (Spec §2.2, ADR-0001).
+
+**Also decided:** dangling `relations` targets (Spec §4.5 — deliberate, typed
+links, distinct from automatic mentions) are detected the same way — a full
+pass across every entity after a full build, or immediately for a single
+entity on incremental reindex — and reported via `IndexBuildSummary`/
+`ReindexFileResult`, never rejected (Spec §23).
+
+**Verified:** 99 unit tests (mentions matching edge cases, dangling-relation
+detection, sql.js mentions/backlinks CRUD) plus a manual Extension Development
+Host check — a real dangling relation (`target: ghost-entity`) was correctly
+flagged while a valid one (`target: sango`) was not.
+
+**Revisit if:** real dogfooding on the ORUN corpus shows the "reindex to fully
+propagate" lag is actually disruptive in practice — the fix would be scoped to
+`buildMentionCandidates`'s caller, not the matching algorithm itself.
+
+---
+
 ## ADR-0006 — `lorefountain.config.json` replaces VS Code settings for project config; activation triggers on it (or a bare `.fountain` script)
 
 **Date:** 2026-07-22 · **Status:** Accepted

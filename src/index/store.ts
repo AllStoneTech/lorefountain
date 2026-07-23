@@ -12,6 +12,7 @@
 
 import type { Entity, EntityType, EntityFrontmatter } from '../model/entity';
 import type { GlossaryTerm, GlossaryTermFrontmatter } from '../model/glossary';
+import type { MentionKind, MentionTarget } from './mentions';
 
 /** A stored, indexed entity row plus its full validated frontmatter. */
 export interface EntityRecord {
@@ -54,6 +55,21 @@ export interface GlossarySearchHit {
 /** Optional filters for {@link IndexStore.listEntities}. */
 export interface ListEntitiesFilter {
   type?: EntityType;
+}
+
+/** A mention edge's source or target: which entity/glossary record it points at. */
+export interface MentionEndpoint {
+  id: string;
+  kind: MentionKind;
+}
+
+/** One resolved backlink: a source that mentions the queried target, with display info. */
+export interface MentionBacklink {
+  id: string;
+  kind: MentionKind;
+  /** Display name: the entity's `name` or the glossary term's `term`. */
+  name: string;
+  filePath: string;
 }
 
 /** Aggregate counts for the current index contents. */
@@ -102,6 +118,20 @@ export interface IndexStore {
 
   /** Full-text search over glossary term + gloss + body. See ADR-0005 (FTS3, not FTS5). */
   searchGlossary(query: string, limit?: number): GlossarySearchHit[];
+
+  /**
+   * Replace every outgoing mention edge for a source (Spec §4.5) — an
+   * entity's or glossary term's automatically-detected references to other
+   * entities/glossary terms. Call after (re)computing a file's mentions;
+   * always replaces the full set for that source, never appends.
+   */
+  setMentionsForSource(source: MentionEndpoint, targets: readonly MentionTarget[]): void;
+
+  /** Remove every outgoing mention edge for a source. Used when its file is removed from the index. */
+  removeMentionsForSource(source: MentionEndpoint): void;
+
+  /** Every source that mentions `target` — the reverse lookup, resolved with display info. */
+  getBacklinks(target: MentionEndpoint): MentionBacklink[];
 
   stats(): IndexStats;
 

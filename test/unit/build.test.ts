@@ -126,7 +126,88 @@ describe('buildIndexFromDisk', () => {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
     });
-    expect(summary).toEqual({ entityCount: 0, glossaryCount: 0, malformed: [], warnings: [] });
+    expect(summary).toEqual({
+      entityCount: 0,
+      glossaryCount: 0,
+      malformed: [],
+      warnings: [],
+      danglingRelations: [],
+    });
+  });
+
+  it('populates mentions across files in one full build, resolvable via backlinks', async () => {
+    await writeFile(
+      tmpRoot,
+      'world/sango.md',
+      ['---', 'name: Sango', 'type: character', '---', '', 'God of thunder.'].join('\n'),
+    );
+    await writeFile(
+      tmpRoot,
+      'world/esu.md',
+      ['---', 'name: Esu', 'type: character', '---', '', 'Esu once argued with Sango at the crossroads.'].join('\n'),
+    );
+
+    await buildIndexFromDisk(store, {
+      world: path.join(tmpRoot, 'world'),
+      glossary: path.join(tmpRoot, 'world', 'glossary'),
+    });
+
+    const backlinks = store.getBacklinks({ id: 'sango', kind: 'entity' });
+    expect(backlinks).toEqual([{ id: 'esu', kind: 'entity', name: 'Esu', filePath: expect.stringContaining('esu.md') }]);
+  });
+
+  it('detects a dangling relation target and reports it in the summary', async () => {
+    await writeFile(
+      tmpRoot,
+      'world/esu.md',
+      [
+        '---',
+        'name: Esu',
+        'type: character',
+        'relations:',
+        '  - target: nonexistent-entity',
+        '    relation_type: enemy',
+        '---',
+        '',
+        'Body.',
+      ].join('\n'),
+    );
+
+    const summary = await buildIndexFromDisk(store, {
+      world: path.join(tmpRoot, 'world'),
+      glossary: path.join(tmpRoot, 'world', 'glossary'),
+    });
+
+    expect(summary.danglingRelations).toHaveLength(1);
+    expect(summary.danglingRelations[0]).toMatchObject({
+      target: 'nonexistent-entity',
+      relationType: 'enemy',
+    });
+  });
+
+  it('does not report a relation whose target resolves to a known entity', async () => {
+    await writeFile(tmpRoot, 'world/sango.md', ['---', 'name: Sango', 'type: character', '---', ''].join('\n'));
+    await writeFile(
+      tmpRoot,
+      'world/esu.md',
+      [
+        '---',
+        'name: Esu',
+        'type: character',
+        'relations:',
+        '  - target: sango',
+        '    relation_type: ally',
+        '---',
+        '',
+      ].join('\n'),
+    );
+
+    const summary = await buildIndexFromDisk(store, {
+      world: path.join(tmpRoot, 'world'),
+      glossary: path.join(tmpRoot, 'world', 'glossary'),
+    });
+
+    expect(summary.danglingRelations).toEqual([]);
   });
 });
 
@@ -175,5 +256,59 @@ describe('reindexFile and removeFileFromIndex', () => {
 
   it('removeFileFromIndex is a safe no-op for a file that was never indexed', () => {
     expect(() => removeFileFromIndex(store, '/never/indexed.md', 'entity')).not.toThrow();
+  });
+
+  it('recomputes a single reindexed file\'s outgoing mentions against current candidates', async () => {
+    await writeFile(tmpRoot, 'world/sango.md', characterMd('Sango'));
+    await reindexFile(store, path.join(tmpRoot, 'world', 'sango.md'), 'entity');
+
+    const esuPath = await writeFile(
+      tmpRoot,
+      'world/esu.md',
+      ['---', 'name: Esu', 'type: character', '---', '', 'Esu argued with Sango.'].join('\n'),
+    );
+    const result = await reindexFile(store, esuPath, 'entity');
+    expect(result.ok).toBe(true);
+
+    expect(store.getBacklinks({ id: 'sango', kind: 'entity' })).toEqual([
+      { id: 'esu', kind: 'entity', name: 'Esu', filePath: esuPath },
+    ]);
+  });
+
+  it('reports a dangling relation found on a single reindexed file', async () => {
+    const filePath = await writeFile(
+      tmpRoot,
+      'world/esu.md',
+      [
+        '---',
+        'name: Esu',
+        'type: character',
+        'relations:',
+        '  - target: ghost',
+        '    relation_type: enemy',
+        '---',
+        '',
+      ].join('\n'),
+    );
+    const result = await reindexFile(store, filePath, 'entity');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.danglingRelations).toEqual([{ filePath, target: 'ghost', relationType: 'enemy' }]);
+  });
+
+  it('skipping mention recomputation (recomputeMentions: false) leaves prior mentions untouched', async () => {
+    await writeFile(tmpRoot, 'world/sango.md', characterMd('Sango'));
+    await reindexFile(store, path.join(tmpRoot, 'world', 'sango.md'), 'entity');
+
+    const esuPath = await writeFile(
+      tmpRoot,
+      'world/esu.md',
+      ['---', 'name: Esu', 'type: character', '---', '', 'Esu argued with Sango.'].join('\n'),
+    );
+    const result = await reindexFile(store, esuPath, 'entity', { recomputeMentions: false });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.danglingRelations).toEqual([]);
+    expect(store.getBacklinks({ id: 'sango', kind: 'entity' })).toEqual([]);
   });
 });
