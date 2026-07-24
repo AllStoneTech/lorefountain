@@ -37,3 +37,19 @@ export function slugify(input: string): string {
 export function idFromFilePath(filePath: string): string {
   return slugify(path.basename(filePath, path.extname(filePath)));
 }
+
+/**
+ * Turn a hyphen-separated slug back into a readable, title-cased label —
+ * an approximate inverse of {@link slugify}, used where a file has no
+ * stored display name to show instead (e.g. scratch notes, Spec §13.4).
+ *
+ * @param slug - A hyphen-separated slug (e.g. a filename stem).
+ * @returns A title-cased label (e.g. `"the-ark"` -> `"The Ark"`).
+ */
+export function titleizeSlug(slug: string): string {
+  return slug
+    .split('-')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}

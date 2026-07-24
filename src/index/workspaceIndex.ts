@@ -12,6 +12,7 @@
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { getWorkspaceFolders } from '../config/workspaceConfig';
+import { removeCueSidecar } from '../cues/sidecar';
 import { buildIndexFromDisk, reindexFile, removeFileFromIndex, type IndexBuildSummary } from './build';
 import { createSqlJsIndexStore } from './sqlJsStore';
 import type { IndexStore } from './store';
@@ -90,6 +91,7 @@ export class WorkspaceIndex implements vscode.Disposable {
     scriptsWatcher.onDidChange((uri) => void this.handleReindex(uri.fsPath, 'script'));
     scriptsWatcher.onDidDelete((uri) => {
       removeFileFromIndex(this.store, uri.fsPath, 'script');
+      void removeCueSidecar(uri.fsPath);
       this.changeEmitter.fire();
     });
     this.disposables.push(scriptsWatcher);

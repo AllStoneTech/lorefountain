@@ -47,6 +47,19 @@
         "configuration": "./resources/fountain-language-configuration.json"
       }
     ],
+    "grammars": [
+      {
+        "language": "fountain",
+        "scopeName": "text.fountain",
+        "path": "./resources/fountain.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "fountain",
+        "path": "./resources/fountain-cues.code-snippets"
+      }
+    ],
     "commands": [
       {
         "command": "lorefountain.reindexWorkspace",
@@ -86,6 +99,42 @@
       {
         "command": "lorefountain.newGlossaryTerm",
         "title": "New Glossary Term",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.newNote",
+        "title": "New Note",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.promoteNoteToEntity",
+        "title": "Promote Note to Entity",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.renameEntity",
+        "title": "Rename Entity",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.showBrokenReferences",
+        "title": "Show Broken References",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.exportTranscript",
+        "title": "Export Transcript",
+        "category": "LoreFountain",
+        "icon": "$(book)"
+      },
+      {
+        "command": "lorefountain.structuredSearch",
+        "title": "Structured Search",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.tryLoreFountain",
+        "title": "Try LoreFountain (Sample Workspace)",
         "category": "LoreFountain"
       }
     ],
@@ -145,6 +194,23 @@
           "command": "lorefountain.reindexWorkspace",
           "when": "view == lorefountain.worldView",
           "group": "navigation"
+        },
+        {
+          "command": "lorefountain.showBrokenReferences",
+          "when": "view == lorefountain.worldView",
+          "group": "9_lorefountain"
+        },
+        {
+          "command": "lorefountain.structuredSearch",
+          "when": "view == lorefountain.worldView",
+          "group": "9_lorefountain"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "lorefountain.exportTranscript",
+          "when": "editorLangId == fountain",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
@@ -177,9 +243,78 @@
           "command": "lorefountain.newGlossaryTerm",
           "when": "view == lorefountain.worldView && viewItem == lorefountain.category.glossary",
           "group": "inline"
+        },
+        {
+          "command": "lorefountain.newNote",
+          "when": "view == lorefountain.worldView && viewItem == lorefountain.category.notes",
+          "group": "inline"
+        },
+        {
+          "command": "lorefountain.promoteNoteToEntity",
+          "when": "view == lorefountain.worldView && viewItem == lorefountain.note",
+          "group": "inline"
+        },
+        {
+          "command": "lorefountain.renameEntity",
+          "when": "view == lorefountain.worldView && viewItem == lorefountain.entity",
+          "group": "7_modification"
         }
       ]
-    }
+    },
+    "walkthroughs": [
+      {
+        "id": "lorefountain.gettingStarted",
+        "title": "Get Started with LoreFountain",
+        "description": "Link your Fountain scripts to a structured, persistent world — in four steps.",
+        "steps": [
+          {
+            "id": "tryLoreFountain",
+            "title": "Try a Sample World",
+            "description": "See LoreFountain working before touching your own project — this scaffolds a small sample workspace (two entities, a glossary term, and a script) and opens it.\n[Try LoreFountain](command:lorefountain.tryLoreFountain)",
+            "media": {
+              "markdown": "resources/walkthrough/try-sample.md"
+            },
+            "completionEvents": [
+              "onCommand:lorefountain.tryLoreFountain"
+            ]
+          },
+          {
+            "id": "createEntity",
+            "title": "Create Your First Entity",
+            "description": "Entities are the characters, locations, factions, objects, and concepts of your world — each one a plain Markdown file. Create one from the Command Palette or the World view.\n[New Character](command:lorefountain.newCharacter)",
+            "media": {
+              "markdown": "resources/walkthrough/create-entity.md"
+            },
+            "completionEvents": [
+              "onCommand:lorefountain.newCharacter",
+              "onCommand:lorefountain.newLocation",
+              "onCommand:lorefountain.newFaction",
+              "onCommand:lorefountain.newObject",
+              "onCommand:lorefountain.newConcept"
+            ]
+          },
+          {
+            "id": "linkInScript",
+            "title": "Link It in a Script",
+            "description": "Open a `.fountain` script and reference your entity by name — as a character cue, in an action line, or wrapped in `[[double brackets]]`. LoreFountain finds it automatically; hover any recognized mention to preview its Story Card.",
+            "media": {
+              "markdown": "resources/walkthrough/link-in-script.md"
+            }
+          },
+          {
+            "id": "browseWorld",
+            "title": "Browse Your World",
+            "description": "The World view lists every entity and glossary term by category, with backlinks showing everywhere each one is mentioned.\n[Open the World View](command:lorefountain.worldView.focus)",
+            "media": {
+              "markdown": "resources/walkthrough/browse-world.md"
+            },
+            "completionEvents": [
+              "onView:lorefountain.worldView"
+            ]
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run build -- --production",

@@ -15,14 +15,18 @@
  * the extension host) — verify manually via the F5 Extension Development Host.
  */
 
+import * as fsp from 'node:fs/promises';
+import * as path from 'node:path';
 import * as vscode from 'vscode';
+import { getWorkspaceFolders } from '../config/workspaceConfig';
 import type { EntityType } from '../model/entity';
 import type { IndexStore } from '../index/store';
+import { titleizeSlug } from '../model/slug';
 import { STORY_CARD_VIEW_TYPE } from './storyCardEditorProvider';
 
-type Category = EntityType | 'glossary';
+type Category = EntityType | 'glossary' | 'notes';
 
-const CATEGORIES: readonly Category[] = ['character', 'location', 'faction', 'object', 'concept', 'glossary'];
+const CATEGORIES: readonly Category[] = ['character', 'location', 'faction', 'object', 'concept', 'glossary', 'notes'];
 
 const CATEGORY_LABELS: Record<Category, string> = {
   character: 'Characters',
@@ -31,6 +35,7 @@ const CATEGORY_LABELS: Record<Category, string> = {
   object: 'Objects',
   concept: 'Concepts',
   glossary: 'Glossary',
+  notes: 'Notes',
 };
 
 const CATEGORY_ICONS: Record<Category, string> = {
@@ -40,14 +45,16 @@ const CATEGORY_ICONS: Record<Category, string> = {
   object: 'package',
   concept: 'lightbulb',
   glossary: 'book',
+  notes: 'edit',
 };
 
-/** One node in the World tree: a workspace folder, a category, an entity, or a glossary term. */
+/** One node in the World tree: a workspace folder, a category, an entity, a glossary term, or a scratch note. */
 export type WorldTreeNode =
   | { kind: 'folder'; folder: vscode.WorkspaceFolder }
   | { kind: 'category'; folder: vscode.WorkspaceFolder; category: Category }
   | { kind: 'entity'; folder: vscode.WorkspaceFolder; name: string; filePath: string }
-  | { kind: 'glossaryTerm'; folder: vscode.WorkspaceFolder; term: string; filePath: string };
+  | { kind: 'glossaryTerm'; folder: vscode.WorkspaceFolder; term: string; filePath: string }
+  | { kind: 'note'; folder: vscode.WorkspaceFolder; title: string; filePath: string };
 
 /**
  * TreeDataProvider backing the World sidebar view. Call {@link refresh} to
@@ -93,10 +100,16 @@ export class WorldTreeProvider implements vscode.TreeDataProvider<WorldTreeNode>
         item.command = { command: 'vscode.open', title: 'Open', arguments: [vscode.Uri.file(node.filePath)] };
         return item;
       }
+      case 'note': {
+        const item = new vscode.TreeItem(node.title, vscode.TreeItemCollapsibleState.None);
+        item.contextValue = 'lorefountain.note';
+        item.command = { command: 'vscode.open', title: 'Open', arguments: [vscode.Uri.file(node.filePath)] };
+        return item;
+      }
     }
   }
 
-  getChildren(node?: WorldTreeNode): WorldTreeNode[] {
+  async getChildren(node?: WorldTreeNode): Promise<WorldTreeNode[]> {
     const folders = vscode.workspace.workspaceFolders ?? [];
 
     if (!node) {
@@ -106,7 +119,7 @@ export class WorldTreeProvider implements vscode.TreeDataProvider<WorldTreeNode>
       return categoryNodesFor(node.folder);
     }
     if (node.kind === 'category') {
-      return this.itemsFor(node);
+      return node.category === 'notes' ? this.notesFor(node.folder) : this.itemsFor(node);
     }
     return [];
   }
@@ -120,9 +133,36 @@ export class WorldTreeProvider implements vscode.TreeDataProvider<WorldTreeNode>
         .listGlossaryTerms()
         .map((term) => ({ kind: 'glossaryTerm', folder: node.folder, term: term.term, filePath: term.filePath }));
     }
+    if (node.category === 'notes') return [];
     return store
       .listEntities({ type: node.category })
       .map((entity) => ({ kind: 'entity', folder: node.folder, name: entity.name, filePath: entity.filePath }));
+  }
+
+  /**
+   * Notes (Spec §13.4) are deliberately never indexed (`src/index/build.ts`),
+   * so — unlike every other category — they're listed straight off disk
+   * rather than from the {@link IndexStore}.
+   */
+  private async notesFor(folder: vscode.WorkspaceFolder): Promise<WorldTreeNode[]> {
+    const { folders } = await getWorkspaceFolders(folder);
+
+    let entries: import('node:fs').Dirent[];
+    try {
+      entries = await fsp.readdir(folders.notes, { withFileTypes: true });
+    } catch {
+      return [];
+    }
+
+    return entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
+      .map((entry) => ({
+        kind: 'note' as const,
+        folder,
+        title: titleizeSlug(entry.name.replace(/\.md$/, '')),
+        filePath: path.join(folders.notes, entry.name),
+      }))
+      .sort((a, b) => a.title.localeCompare(b.title));
   }
 }
 

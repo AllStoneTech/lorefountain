@@ -15,6 +15,9 @@ coverage/
 *.lorefountain.db-journal
 .lorefountain/
 
+# Cue sidecars (Spec Section 15) — derived from scripts, regenerated on every reindex
+*.cues.json
+
 # OS / editor cruft
 .DS_Store
 Thumbs.db

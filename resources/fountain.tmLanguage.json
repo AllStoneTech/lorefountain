@@ -1,0 +1,108 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Fountain",
+  "scopeName": "text.fountain",
+  "fileTypes": ["fountain", "spmd"],
+  "patterns": [
+    { "include": "#boneyard" },
+    { "include": "#note" },
+    { "include": "#page-break" },
+    { "include": "#section-heading" },
+    { "include": "#synopsis" },
+    { "include": "#scene-heading" },
+    { "include": "#transition" },
+    { "include": "#centered" },
+    { "include": "#lyric" },
+    { "include": "#character-cue" },
+    { "include": "#parenthetical" },
+    { "include": "#title-page" },
+    { "include": "#cue-prefix" },
+    { "include": "#emphasis" }
+  ],
+  "repository": {
+    "boneyard": {
+      "begin": "/\\*",
+      "end": "\\*/",
+      "name": "comment.block.fountain"
+    },
+    "note": {
+      "begin": "\\[\\[",
+      "end": "\\]\\]",
+      "name": "comment.block.notation.fountain"
+    },
+    "page-break": {
+      "match": "^\\s*={3,}\\s*$",
+      "name": "meta.separator.page-break.fountain"
+    },
+    "section-heading": {
+      "match": "^(\\s*#{1,6})\\s*(.*)$",
+      "name": "markup.heading.section.fountain",
+      "captures": {
+        "1": { "name": "punctuation.definition.heading.fountain" }
+      }
+    },
+    "synopsis": {
+      "match": "^\\s*=(?!=)\\s*(.*)$",
+      "name": "comment.line.synopsis.fountain"
+    },
+    "scene-heading": {
+      "match": "(?i)^\\s*(\\.(?!\\.)[^\\n]*|(?:int|ext|est|i/e|int\\.?/ext)[.\\s].*)$",
+      "name": "entity.name.function.scene-heading.fountain"
+    },
+    "transition": {
+      "match": "(?:^\\s*>(?!.*<\\s*$)\\s*(.*)$)|(?:^\\s*[A-Z0-9 ]*[A-Z][A-Z0-9 ]*TO:\\s*$)",
+      "name": "keyword.control.transition.fountain"
+    },
+    "centered": {
+      "match": "^\\s*>\\s*(.*?)\\s*<\\s*$",
+      "name": "markup.quote.centered.fountain"
+    },
+    "lyric": {
+      "match": "^\\s*~\\s*.*$",
+      "name": "string.unquoted.lyric.fountain"
+    },
+    "character-cue": {
+      "match": "^\\s*(@[^\\n]+|[A-Z0-9][A-Z0-9 .'\\-]*(?:\\([^)]*\\))?\\s*\\^?)$",
+      "name": "entity.name.tag.character.fountain"
+    },
+    "parenthetical": {
+      "match": "^\\s*(\\([^)]*\\))\\s*$",
+      "name": "storage.type.parenthetical.fountain"
+    },
+    "title-page": {
+      "match": "(?i)^\\s*(title|credit|authors?|source|draft date|contact|copyright|notes|revision):(.*)$",
+      "name": "keyword.other.title-page-key.fountain",
+      "captures": {
+        "1": { "name": "support.type.property-name.fountain" }
+      }
+    },
+    "cue-prefix": {
+      "match": "^\\s*((?:SFX|MUSIC|AMB):)\\s*(IN|OUT|STING|UNDER)?",
+      "name": "support.function.cue-prefix.lorefountain",
+      "captures": {
+        "1": { "name": "support.function.cue-prefix.lorefountain" },
+        "2": { "name": "keyword.other.cue-modifier.lorefountain" }
+      }
+    },
+    "emphasis": {
+      "patterns": [
+        {
+          "match": "\\*\\*\\*(?!\\s)([^*\\n]+?)(?<!\\s)\\*\\*\\*",
+          "name": "markup.bold.markup.italic.fountain"
+        },
+        {
+          "match": "\\*\\*(?!\\s)([^*\\n]+?)(?<!\\s)\\*\\*",
+          "name": "markup.bold.fountain"
+        },
+        {
+          "match": "\\*(?!\\s)([^*\\n]+?)(?<!\\s)\\*",
+          "name": "markup.italic.fountain"
+        },
+        {
+          "match": "_(?!\\s)([^_\\n]+?)(?<!\\s)_",
+          "name": "markup.underline.fountain"
+        }
+      ]
+    }
+  }
+}

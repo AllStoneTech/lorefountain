@@ -1,0 +1,17 @@
+{
+  "SFX Cue": {
+    "prefix": "sfx",
+    "body": "SFX: ${1:description}",
+    "description": "Insert a sound-effect cue (Spec §15.1) — extracted into the script's cue sidecar."
+  },
+  "Ambience Cue": {
+    "prefix": "amb",
+    "body": "AMB: ${1:description}",
+    "description": "Insert an ambience/room-tone cue (Spec §15.1) — extracted into the script's cue sidecar."
+  },
+  "Music Cue": {
+    "prefix": "mus",
+    "body": "MUSIC: ${1|IN,OUT,STING,UNDER|} ${2:description}",
+    "description": "Insert a music cue (Spec §15.1) — extracted into the script's cue sidecar."
+  }
+}

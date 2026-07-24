@@ -6,6 +6,373 @@ revisit.
 
 ---
 
+## ADR-0017 — Phase E8: walkthrough substitutes the graph view with World-tree browsing; sample content is original, not ORUN's
+
+**Date:** 2026-07-24 · **Status:** Accepted
+
+Spec §20's walkthrough + sample workspace implemented via
+`contributes.walkthroughs` (native VS Code "Get Started" surface, no
+webview) + `src/commands/tryLoreFountain.ts` (scaffolds and opens a new
+folder).
+
+1. **The suggested flow's third step — "open the graph view" — is
+   replaced with "browse the World view.**" The graph view is an
+   explicitly paid-tier feature (Spec §1.3) that doesn't exist in this
+   build; substituting the actual free-tier capstone (the World tree,
+   Phase D4) keeps the walkthrough honest about what this install can
+   actually do, rather than promising a feature behind a paywall. A "Try a
+   Sample World" step was added ahead of the spec's three, since §20 pairs
+   the walkthrough with the sample-workspace command as its natural first
+   move.
+2. **Each step ships a short Markdown `media` file** under
+   `resources/walkthrough/` rather than an image/SVG — no visual assets
+   needed, and Markdown media renders directly in the walkthrough's detail
+   pane.
+3. **Completion events use `onCommand:`/`onView:`** where a natural trigger
+   exists (trying the sample, creating any entity type, opening the World
+   view); the "Link It in a Script" step has none — there's no reliable
+   single command/view event for "wrote a wikilink," so it's left as a
+   purely informational step the user can mark done manually, a supported
+   walkthrough pattern.
+4. **The sample workspace's content is original** (a small sci-fi
+   freighter-pilot setup — "Nova Reyes," "The Wayfarer," a "Jump Drive"
+   glossary term), not built from the user's own ORUN material used
+   elsewhere in this session's manually-created `lorefountain-demo`
+   workspace. A shipped, product-bundled sample must never embed a real
+   user's creative IP.
+5. **`tryLoreFountain` prompts for a parent directory via
+   `showOpenDialog`**, creates `<chosen>/lorefountain-sample/`, scaffolds
+   it by reusing `resolveWorkspaceFolders` and `writeDefaultConfigIfAbsent`
+   (both already `vscode`-free, callable against a path that isn't yet an
+   open workspace folder), and opens it via `vscode.commands.executeCommand('vscode.openFolder', ...)`.
+   Refuses to silently overwrite an existing same-named folder — asks
+   before opening it anyway.
+6. Verified live end-to-end: **Help → Open Walkthrough… → "Get Started
+   with LoreFountain"** renders with the correct title, description, and
+   all four steps; clicking **Try LoreFountain** opened a folder picker
+   titled "Choose a location for the sample LoreFountain workspace" with a
+   custom "Create Sample Workspace Here" button, created the folder, and
+   opened it in a new window with `world/`, `scripts/`, `glossary/`, both
+   sample entities, the glossary term, and the sample script all present —
+   and, cross-validating two earlier features in the same pass, the git-
+   safety banner (ADR-0011) correctly fired for the fresh ungitted folder
+   and a cue sidecar (ADR-0014) was auto-generated for the sample script's
+   `SFX:` cue. The walkthrough step's own "Try a Sample World" checkbox
+   correctly flipped to completed after the command ran.
+
+---
+
+## ADR-0016 — Phase E7: structured search is scenes-by-scene-heading + reused mention-matching, entirely QuickPick-driven
+
+**Date:** 2026-07-24 · **Status:** Accepted
+
+Spec §13.6 asks for co-presence ("Sango and Esu in the same room") and
+mention-line search exposed as their own named feature, not left implicit
+inside generic full-text search. Implemented as `src/search/structuredSearch.ts`
+(pure) + `src/commands/structuredSearch.ts` (vscode-facing).
+
+1. **"Same room" = same scene, and a scene = the span between one
+   `scene_heading` token and the next** (or end-of-file), reusing
+   `parseFountain`/`mapTokensToPositions` from ADR-0002's groundwork — the
+   first real consumer of that position-recovery layer beyond hover. A
+   script with no scene headings is treated as one implicit scene rather
+   than producing zero results.
+2. **Both search modes reuse `index/mentions.ts`'s exact whole-word
+   matcher** — `extractMentionTargets` for "who's mentioned anywhere in
+   this scene's text", `findMentionOccurrences` for "which lines mention
+   this specific candidate" — rather than building separate matching logic.
+   This is the same primitive the live index already uses, just applied
+   per-scene-span or reported per-line instead of per-file.
+3. **"Cross-episode" is read as scoped to `.fountain` scripts only**, not
+   `world/` entity/glossary prose — an "episode" is a script; the spec's
+   own two examples ("scene", "line") are both script-native concepts with
+   no obvious equivalent in a Markdown entity file.
+4. **Entirely QuickPick/menu-driven with no free-text input** — mode
+   selection, then entity selection(s), all via `showQuickPick` populated
+   from `buildMentionCandidates` (already exported from `build.ts` for
+   Phase C's hover/completion). This made it the first Phase E command
+   fully verifiable in this sandbox with no typing-restriction caveat.
+5. Verified live in the Extension Development Host, both modes, via the
+   World view's "..." overflow: "scenes with both Esu and Sango" correctly
+   found the one scene mentioning both (`1x01.fountain`'s bridge scene);
+   "every line mentioning The Ark" correctly found the one line (the scene
+   heading itself, `INT. THE ARK - BRIDGE - NIGHT`) with no false positives
+   from other entities.
+
+---
+
+## ADR-0015 — Phase E6: transcript export keeps scene headings as section breaks; "dialogue only" excludes everything else
+
+**Date:** 2026-07-24 · **Status:** Accepted
+
+Spec §16's transcript export ("dialogue only, cues stripped") implemented as
+`src/export/transcript.ts` (pure — builds entries from a token stream, then
+serializes to Markdown) + `src/commands/exportTranscript.ts` (vscode-facing).
+
+1. **"Dialogue only" is read literally**: only `character`/`dialogue`
+   token pairs become content. Action lines (where the SFX:/MUSIC:/AMB:
+   convention lives, Spec §15), transitions, and parentheticals (performance
+   direction, never spoken) are all excluded — not just the cue lines the
+   spec bullet names explicitly.
+2. **Scene headings are kept as Markdown section headers**, despite not
+   being "dialogue" — a deliberate exception, since §16's named audiences
+   (accessibility, publishing, show notes) all benefit from knowing where
+   one scene ends and the next begins, and a heading is clearly
+   distinguishable from spoken content in the output (`##` vs `**NAME:**`).
+3. **Target script resolution**: the active editor if it's a `.fountain`
+   document, else a `QuickPick` over every script found across all open
+   workspace folders (reusing `listFilesWithExtension`, exported from
+   `build.ts` for E4's rename command and now reused a second time).
+4. **Output goes through `vscode.window.showSaveDialog`**, not a fixed
+   path — gives the writer a chance to pick where the transcript lands,
+   pre-filled with `<script>.transcript.md` next to the source script as a
+   sensible default.
+5. **Surfaced via an `editor/title` icon** (`$(book)`) when a `.fountain`
+   file is active, in addition to the Command Palette. Verified live: the
+   command itself, invoked via a temporary duplicate placement in the
+   World view's overflow menu (proven reliable in ADR-0013's testing),
+   correctly resolved the active editor's script, opened a save dialog
+   pre-filled with `1x01.transcript.md`, and produced a transcript with
+   `SFX:`/`MUSIC:` lines correctly stripped and dialogue correctly
+   attributed. **The `editor/title` icon's own visibility could not be
+   confirmed** in this specific sandboxed dev host — its toolbar row was
+   crowded with several other installed extensions' own icons (GitLens,
+   Markdown Preview Enhanced, etc.), a plausible and mundane explanation
+   distinct from the typing-restriction gaps noted elsewhere, but not
+   something this session could fully rule out. The command is reachable
+   regardless via the Command Palette (an independent registration path
+   from the menu contribution), so this is a coverage gap in one discovery
+   surface, not in the feature itself.
+
+---
+
+## ADR-0014 — Phase E5: snippets over a custom completion provider; sidecar regeneration piggybacks on existing script reads
+
+**Date:** 2026-07-24 · **Status:** Accepted
+
+Spec §13.9 (structured cue insertion) + §15 (cue sidecar) implemented as
+`resources/fountain-cues.code-snippets` + `src/cues/parseCues.ts` (pure
+extraction) + `src/cues/sidecar.ts` (fs-touching, no `vscode` dependency).
+
+1. **Cue insertion uses VS Code's native `contributes.snippets`**, not a
+   custom `CompletionItemProvider` like hover/wikilink completion (Phase C).
+   The spec's own framing — "the same reasoning that makes a code snippet
+   expanding a boilerplate block feel like a convenience" — points straight
+   at the stock mechanism built for exactly this, including free tab-stops
+   for the variable part and (for MUSIC) a native choice list
+   (`${1|IN,OUT,STING,UNDER|}`) with zero custom code.
+2. **Sidecar generation piggybacks on every place `build.ts` already reads
+   a script's text** (the full-build loop and `reindexFile`'s script
+   branch) rather than being a separate pass — the text is already in
+   memory, so this is a same-cost addition, and it guarantees the sidecar
+   can never observe a different version of the script than the index just
+   did. Removal is wired separately into `workspaceIndex.ts`'s script
+   delete-watcher, since `build.ts`'s `removeFileFromIndex` is synchronous
+   and shared across all three file kinds — kept that contract unchanged
+   rather than making it async for this one case.
+3. **A sidecar is deleted, not written with an empty `cues` array, once a
+   script has no cues left** — avoids leaving an empty, permanently-stale
+   `.cues.json` next to every script that happens not to use the
+   convention (plausible for non-cue-heavy scenes or early drafts).
+4. **`*.cues.json` is gitignored**, consistent with the SQL index's own
+   "derived, rebuildable, never authoritative" treatment (Spec §2.2) —
+   regenerated automatically on the next activation/rebuild regardless.
+5. Verified live in the Extension Development Host: adding `SFX:`, `MUSIC:
+   <modifier> - ...`, and `AMB:` lines to the demo script produced a
+   correct `1x01.cues.json` on activation (including a plain SFX
+   description untouched by the modifier logic, since SFX has none per
+   §15.1's table); editing the script while the window stayed open
+   triggered the file watcher and regenerated the sidecar with the new cue,
+   with no manual rebuild needed. **Not live-tested:** actually typing
+   `sfx`/`mus`/`amb` + Tab to confirm the snippet body/choice-list expands
+   as authored — same typing restriction as every other input-driven flow
+   this session; snippet JSON was validated for correct syntax instead.
+
+---
+
+## ADR-0013 — Phase E4: rename rewrites relations + wikilinks only; plain-text mentions get an alias, not a silent edit
+
+**Date:** 2026-07-24 · **Status:** Accepted
+
+Spec §13.3 asks for a rename command that "rewrites known references (mentions
+and typed relations)... where safely detectable," plus a broken-reference
+report for what isn't. `src/refactor/renameEntity.ts` (pure) +
+`src/commands/renameEntity.ts` (vscode-facing) implement this with a
+deliberately narrower definition of "safely detectable" than "anything the
+mention engine can find":
+
+1. **Auto-rewritten:** the renamed entity's own file (moved + frontmatter
+   `name` updated), every other entity's `relations[].target` matching the
+   old id (exact id string match — metadata, unambiguous), and every
+   explicit `[[wikilink]]` occurrence of the old name anywhere (world
+   bodies, glossary bodies, `.fountain` scripts) — a deliberate, structural
+   marker the writer chose specifically to mean "link to this entity."
+2. **Never auto-rewritten:** bare plain-text mentions inside prose (a
+   script's dialogue/action lines, another entity's free-text body) — found
+   using the exact same whole-word matcher `mentions.ts` already uses for
+   indexing (so detection isn't the limiting factor), but left untouched on
+   principle: a screenplay's own prose shouldn't be silently bulk-edited by
+   a rename command. This is the spec's own example of what belongs in the
+   broken-reference report.
+3. **The old name is kept as an alias** on the renamed entity (deduped,
+   case-insensitive) specifically so those untouched plain-text mentions
+   *keep resolving* — nothing goes dark the moment a name changes. The
+   rename's report is reframed accordingly: it lists files still using the
+   old name as "still recognized via alias, update the wording if you'd
+   like" rather than "broken," since with the alias in place nothing
+   actually is. This is a deliberate enhancement beyond the spec's literal
+   wording, judged a strictly better outcome for the writer with no real
+   downside (the alias is a normal, editable frontmatter field).
+4. **The whole operation is one `vscode.WorkspaceEdit`** (rename-file +
+   whole-document `replace` on every touched file), applied and then saved
+   atomically — extending the exact whole-document-replace pattern
+   `storyCardEditorProvider.ts` already established, to multiple files.
+   The file-move is sequenced *before* the content edit (rather than
+   content-then-move) specifically to avoid relying on undocumented
+   behavior for whether a text edit's dirty buffer survives a same-URI
+   rename within one edit — each operation now targets a URI that stays
+   stable for its own step.
+5. **"Show Broken References" is a separate, standalone command**, not
+   just a rename side-effect — it re-exposes the dangling-relation
+   detection already built for Phase B4 (`src/index/relations.ts`) as an
+   on-demand report, so a writer can check for drift anytime (a relation
+   target renamed/deleted outside the tool, a hand-edited file), not only
+   immediately after using the rename command. Verified live in the
+   Extension Development Host via the World view's "..." menu: a
+   deliberately-added dangling relation (`Sango` -> `rival: orunmila`,
+   `orunmila` not a real entity) is correctly reported with folder name,
+   file path, relation type, and target.
+6. **Not live-tested:** the rename command's `showInputBox` flow itself
+   (typing a new name) and its right-click context-menu entry (right-click
+   is blocked at this sandbox's tier, separate from the typing
+   restriction) — same accepted gap as ADR-0009/ADR-0012's creation
+   commands. Mitigated by an unusually careful manual code review (this
+   command is the most structurally complex one shipped so far) plus full
+   coverage of the underlying pure rewrite logic (10 unit tests covering
+   wikilink rewriting, stale-mention detection, relation retargeting, and
+   alias deduplication).
+
+---
+
+## ADR-0012 — Phase E3: notes stay disk-only (never indexed); tree lists them live; promotion never deletes the source
+
+**Date:** 2026-07-24 · **Status:** Accepted
+
+Spec §13.4's `/world/notes` scratch space turned out to be mostly already
+built: `ENTITY_EXCLUDED_SUBDIRS` in `src/index/build.ts` (Phase B) already
+excludes `notes/` from entity parsing/validation entirely — free-form
+Markdown with no schema was already true before Phase E started. What Phase
+E3 actually adds is the writer-facing workflow the spec implies around that
+folder: `src/commands/notes.ts` ("New Note", "Promote Note to Entity") and a
+new "Notes" category in `WorldTreeProvider`.
+
+1. **The Notes category reads the folder straight off disk on every
+   expand**, not from the `IndexStore` like every other category — there's
+   nothing to read from the store, since notes are deliberately never
+   indexed. `getChildren` is now `async` throughout to support this.
+2. **"Promote Note to Entity" never deletes the original note.** Copies the
+   note's raw text into the new entity's body (via `createEntity` +
+   mutating `entity.body` + `writeEntity`, rather than adding a body
+   parameter to `createEntity` itself) and tells the writer the note is
+   unchanged. Consistent with `entities/service.ts`'s own stated
+   philosophy ("no delete operation... files-as-truth means Explorer
+   already covers it") and with this project's general caution around
+   destructive actions — an extra orphaned note file is a trivial cleanup;
+   silently losing a half-formed idea to a promotion bug is not.
+3. **`titleizeSlug` added to `model/slug.ts`** (an approximate inverse of
+   `slugify`) since notes have no stored display name — the tree and the
+   "Promote" command's default name both need to turn a filename like
+   `hidden-fourth-deck.md` back into "Hidden Fourth Deck" for display.
+4. Verified live in the Extension Development Host: a note written directly
+   to `world/notes/` appears under the new "Notes" category after a
+   rebuild, stays out of the indexed entity/glossary/script counts, opens
+   as plain Markdown (no Story Card editor), and shows the "Promote Note to
+   Entity" inline action. The two `showInputBox`/`showQuickPick`-driven
+   flows ("New Note"'s title prompt, "Promote"'s type/name prompts) are
+   **not** live-tested, for the same reason as Phase D's creation commands
+   (ADR-0009) — this sandbox's browser-automation can click but not type
+   into the Extension Development Host. Same accepted gap, not a new one.
+
+---
+
+## ADR-0011 — Phase E2: git-safety check scope, "other backup mechanism" definition, and the "checkbox" as a button
+
+**Date:** 2026-07-24 · **Status:** Accepted
+
+Spec §13.7 requires a persistent warning when a workspace has no git repo and
+no other backup mechanism, but leaves "other recognized backup mechanism"
+and the dismissal "checkbox" unspecified. Implemented in
+`src/safety/backupCheck.ts` (pure) + `src/safety/gitSafetyBanner.ts`
+(vscode-facing), wired into `addIndexFor` in `extension.ts` so it runs once
+per workspace folder on every activation:
+
+1. **"Other backup mechanism" = git found anywhere at or above the folder
+   (not just directly in it — a workspace folder may be a subdirectory of a
+   larger repo) OR the folder path contains a recognized consumer
+   cloud-sync marker** (OneDrive, Dropbox, Google Drive, iCloud Drive).
+   Heuristic and not exhaustive by necessity — the spec doesn't enumerate a
+   list — but low-risk (path-string/`.git`-existence checks only, no
+   network calls) and documented here as the concrete definition.
+2. **The dismissal "checkbox" is implemented as a second button** ("Don't
+   ask again for this workspace") on the same `showWarningMessage`, not a
+   literal checkbox — VS Code's non-modal notification API has no checkbox
+   control. Functionally equivalent: persists a per-workspace-folder flag in
+   `context.workspaceState`, keyed by folder URI so multi-root workspaces
+   dismiss independently.
+3. **"Initialize Git" delegates to the built-in Git extension's own
+   `git.init` command** rather than shelling out to the `git` binary
+   ourselves — reuses the user's existing Git integration (handles
+   multi-root prompts, PATH resolution, etc.) instead of duplicating it.
+4. **Scoped to folders that already have a `scripts` or `world` folder on
+   disk** (per the spec's own wording), so a workspace that hasn't run
+   `initializeWorkspace` yet doesn't get warned before it has anything to
+   protect.
+5. Verified live in the Extension Development Host: an ungitted, non-cloud
+   workspace shows the banner every fresh launch; clicking "Don't ask again"
+   suppresses it on a full process restart (not just for the current
+   session), confirming the `workspaceState` persistence.
+
+---
+
+## ADR-0010 — Phase E1: hand-written TextMate grammar, shape-heuristic only, no runtime toggle
+
+**Date:** 2026-07-24 · **Status:** Accepted
+
+Fountain syntax highlighting (deferred from Phase C per ADR-0008) is now
+shipped via a hand-written `resources/fountain.tmLanguage.json`, registered
+in `package.json`'s `contributes.grammars` for the `fountain` language id.
+
+1. **Written fresh against the public Fountain spec (fountain.io), not
+   copied from Better Fountain's grammar.** Scene headings, transitions, and
+   character cues are matched by *shape* (ALL CAPS, `INT./EXT.` prefixes,
+   `TO:` suffixes) rather than by the full two-pass "preceded/followed by a
+   blank line" Fountain rule — TextMate grammars tokenize per-line and can't
+   reliably express that cross-line context. This is the same heuristic
+   every other Fountain syntax highlighter (including Better Fountain) uses;
+   our own `src/fountain/parse.ts` still does the real, position-accurate
+   parse for hover/completion/mentions, so this file is presentation-only.
+2. **The SFX:/MUSIC:/AMB: cue convention (§15.1) gets its own scope**
+   (`support.function.cue-prefix.lorefountain`) distinct from plain action
+   text, plus the MUSIC modifiers (IN/OUT/STING/UNDER) — a deliberate,
+   product-specific touch beyond generic Fountain highlighting, since this
+   convention is load-bearing for the cue sidecar (Phase E5).
+3. **No runtime enable/disable setting**, unlike hover/completion
+   (ADR-0003). VS Code's `contributes.grammars` is a static contribution
+   with no `when` clause and no `vscode.languages.register*`-style API for
+   grammars — there is no mechanism to conditionally register or unregister
+   one at runtime. Ships default-on; if a user has Better Fountain installed
+   too, VS Code's own extension-priority rules (undocumented, generally
+   last-registered-wins) decide which grammar renders — same accepted risk
+   already noted in ADR-0003 for the `fountain` language-configuration.
+4. Verified visually in the Extension Development Host (not unit-testable):
+   scene headings, transitions, character cues (incl. `(V.O.)` extensions),
+   parentheticals, `[[notes]]`, `/* boneyard */`, centered text, lyrics,
+   title-page keys, cue prefixes + modifiers, and `*italic*`/`**bold**`/
+   `_underline_` emphasis all render distinctly against a throwaway test
+   fixture, then removed.
+
+---
+
 ## ADR-0009 — Phase D scope: Story Card editor is entity-only; selector matches the default `world/` layout only
 
 **Date:** 2026-07-23 · **Status:** Accepted

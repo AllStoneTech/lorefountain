@@ -11,6 +11,11 @@
  * contributes outgoing mention edges (so it shows up in an entity's
  * backlinks) but has no frontmatter/schema to validate.
  *
+ * Every time a script's text is read here — full build or incremental
+ * reindex — its cue sidecar (Spec §15) is also regenerated via
+ * `cues/sidecar.ts`, for the same reason: the sidecar is derived data that
+ * must never drift from the script it was parsed from.
+ *
  * A full build never throws on a bad file: malformed YAML, schema violations,
  * and filesystem read errors are all collected and reported in the returned
  * summary so the index rebuild can skip/flag rather than crash (Spec §23).
@@ -32,6 +37,7 @@
 
 import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
+import { updateCueSidecar } from '../cues/sidecar';
 import type { ValidationIssue } from '../model/errors';
 import { parseEntityFile, type EntityWarning } from '../model/entity';
 import { parseGlossaryFile } from '../model/glossary';
@@ -139,8 +145,10 @@ export async function buildIndexFromDisk(
   const scriptTexts = new Map<string, string>();
   for (const filePath of scriptFiles) {
     try {
-      scriptTexts.set(filePath, await fsp.readFile(filePath, 'utf8'));
+      const text = await fsp.readFile(filePath, 'utf8');
+      scriptTexts.set(filePath, text);
       summary.scriptCount += 1;
+      await updateCueSidecar(filePath, text);
     } catch (err) {
       summary.malformed.push({ filePath, reason: 'read-error', message: errorMessage(err) });
     }
@@ -185,6 +193,7 @@ export async function reindexFile(
   const id = idFromFilePath(filePath);
 
   if (kind === 'script') {
+    await updateCueSidecar(filePath, text);
     if (recomputeMentions) {
       const candidates = buildMentionCandidates(store);
       store.setMentionsForSource({ id, kind: 'script', filePath }, extractMentionTargets(text, candidates));
@@ -316,8 +325,11 @@ function recomputeAllMentionsAndFindDanglingRelations(
  * Recursively collect file paths under `dir` whose name ends with `extension`,
  * skipping any directory whose name appears in `excludeSubdirNames` at any
  * depth. Returns an empty array if `dir` does not exist.
+ *
+ * Exported for reuse by anything else that needs the same file-discovery
+ * logic (e.g. the entity rename command scanning `.fountain` scripts).
  */
-async function listFilesWithExtension(
+export async function listFilesWithExtension(
   dir: string,
   extension: string,
   excludeSubdirNames: string[] = [],

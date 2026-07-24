@@ -17,7 +17,8 @@ import { createEntity, createGlossaryTerm } from '../entities/service';
 import type { EntityType } from '../model/entity';
 import { STORY_CARD_VIEW_TYPE } from '../providers/storyCardEditorProvider';
 
-const ENTITY_TYPE_COMMANDS: ReadonlyArray<{ commandId: string; type: EntityType; label: string }> = [
+/** Exported for reuse by other commands that need the same type/label pairing (e.g. note promotion). */
+export const ENTITY_TYPE_COMMANDS: ReadonlyArray<{ commandId: string; type: EntityType; label: string }> = [
   { commandId: 'lorefountain.newCharacter', type: 'character', label: 'Character' },
   { commandId: 'lorefountain.newLocation', type: 'location', label: 'Location' },
   { commandId: 'lorefountain.newFaction', type: 'faction', label: 'Faction' },

@@ -21,6 +21,11 @@
 import * as fsp from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { registerEntityCreationCommands } from './commands/createEntity';
+import { registerExportTranscriptCommand } from './commands/exportTranscript';
+import { registerNoteCommands } from './commands/notes';
+import { registerReferenceCommands } from './commands/renameEntity';
+import { registerStructuredSearchCommand } from './commands/structuredSearch';
+import { registerTryLoreFountainCommand } from './commands/tryLoreFountain';
 import { writeDefaultConfigIfAbsent } from './config/configFile';
 import { getWorkspaceFolders } from './config/workspaceConfig';
 import { WorkspaceIndex } from './index/workspaceIndex';
@@ -29,8 +34,10 @@ import { createFountainHoverProvider } from './providers/hoverProvider';
 import { createWikilinkCompletionProvider } from './providers/completionProvider';
 import { createStoryCardEditorProvider, STORY_CARD_VIEW_TYPE } from './providers/storyCardEditorProvider';
 import { WorldTreeProvider } from './providers/worldTreeProvider';
+import { checkGitSafety } from './safety/gitSafetyBanner';
 
 let outputChannel: vscode.OutputChannel;
+let extensionContext: vscode.ExtensionContext;
 const indexes = new Map<string, WorkspaceIndex>();
 let hoverRegistration: vscode.Disposable | undefined;
 let completionRegistration: vscode.Disposable | undefined;
@@ -42,6 +49,7 @@ let treeProvider: WorldTreeProvider;
  * @param context - The extension context provided by the VS Code host.
  */
 export function activate(context: vscode.ExtensionContext): void {
+  extensionContext = context;
   outputChannel = vscode.window.createOutputChannel('LoreFountain');
   context.subscriptions.push(outputChannel);
 
@@ -50,6 +58,11 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('lorefountain.initializeWorkspace', () => void initializeWorkspace()),
   );
   registerEntityCreationCommands(context, pickTargetWorkspaceFolder);
+  registerNoteCommands(context, pickTargetWorkspaceFolder);
+  registerReferenceCommands(context, outputChannel, findStoreForFolder);
+  registerExportTranscriptCommand(context);
+  registerStructuredSearchCommand(context, outputChannel, pickTargetWorkspaceFolder, findStoreForFolder);
+  registerTryLoreFountainCommand(context);
 
   context.subscriptions.push(
     vscode.window.registerCustomEditorProvider(
@@ -145,10 +158,30 @@ async function addIndexFor(folder: vscode.WorkspaceFolder): Promise<void> {
     indexes.set(folder.uri.toString(), index);
     index.onDidChangeIndex(() => treeProvider.refresh());
     await index.rebuild();
+    void checkGitSafetyForFolder(folder);
   } catch (err) {
     outputChannel.appendLine(
       `[LoreFountain] Failed to initialize the index for "${folder.name}": ${errorMessage(err)}`,
     );
+  }
+}
+
+/**
+ * Runs the Spec §13.7 git-safety check for a workspace folder, scoped to
+ * folders that already have a `scripts` or `world` folder on disk.
+ */
+async function checkGitSafetyForFolder(folder: vscode.WorkspaceFolder): Promise<void> {
+  const { folders } = await getWorkspaceFolders(folder);
+  const hasWorldOrScripts = (await pathExists(folders.scripts)) || (await pathExists(folders.world));
+  await checkGitSafety(extensionContext, folder, hasWorldOrScripts);
+}
+
+async function pathExists(target: string): Promise<boolean> {
+  try {
+    await fsp.access(target);
+    return true;
+  } catch {
+    return false;
   }
 }
 

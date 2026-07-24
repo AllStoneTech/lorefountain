@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { slugify } from '../../src/model/slug';
+import { slugify, titleizeSlug } from '../../src/model/slug';
 
 describe('slugify', () => {
   it('lowercases and hyphenates spaces', () => {
@@ -24,5 +24,23 @@ describe('slugify', () => {
 
   it('returns an empty string when there are no letters or numbers', () => {
     expect(slugify('--- !!! ---')).toBe('');
+  });
+});
+
+describe('titleizeSlug', () => {
+  it('title-cases each hyphen-separated word', () => {
+    expect(titleizeSlug('the-ark')).toBe('The Ark');
+  });
+
+  it('round-trips a slugify() output back to something readable', () => {
+    expect(titleizeSlug(slugify('hidden fourth deck'))).toBe('Hidden Fourth Deck');
+  });
+
+  it('collapses doubled hyphens without producing an empty word', () => {
+    expect(titleizeSlug('the--ark')).toBe('The Ark');
+  });
+
+  it('returns an empty string for an empty slug', () => {
+    expect(titleizeSlug('')).toBe('');
   });
 });
