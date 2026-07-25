@@ -6,6 +6,20 @@ revisit.
 
 ---
 
+## ADR-0024 — Business-sensitive material split into a separate private repo
+
+**Date:** 2026-07-26 · **Status:** Accepted
+
+Raised by the project owner while planning ahead for this repo eventually going public: the free tier is code-complete, but `docs/LoreFountain_Spec.md`/`.docx` (plus `docs/archive/`'s older drafts) were tracked here and describe the entire paid-tier feature list *and* the exact licensing architecture (a license-check endpoint on AllStoneTech.com) — going public with this repo as-is would publish the whole roadmap and monetization plan before a single paid feature or the licensing backend exists.
+
+1. **New private repo, `AllStoneTech/lorefountain-business`**, holding `spec/` (the product spec + its archived drafts, moved here verbatim) and two reserved-but-empty folders: `pro/` (future paid-tier feature source — full graph/network view, timeline, Continuity Management, casting/doubling detection, story-bible/BBC/cue-sheet exports — intended to be added to this repo as a private git submodule once it exists, so a build without access to it can only ever produce the free tier) and `licensing/` (the license-check endpoint + payments page, also not built yet).
+2. **GitHub has no per-folder visibility** — a repo is all-or-nothing public or private — so a genuinely separate repo was the only way to let `lorefountain` go public without also publishing this, rather than e.g. a private subfolder.
+3. **`docs/DECISIONS.md` (this file) stays in the public repo.** It's almost entirely engineering rationale for code that's actually here (storage engine, parsing library, folder conventions, the Scripts view) — reads as a genuine engineering-quality signal for an eventual public audience, not a business-sensitive leak. Checked directly before deciding: only one incidental mention of "paid-tier feature" as scoping context, nothing that discloses pricing or the roadmap itself.
+4. **Two dangling references fixed** once the spec moved: this repo's own root `README.md` pointed readers at `docs/LoreFountain_Spec.md` for "the full product and technical specification" (removed — the file's gone from here now); ADR-0019's rationale for why the migration prompt is self-contained referenced "this repo's own spec doc" (reworded, since it no longer is one).
+5. **Deliberately not decided or done here**: whether to scrub the spec's past versions out of *this* repo's git history (the files are removed going forward, but earlier commits in this still-private repo's history still contain them) — a history rewrite is a force-push-requiring, hard-to-reverse operation, out of scope for a same-session file-relocation task. Worth resolving before `lorefountain` actually flips to public, not before. Tracked as a concrete TODO with the exact file paths in `docs/TODO.md`, so it isn't lost between now and whenever that switch actually gets flipped.
+
+---
+
 ## ADR-0023 — Season/Episode script structure, stable Production Codes, and the Scripts tree view
 
 **Date:** 2026-07-26 · **Status:** Accepted
@@ -91,9 +105,10 @@ for reference.
 2. **The template inlines the full entity/glossary schema in plain
    English** (every field from `model/entity.ts`'s discriminated union and
    `model/glossary.ts`, including which fields are type-specific) rather
-   than referencing this repo's own `docs/LoreFountain_Spec.md` — the
-   prompt must be self-contained, since the target project (someone's own
-   story-bible folder) has no reason to contain LoreFountain's spec.
+   than referencing the product spec (which, per ADR-0024, doesn't even
+   live in this repo) — the prompt must be self-contained, since the target
+   project (someone's own story-bible folder) has no reason to contain
+   LoreFountain's spec.
 3. **Explicit ground rules against fabrication**: "never invent facts,"
    omit an uncertain field rather than guess it, skip a file that already
    exists rather than overwrite it. These aren't in the spec bullet

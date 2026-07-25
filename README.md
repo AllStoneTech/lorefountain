@@ -6,8 +6,7 @@ Windsurf, Antigravity). LoreFountain links character cues and scene headings in
 locations, factions, objects, and concepts — with typed relationships, hover
 previews, autocomplete, and backlinks.
 
-> Working title, open to revision. See `docs/LoreFountain_Spec.md` for the full
-> product and technical specification.
+> Working title, open to revision.
 
 ## Principles
 

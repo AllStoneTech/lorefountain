@@ -3,12 +3,14 @@
 
 .vscode/**
 .vscode-test/**
+.*/**
 src/**
 test/**
 out/**
 node_modules/**
 docs/**
 coverage/**
+imports/**
 
 .gitignore
 .vscodeignore
