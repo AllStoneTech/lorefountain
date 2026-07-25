@@ -28,6 +28,7 @@ import { registerNoteCommands } from './commands/notes';
 import { registerReferenceCommands } from './commands/renameEntity';
 import { registerStructuredSearchCommand } from './commands/structuredSearch';
 import { registerTryLoreFountainCommand } from './commands/tryLoreFountain';
+import { scaffoldAgentFilesIfAbsent } from './config/agentFiles';
 import { writeDefaultConfigIfAbsent } from './config/configFile';
 import { detectExistingCoreFolders } from './config/existingFolders';
 import { getWorkspaceFolders } from './config/workspaceConfig';
@@ -248,7 +249,7 @@ async function initializeWorkspace(): Promise<void> {
     const proceed = 'Use Existing Folder(s)';
     const choice = await vscode.window.showWarningMessage(
       `LoreFountain found an existing "${names.join('" and "')}" folder in "${folder.name}". ` +
-        "LoreFountain never touches anything outside its own folders — proceeding will index what's already there and add only what's missing (a config file, and any of glossary/timeline/notes/imports that don't exist yet).",
+        "LoreFountain never touches anything outside its own folders — proceeding will index what's already there and add only what's missing (a config file, agent instructions for AI coding tools, and any of glossary/timeline/notes/imports that don't exist yet).",
       { modal: true },
       proceed,
     );
@@ -261,6 +262,11 @@ async function initializeWorkspace(): Promise<void> {
     ),
   );
   const wroteConfig = await writeDefaultConfigIfAbsent(folder.uri.fsPath);
+  await scaffoldAgentFilesIfAbsent(path.join(extensionContext.extensionPath, 'resources'), folder.uri.fsPath, {
+    world: path.relative(folder.uri.fsPath, folders.world) || 'world',
+    scripts: path.relative(folder.uri.fsPath, folders.scripts) || 'scripts',
+    imports: path.relative(folder.uri.fsPath, folders.imports) || 'imports',
+  });
 
   const existingIndex = indexes.get(folder.uri.toString());
   if (existingIndex) {

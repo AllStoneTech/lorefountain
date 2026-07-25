@@ -6,6 +6,22 @@ revisit.
 
 ---
 
+## ADR-0020 — Phase F: project-level `AGENTS.md` + `agents/*.md` replace the standalone migration-only prompt
+
+**Date:** 2026-07-25 · **Status:** Accepted
+
+Raised by the project owner mid-Phase-F: an AI working in a LoreFountain project needs to know the entity schema and conventions for *every* creation/edit, not just the one-time migration — and that knowledge shouldn't be re-explained inside every prompt separately, or it drifts out of sync. Implemented as `src/config/agentFiles.ts` (`scaffoldAgentFilesIfAbsent`) + four bundled templates (`resources/AGENTS.md`, `resources/agents/{world-builder,script-writer,initiator}.md`), superseding ADR-0019's standalone `migrate-existing-lore-prompt.md`.
+
+1. **Schema knowledge now lives in exactly one place**: `agents/world-builder.md` (entity/glossary format, relations-vs-mentions, ground rules) and `agents/script-writer.md` (Fountain/cue conventions). `agents/initiator.md` — the migration prompt itself — no longer inlines the schema; its first instruction is "read those two files before doing anything." This directly reverses ADR-0019 point 2's original reasoning ("the prompt must be self-contained, since the target project has no reason to contain LoreFountain's spec") — the target project *now* carries that knowledge via `agents/`, so self-containment moved from "one big prompt" to "the project plus a short pointer."
+2. **`agents/initiator.md` now explicitly instructs the AI to ask scoping questions before generating anything** — skim the source material and report back what's there, ask how exhaustive the first pass should be, flag real judgment calls (real historical/public figures, conflicting documents) rather than deciding them silently. This directly reverses the gap the project owner flagged: the original migration prompt had no such instruction, and an AI (or a less careful invocation) could have just barreled through and made those calls itself, which is exactly what didn't happen during the actual ORUN migration only because a human was watching closely.
+3. **Root `AGENTS.md` is a short index, not the schema itself** — it exists mainly so an AI dropped into the project cold has one obvious entry point, and because several coding tools (Cursor and others) are converging on scanning for that exact filename automatically, without anyone needing to paste a prompt at all.
+4. **All four files are scaffolded by `initializeWorkspace`** (the same "create what's missing" step that already handles folders/config), with `{{WORLD_FOLDER}}`/`{{SCRIPTS_FOLDER}}`/`{{IMPORTS_FOLDER}}` placeholders substituted for this workspace's *actual* configured folder names at scaffold time — so every file is immediately readable by any AI with no leftover template syntax. The tradeoff: if folder names are reconfigured later, these files go stale until manually updated; accepted as rare and user-editable, matching `lorefountain.config.json`'s own already-accepted tradeoff.
+5. **Never overwrites an existing file** (same contract as `writeDefaultConfigIfAbsent`) — protects a writer's own edits, and also means an unrelated pre-existing `AGENTS.md` from some other tool's convention is left alone rather than silently replaced. Known gap, not fixed here: if such a file already exists, LoreFountain's own instructions never get added to it; documented as an acceptable edge case rather than building markdown-merge logic for it.
+6. **`migrateExistingLore` no longer reads its own bundled template** — it scaffolds the files if absent (defensive, in case `initializeWorkspace` was skipped) and then reads `agents/initiator.md` straight from the workspace, so a writer's own edits to that file are what actually gets handed to their AI, not a fixed copy baked into the extension.
+7. Verified live in the Extension Development Host: running `Initialize Workspace` against the already-populated demo workspace correctly triggered the existing-folders modal (ADR-0018), and on confirming, wrote `AGENTS.md` + all three `agents/*.md` files with real folder names substituted; running `Migrate Existing Lore` immediately afterward opened that exact scaffolded file, confirming the two commands now share one source of truth.
+
+---
+
 ## ADR-0019 — Phase F: migration prompt is a static template + find/replace, not agent-driven generation
 
 **Date:** 2026-07-24 · **Status:** Accepted
