@@ -6,6 +6,57 @@ revisit.
 
 ---
 
+## ADR-0018 — Pre-Phase-F: initialization asks before adopting pre-existing `world`/`scripts` folders
+
+**Date:** 2026-07-24 · **Status:** Accepted
+
+Raised by the project owner immediately before Phase F (the real ORUN dogfood): "this
+project should never modify the import directory... if it's pointed into an
+existing directory it should not modify any files outside of its core
+folders... if there are existing world and scripts folder it should ask
+initially." Concrete trigger: ORUN's real project folder
+(`a real production project folder`) has its own `docs/` folder
+with existing bible/outline documents that must never be touched, and could
+plausibly already have `world`/`scripts` folders of its own by the time
+LoreFountain is pointed at it for real.
+
+1. **Audit confirmed the codebase was already compliant except for one
+   gap.** `build.ts` only ever walks `folders.world`/`folders.glossary`/
+   `folders.scripts` — never `imports/`, never anything else at the
+   workspace root — and nothing anywhere writes into `imports/` beyond
+   creating it empty once. The one real gap: `initializeWorkspace`
+   (`extension.ts`) would `mkdir(recursive: true)` (a safe no-op if the
+   folder already exists) and index whatever was there **without ever
+   telling the user it was adopting a pre-existing folder it didn't
+   create.**
+2. **Fix**: `src/config/existingFolders.ts` (pure, `detectExistingCoreFolders`)
+   checks whether the resolved `world`/`scripts` paths already exist before
+   `initializeWorkspace` does anything. If either does, a **modal**
+   warning (`{ modal: true }` — deliberately not dismissible by accident,
+   since this is a real "does this fold into my existing project or not"
+   decision) names which folder(s) were found and states the invariant
+   directly ("LoreFountain never touches anything outside its own
+   folders"), with a single affirmative action ("Use Existing Folder(s)");
+   anything else (Cancel, Escape, click-away) aborts with zero writes.
+3. **Scope stayed tight to what was asked**: the check only gates the
+   *initialization* command (the only place that creates anything).
+   Normal activation/indexing was already read-only with respect to
+   `world`/`scripts` content (only the cue sidecar, E5, writes anywhere
+   near a script — and only a new `.cues.json`, never touching the script
+   itself) and doesn't need a prompt.
+4. Verified live in the Extension Development Host against a throwaway
+   test folder built specifically to simulate this scenario (a pre-existing
+   `world/some-preexisting-file.md`, `scripts/preexisting.fountain`, and an
+   unrelated `docs/notes.txt`): the modal appeared naming both folders;
+   **Cancel** left the entire filesystem byte-for-byte unchanged (no
+   config, no subfolders, no touched files); **Use Existing Folder(s)**
+   created only `imports/`, `world/glossary`, `world/notes`,
+   `world/timeline`, and `lorefountain.config.json` — the pre-existing
+   `some-preexisting-file.md`, `preexisting.fountain`, and `docs/notes.txt`
+   were all confirmed untouched (identical content) afterward.
+
+---
+
 ## ADR-0017 — Phase E8: walkthrough substitutes the graph view with World-tree browsing; sample content is original, not ORUN's
 
 **Date:** 2026-07-24 · **Status:** Accepted

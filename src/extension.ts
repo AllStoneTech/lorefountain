@@ -19,6 +19,7 @@
  */
 
 import * as fsp from 'node:fs/promises';
+import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { registerEntityCreationCommands } from './commands/createEntity';
 import { registerExportTranscriptCommand } from './commands/exportTranscript';
@@ -27,6 +28,7 @@ import { registerReferenceCommands } from './commands/renameEntity';
 import { registerStructuredSearchCommand } from './commands/structuredSearch';
 import { registerTryLoreFountainCommand } from './commands/tryLoreFountain';
 import { writeDefaultConfigIfAbsent } from './config/configFile';
+import { detectExistingCoreFolders } from './config/existingFolders';
 import { getWorkspaceFolders } from './config/workspaceConfig';
 import { WorkspaceIndex } from './index/workspaceIndex';
 import type { IndexStore } from './index/store';
@@ -219,12 +221,38 @@ async function rebuildAllWorkspaceIndexes(): Promise<void> {
  * the bootstrap path for a brand-new project with no config file and no
  * `.fountain` script yet — reachable via the Command Palette even before the
  * extension would otherwise activate.
+ *
+ * Never touches anything outside `world/` (and its `glossary`/`timeline`/
+ * `notes` subfolders), `scripts/`, `imports/` (created empty, never written
+ * into again — Spec §13.5's drop-zone is user-owned), and the root config
+ * file. If `world` or `scripts` already exists — a workspace pointed at an
+ * existing project, not a blank one — this asks before proceeding, since
+ * LoreFountain didn't create that folder and shouldn't silently assume
+ * ownership of whatever's already in it (the project owner, 2026-07-24).
  */
 async function initializeWorkspace(): Promise<void> {
   const folder = await pickTargetWorkspaceFolder();
   if (!folder) return;
 
   const { folders } = await getWorkspaceFolders(folder);
+
+  const existingFolders = await detectExistingCoreFolders(folders.world, folders.scripts);
+  if (existingFolders.world || existingFolders.scripts) {
+    const names = [
+      existingFolders.world ? path.basename(folders.world) : undefined,
+      existingFolders.scripts ? path.basename(folders.scripts) : undefined,
+    ].filter((name): name is string => name !== undefined);
+
+    const proceed = 'Use Existing Folder(s)';
+    const choice = await vscode.window.showWarningMessage(
+      `LoreFountain found an existing "${names.join('" and "')}" folder in "${folder.name}". ` +
+        "LoreFountain never touches anything outside its own folders — proceeding will index what's already there and add only what's missing (a config file, and any of glossary/timeline/notes/imports that don't exist yet).",
+      { modal: true },
+      proceed,
+    );
+    if (choice !== proceed) return; // cancelled — nothing written
+  }
+
   await Promise.all(
     [folders.scripts, folders.world, folders.glossary, folders.timeline, folders.notes, folders.imports].map(
       (dir) => fsp.mkdir(dir, { recursive: true }),
@@ -232,9 +260,9 @@ async function initializeWorkspace(): Promise<void> {
   );
   const wroteConfig = await writeDefaultConfigIfAbsent(folder.uri.fsPath);
 
-  const existing = indexes.get(folder.uri.toString());
-  if (existing) {
-    await existing.rebuild();
+  const existingIndex = indexes.get(folder.uri.toString());
+  if (existingIndex) {
+    await existingIndex.rebuild();
   } else {
     await addIndexFor(folder);
   }
