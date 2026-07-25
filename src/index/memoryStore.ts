@@ -16,6 +16,7 @@
 
 import type { Entity, EntityFrontmatter } from '../model/entity';
 import type { GlossaryTerm, GlossaryTermFrontmatter } from '../model/glossary';
+import type { Script } from '../model/script';
 import type { MentionKind, MentionTarget } from './mentions';
 import type {
   EntityRecord,
@@ -28,12 +29,14 @@ import type {
   MentionBacklink,
   MentionEndpoint,
   MentionSource,
+  ScriptRecord,
 } from './store';
 
 /** Create a fresh, empty in-memory {@link IndexStore}. */
 export function createMemoryIndexStore(): IndexStore {
   const entitiesById = new Map<string, EntityRecord>();
   const glossaryById = new Map<string, GlossaryRecord>();
+  const scriptsById = new Map<string, ScriptRecord>();
   const mentionsBySource = new Map<string, MentionTarget[]>();
 
   return {
@@ -84,6 +87,27 @@ export function createMemoryIndexStore(): IndexStore {
       return [];
     },
 
+    upsertScript(script: Script): void {
+      removeMatchingEntity(scriptsById, script.filePath, script.id);
+      scriptsById.set(script.id, toScriptRecord(script));
+    },
+
+    removeScriptByPath(filePath: string): void {
+      removeByFilePath(scriptsById, filePath);
+    },
+
+    getScriptById(id: string): ScriptRecord | undefined {
+      return scriptsById.get(id);
+    },
+
+    getScriptByPath(filePath: string): ScriptRecord | undefined {
+      return findByFilePath(scriptsById, filePath);
+    },
+
+    listScripts(): ScriptRecord[] {
+      return [...scriptsById.values()];
+    },
+
     setMentionsForSource(source: MentionSource, targets: readonly MentionTarget[]): void {
       mentionsBySource.set(mentionKey(source.kind, source.id), [...targets]);
     },
@@ -103,6 +127,7 @@ export function createMemoryIndexStore(): IndexStore {
     clear(): void {
       entitiesById.clear();
       glossaryById.clear();
+      scriptsById.clear();
       mentionsBySource.clear();
     },
 
@@ -168,5 +193,15 @@ function toGlossaryRecord(term: GlossaryTerm): GlossaryRecord {
     schemaVersion: frontmatter.schema_version,
     data: frontmatter,
     body: term.body,
+  };
+}
+
+function toScriptRecord(script: Script): ScriptRecord {
+  return {
+    id: script.id,
+    filePath: script.filePath,
+    title: script.frontmatter.title,
+    order: script.frontmatter.order,
+    productionCode: script.frontmatter.productionCode,
   };
 }

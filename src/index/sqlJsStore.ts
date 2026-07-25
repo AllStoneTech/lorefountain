@@ -7,12 +7,18 @@
  * FTS5 — the default sql.js build has no FTS5 module; see ADR-0005). The whole
  * database is in-memory: the index is disposable and rebuilt from disk, so
  * there is nothing to persist across sessions (see ADR-0001).
+ *
+ * `scripts` has no FTS shadow table and no JSON `data` column — unlike
+ * entities/glossary, a script has no free-form frontmatter to preserve, just
+ * the three fixed fields `parseScriptTitlePage` extracts (title, order,
+ * production_code), so plain columns suffice.
  */
 
 import { basename } from 'node:path';
 import initSqlJs, { type Database, type SqlValue } from 'sql.js';
 import type { Entity, EntityFrontmatter, EntityType } from '../model/entity';
 import type { GlossaryTerm, GlossaryTermFrontmatter } from '../model/glossary';
+import type { Script } from '../model/script';
 import type { MentionKind, MentionTarget } from './mentions';
 import type {
   EntityRecord,
@@ -25,6 +31,7 @@ import type {
   MentionBacklink,
   MentionEndpoint,
   MentionSource,
+  ScriptRecord,
 } from './store';
 
 const SCHEMA_SQL = `
@@ -51,6 +58,14 @@ CREATE TABLE glossary (
 );
 
 CREATE VIRTUAL TABLE glossary_fts USING fts3(id, term, body);
+
+CREATE TABLE scripts (
+  id TEXT PRIMARY KEY,
+  file_path TEXT NOT NULL UNIQUE,
+  title TEXT,
+  "order" INTEGER,
+  production_code TEXT
+);
 
 CREATE TABLE mentions (
   source_id TEXT NOT NULL,
@@ -189,6 +204,38 @@ class SqlJsIndexStore implements IndexStore {
     return rows.map((row) => ({ id: row.id, term: row.term, filePath: row.file_path }));
   }
 
+  upsertScript(script: Script): void {
+    this.deleteScriptRows(script.id, script.filePath);
+    this.db.run(
+      'INSERT INTO scripts (id, file_path, title, "order", production_code) VALUES (?, ?, ?, ?, ?)',
+      [
+        script.id,
+        script.filePath,
+        script.frontmatter.title ?? null,
+        script.frontmatter.order ?? null,
+        script.frontmatter.productionCode ?? null,
+      ],
+    );
+  }
+
+  removeScriptByPath(filePath: string): void {
+    const id = this.singleValue<string>('SELECT id FROM scripts WHERE file_path = ?', [filePath]);
+    if (id === undefined) return;
+    this.deleteScriptRows(id, filePath);
+  }
+
+  getScriptById(id: string): ScriptRecord | undefined {
+    return this.queryScripts('SELECT * FROM scripts WHERE id = ?', [id])[0];
+  }
+
+  getScriptByPath(filePath: string): ScriptRecord | undefined {
+    return this.queryScripts('SELECT * FROM scripts WHERE file_path = ?', [filePath])[0];
+  }
+
+  listScripts(): ScriptRecord[] {
+    return this.queryScripts('SELECT * FROM scripts');
+  }
+
   setMentionsForSource(source: MentionSource, targets: readonly MentionTarget[]): void {
     this.removeMentionsForSource(source);
     for (const target of targets) {
@@ -235,7 +282,7 @@ class SqlJsIndexStore implements IndexStore {
 
   clear(): void {
     this.db.run(
-      'DELETE FROM entities; DELETE FROM entities_fts; DELETE FROM glossary; DELETE FROM glossary_fts; DELETE FROM mentions;',
+      'DELETE FROM entities; DELETE FROM entities_fts; DELETE FROM glossary; DELETE FROM glossary_fts; DELETE FROM scripts; DELETE FROM mentions;',
     );
   }
 
@@ -265,6 +312,15 @@ class SqlJsIndexStore implements IndexStore {
       this.db.run('DELETE FROM glossary WHERE id = ?', [staleId]);
       this.db.run('DELETE FROM glossary_fts WHERE id = ?', [staleId]);
     }
+  }
+
+  /** Remove any script row matching `id` OR `filePath`. */
+  private deleteScriptRows(id: string, filePath: string): void {
+    this.db.run('DELETE FROM scripts WHERE id = ? OR file_path = ?', [id, filePath]);
+  }
+
+  private queryScripts(sql: string, params: SqlValue[] = []): ScriptRecord[] {
+    return this.queryAll<ScriptRow>(sql, params).map(rowToScriptRecord);
   }
 
   private queryOneEntity(sql: string, params: SqlValue[]): EntityRecord | undefined {
@@ -332,6 +388,14 @@ interface GlossaryRow {
   body: string;
 }
 
+interface ScriptRow {
+  id: string;
+  file_path: string;
+  title: string | null;
+  order: number | null;
+  production_code: string | null;
+}
+
 /**
  * Map a raw entities-table row to an {@link EntityRecord}. `data` was written
  * from an already Zod-validated {@link EntityFrontmatter} at upsert time, so
@@ -359,5 +423,16 @@ function rowToGlossaryRecord(row: GlossaryRow): GlossaryRecord {
     schemaVersion: row.schema_version,
     data: JSON.parse(row.data) as GlossaryTermFrontmatter,
     body: row.body,
+  };
+}
+
+/** Map a raw scripts-table row to a {@link ScriptRecord}, converting SQL `NULL` back to `undefined`. */
+function rowToScriptRecord(row: ScriptRow): ScriptRecord {
+  return {
+    id: row.id,
+    filePath: row.file_path,
+    title: row.title ?? undefined,
+    order: row.order ?? undefined,
+    productionCode: row.production_code ?? undefined,
   };
 }

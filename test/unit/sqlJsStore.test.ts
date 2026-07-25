@@ -9,6 +9,7 @@ import { createSqlJsIndexStore } from '../../src/index/sqlJsStore';
 import type { IndexStore } from '../../src/index/store';
 import { entityFrontmatterSchema, type Entity } from '../../src/model/entity';
 import { glossaryTermSchema, type GlossaryTerm } from '../../src/model/glossary';
+import type { Script, ScriptFrontmatter } from '../../src/model/script';
 
 function entity(opts: {
   id: string;
@@ -40,6 +41,10 @@ function glossaryTerm(opts: {
     body: opts.body ?? '',
     frontmatter: glossaryTermSchema.parse({ term: 'Ase', ...opts.frontmatter }),
   };
+}
+
+function script(opts: { id: string; filePath: string; frontmatter?: ScriptFrontmatter }): Script {
+  return { id: opts.id, filePath: opts.filePath, frontmatter: opts.frontmatter ?? {} };
 }
 
 describe('SqlJsIndexStore', () => {
@@ -148,6 +153,63 @@ describe('SqlJsIndexStore', () => {
       store.upsertGlossaryTerm(glossaryTerm({ id: 'ase', filePath: '/world/glossary/ase.md' }));
       store.removeGlossaryTermByPath('/world/glossary/ase.md');
       expect(store.getGlossaryTermById('ase')).toBeUndefined();
+    });
+  });
+
+  describe('scripts', () => {
+    it('upserts and retrieves a script by id and by path, with full title-page metadata', () => {
+      store.upsertScript(
+        script({ id: '1x01-pilot', filePath: '/scripts/1x01-pilot.fountain', frontmatter: { title: 'Pilot', order: 1, productionCode: '1x01' } }),
+      );
+      const byId = store.getScriptById('1x01-pilot');
+      const byPath = store.getScriptByPath('/scripts/1x01-pilot.fountain');
+      expect(byId).toEqual(byPath);
+      expect(byId).toEqual({ id: '1x01-pilot', filePath: '/scripts/1x01-pilot.fountain', title: 'Pilot', order: 1, productionCode: '1x01' });
+    });
+
+    it('stores a script with no title-page metadata as all-undefined fields, not a failure', () => {
+      store.upsertScript(script({ id: 'untitled', filePath: '/scripts/untitled.fountain' }));
+      expect(store.getScriptById('untitled')).toEqual({
+        id: 'untitled',
+        filePath: '/scripts/untitled.fountain',
+        title: undefined,
+        order: undefined,
+        productionCode: undefined,
+      });
+    });
+
+    it('returns undefined for an unknown id or path', () => {
+      expect(store.getScriptById('nope')).toBeUndefined();
+      expect(store.getScriptByPath('/scripts/nope.fountain')).toBeUndefined();
+    });
+
+    it('re-upserting the same file path replaces the row rather than duplicating it', () => {
+      store.upsertScript(script({ id: '1x01', filePath: '/scripts/1x01.fountain', frontmatter: { order: 1 } }));
+      store.upsertScript(script({ id: '1x01', filePath: '/scripts/1x01.fountain', frontmatter: { order: 2 } }));
+      expect(store.listScripts()).toHaveLength(1);
+      expect(store.getScriptById('1x01')?.order).toBe(2);
+    });
+
+    it('treats a changed id at the same file path as a rename, not a duplicate', () => {
+      store.upsertScript(script({ id: '1x01-old-title', filePath: '/scripts/1x01.fountain' }));
+      store.upsertScript(script({ id: '1x01-new-title', filePath: '/scripts/1x01.fountain' }));
+      expect(store.listScripts()).toHaveLength(1);
+      expect(store.getScriptById('1x01-old-title')).toBeUndefined();
+      expect(store.getScriptById('1x01-new-title')).toBeDefined();
+    });
+
+    it('lists every script', () => {
+      store.upsertScript(script({ id: '1x01', filePath: '/scripts/1x01.fountain' }));
+      store.upsertScript(script({ id: '1x02', filePath: '/scripts/1x02.fountain' }));
+      expect(store.listScripts().map((s) => s.id).sort()).toEqual(['1x01', '1x02']);
+    });
+
+    it('removes a script by file path, safely no-oping when absent', () => {
+      store.upsertScript(script({ id: '1x01', filePath: '/scripts/1x01.fountain' }));
+      store.removeScriptByPath('/scripts/1x01.fountain');
+      expect(store.getScriptById('1x01')).toBeUndefined();
+      expect(store.listScripts()).toEqual([]);
+      expect(() => store.removeScriptByPath('/scripts/never-existed.fountain')).not.toThrow();
     });
   });
 

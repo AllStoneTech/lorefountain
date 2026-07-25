@@ -156,6 +156,8 @@ describe('buildIndexFromDisk', () => {
       malformed: [],
       warnings: [],
       danglingRelations: [],
+      duplicateScriptOrders: [],
+      duplicateProductionCodes: [],
     });
   });
 
@@ -255,6 +257,93 @@ describe('buildIndexFromDisk', () => {
     const backlinks = store.getBacklinks({ id: 'sango', kind: 'entity' });
     expect(backlinks).toEqual([
       { id: '1x01', kind: 'script', name: '1x01.fountain', filePath: expect.stringContaining('1x01.fountain') },
+    ]);
+  });
+
+  it('parses a script\'s title page and stores it as a queryable ScriptRecord', async () => {
+    await writeFile(
+      tmpRoot,
+      'scripts/Season 01/1x01-pilot/1x01-pilot.fountain',
+      ['Title: Pilot', 'Order: 1', 'Production Code: 1x01', '', 'INT. THE ARK - NIGHT'].join('\n'),
+    );
+
+    await buildIndexFromDisk(store, {
+      world: path.join(tmpRoot, 'world'),
+      glossary: path.join(tmpRoot, 'world', 'glossary'),
+      scripts: path.join(tmpRoot, 'scripts'),
+    });
+
+    expect(store.listScripts()).toEqual([
+      {
+        id: '1x01-pilot',
+        filePath: expect.stringContaining('1x01-pilot.fountain'),
+        title: 'Pilot',
+        order: 1,
+        productionCode: '1x01',
+      },
+    ]);
+  });
+
+  it('reports an invalid Order/Production Code as a warning, without failing the build', async () => {
+    await writeFile(
+      tmpRoot,
+      'scripts/bad.fountain',
+      ['Title: Bad', 'Order: not-a-number', 'Production Code: nope', '', 'INT. X - DAY'].join('\n'),
+    );
+
+    const summary = await buildIndexFromDisk(store, {
+      world: path.join(tmpRoot, 'world'),
+      glossary: path.join(tmpRoot, 'world', 'glossary'),
+      scripts: path.join(tmpRoot, 'scripts'),
+    });
+
+    expect(summary.scriptCount).toBe(1);
+    expect(summary.warnings).toHaveLength(1);
+    expect(summary.warnings[0].warnings.map((w) => w.code).sort()).toEqual(['invalid-order', 'invalid-production-code']);
+  });
+
+  it('flags two ungrouped scripts (no season folder at all) sharing an Order', async () => {
+    await writeFile(tmpRoot, 'scripts/1x01.fountain', ['Title: Pilot', 'Order: 1', ''].join('\n'));
+    await writeFile(tmpRoot, 'scripts/1x02.fountain', ['Title: Second', 'Order: 1', ''].join('\n'));
+
+    const summary = await buildIndexFromDisk(store, {
+      world: path.join(tmpRoot, 'world'),
+      glossary: path.join(tmpRoot, 'world', 'glossary'),
+      scripts: path.join(tmpRoot, 'scripts'),
+    });
+
+    expect(summary.duplicateScriptOrders).toEqual([{ group: '', order: 1, filePaths: expect.arrayContaining([expect.stringContaining('1x01.fountain'), expect.stringContaining('1x02.fountain')]) }]);
+  });
+
+  it('flags two scripts in the same season sharing an Order, but not scripts in different seasons', async () => {
+    await writeFile(tmpRoot, 'scripts/Season 01/1x01-pilot/1x01-pilot.fountain', ['Title: Pilot', 'Order: 1', ''].join('\n'));
+    await writeFile(tmpRoot, 'scripts/Season 01/1x02-second/1x02-second.fountain', ['Title: Second', 'Order: 1', ''].join('\n'));
+    await writeFile(tmpRoot, 'scripts/Season 02/2x01-premiere/2x01-premiere.fountain', ['Title: Premiere', 'Order: 1', ''].join('\n'));
+
+    const summary = await buildIndexFromDisk(store, {
+      world: path.join(tmpRoot, 'world'),
+      glossary: path.join(tmpRoot, 'world', 'glossary'),
+      scripts: path.join(tmpRoot, 'scripts'),
+    });
+
+    expect(summary.duplicateScriptOrders).toHaveLength(1);
+    expect(summary.duplicateScriptOrders[0].group).toBe('Season 01');
+    expect(summary.duplicateScriptOrders[0].order).toBe(1);
+    expect(summary.duplicateScriptOrders[0].filePaths).toHaveLength(2);
+  });
+
+  it('flags two scripts anywhere sharing a Production Code as an error-level collision', async () => {
+    await writeFile(tmpRoot, 'scripts/Season 01/1x01-pilot/1x01-pilot.fountain', ['Title: Pilot', 'Production Code: 1x01', ''].join('\n'));
+    await writeFile(tmpRoot, 'scripts/Season 02/2x01-premiere/2x01-premiere.fountain', ['Title: Premiere', 'Production Code: 1x01', ''].join('\n'));
+
+    const summary = await buildIndexFromDisk(store, {
+      world: path.join(tmpRoot, 'world'),
+      glossary: path.join(tmpRoot, 'world', 'glossary'),
+      scripts: path.join(tmpRoot, 'scripts'),
+    });
+
+    expect(summary.duplicateProductionCodes).toEqual([
+      { productionCode: '1x01', filePaths: expect.arrayContaining([expect.stringContaining('1x01-pilot.fountain'), expect.stringContaining('2x01-premiere.fountain')]) },
     ]);
   });
 
@@ -394,5 +483,44 @@ describe('reindexFile and removeFileFromIndex', () => {
 
     removeFileFromIndex(store, scriptPath, 'script');
     expect(store.getBacklinks({ id: 'sango', kind: 'entity' })).toEqual([]);
+  });
+
+  it('reindexing a script parses and upserts its title-page metadata as a ScriptRecord', async () => {
+    const scriptPath = await writeFile(tmpRoot, 'scripts/1x01.fountain', ['Title: Pilot', 'Order: 1', '', 'INT. X - DAY'].join('\n'));
+    await reindexFile(store, scriptPath, 'script');
+
+    expect(store.getScriptByPath(scriptPath)).toEqual({ id: '1x01', filePath: scriptPath, title: 'Pilot', order: 1, productionCode: undefined });
+  });
+
+  it('warns when a script\'s Production Code changes from what was previously indexed', async () => {
+    const scriptPath = await writeFile(tmpRoot, 'scripts/1x01.fountain', ['Title: Pilot', 'Production Code: 1x01', ''].join('\n'));
+    await reindexFile(store, scriptPath, 'script');
+
+    await fs.writeFile(scriptPath, ['Title: Pilot', 'Production Code: 1x02', ''].join('\n'), 'utf8');
+    const result = await reindexFile(store, scriptPath, 'script');
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.warnings).toEqual([
+      { code: 'production-code-changed', path: 'production_code', message: expect.stringContaining('1x01') },
+    ]);
+  });
+
+  it('does not warn about Production Code drift the first time a script is indexed', async () => {
+    const scriptPath = await writeFile(tmpRoot, 'scripts/1x01.fountain', ['Title: Pilot', 'Production Code: 1x01', ''].join('\n'));
+    const result = await reindexFile(store, scriptPath, 'script');
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('removeFileFromIndex also removes the script\'s ScriptRecord', async () => {
+    const scriptPath = await writeFile(tmpRoot, 'scripts/1x01.fountain', ['Title: Pilot', ''].join('\n'));
+    await reindexFile(store, scriptPath, 'script');
+    expect(store.getScriptByPath(scriptPath)).toBeDefined();
+
+    removeFileFromIndex(store, scriptPath, 'script');
+    expect(store.getScriptByPath(scriptPath)).toBeUndefined();
   });
 });

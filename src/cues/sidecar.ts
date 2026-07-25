@@ -64,3 +64,26 @@ export async function removeCueSidecar(scriptPath: string): Promise<void> {
     if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
   }
 }
+
+/**
+ * Move a script's cue sidecar to match a renamed/moved script file, so a
+ * plain filesystem rename (VS Code's Explorer, F2, a drag) doesn't leave the
+ * old sidecar orphaned under its previous name. Safe to call when there is
+ * no sidecar to move — scripts have no other data that needs this (there is
+ * no alias system, since nothing "mentions" a script by name the way it can
+ * an entity; see `model/script.ts`'s doc comment).
+ *
+ * @param oldScriptPath - The script's absolute path before the rename/move.
+ * @param newScriptPath - The script's absolute path after the rename/move.
+ */
+export async function relocateCueSidecar(oldScriptPath: string, newScriptPath: string): Promise<void> {
+  const oldSidecarPath = cueSidecarPathFor(oldScriptPath);
+  const newSidecarPath = cueSidecarPathFor(newScriptPath);
+  if (oldSidecarPath === newSidecarPath) return;
+
+  try {
+    await fsp.rename(oldSidecarPath, newSidecarPath);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+  }
+}

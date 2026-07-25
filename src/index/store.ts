@@ -12,6 +12,7 @@
 
 import type { Entity, EntityType, EntityFrontmatter } from '../model/entity';
 import type { GlossaryTerm, GlossaryTermFrontmatter } from '../model/glossary';
+import type { Script } from '../model/script';
 import type { MentionKind, MentionTarget } from './mentions';
 
 /** A stored, indexed entity row plus its full validated frontmatter. */
@@ -35,6 +36,21 @@ export interface GlossaryRecord {
   schemaVersion: number;
   data: GlossaryTermFrontmatter;
   body: string;
+}
+
+/**
+ * A stored, indexed script row: title-page metadata plus file context.
+ * Never a mention *target* — see {@link MentionEndpoint}'s doc comment;
+ * scripts only ever appear as a mention source.
+ */
+export interface ScriptRecord {
+  id: string;
+  filePath: string;
+  title?: string;
+  /** This script's position among its season's siblings, from `Order:`. Absent means "sort by filename instead." */
+  order?: number;
+  /** Permanent SxEE identifier from `Production Code:` (e.g. `"1x01"`) — never recomputed once assigned. */
+  productionCode?: string;
 }
 
 /** One full-text search match against entities. */
@@ -134,6 +150,18 @@ export interface IndexStore {
 
   /** Full-text search over glossary term + gloss + body. See ADR-0005 (FTS3, not FTS5). */
   searchGlossary(query: string, limit?: number): GlossarySearchHit[];
+
+  /** Insert or replace a script row, matched by either `script.filePath` or `script.id`. */
+  upsertScript(script: Script): void;
+
+  /** Remove the script row for a given file path, if any. Safe to call when absent. */
+  removeScriptByPath(filePath: string): void;
+
+  getScriptById(id: string): ScriptRecord | undefined;
+  getScriptByPath(filePath: string): ScriptRecord | undefined;
+
+  /** Every indexed script, in no particular order — callers sort by season/`order`/filename themselves. */
+  listScripts(): ScriptRecord[];
 
   /**
    * Replace every outgoing mention edge for a source (Spec §4.5) — an

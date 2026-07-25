@@ -12,9 +12,11 @@
  * `Initialize Workspace` and runs anywhere with `node validate.js`.
  *
  * Exit code is `0` when nothing is wrong, `1` when there's at least one
- * malformed file or dangling relation (misplaced-field warnings alone
- * don't fail the run, matching how the extension treats them as
- * non-blocking).
+ * malformed file, dangling relation, or duplicate Production Code (an
+ * identity collision, not just a display ambiguity). Plain warnings —
+ * misplaced fields, an unusable `Order`/Production Code value, Production
+ * Code drift, or two scripts in the same season sharing an `Order` — don't
+ * fail the run, matching how the extension treats them as non-blocking.
  */
 
 import * as path from 'node:path';
@@ -40,13 +42,24 @@ async function main(): Promise<void> {
   });
 
   printReport(root, summary);
-  process.exitCode = summary.malformed.length > 0 || summary.danglingRelations.length > 0 ? 1 : 0;
+  process.exitCode =
+    summary.malformed.length > 0 ||
+    summary.danglingRelations.length > 0 ||
+    summary.duplicateProductionCodes.length > 0
+      ? 1
+      : 0;
 }
 
 function printReport(root: string, summary: IndexBuildSummary): void {
   console.log(`${summary.entityCount} entities, ${summary.glossaryCount} glossary terms, ${summary.scriptCount} scripts parsed.\n`);
 
-  if (summary.malformed.length === 0 && summary.warnings.length === 0 && summary.danglingRelations.length === 0) {
+  const nothingToReport =
+    summary.malformed.length === 0 &&
+    summary.warnings.length === 0 &&
+    summary.danglingRelations.length === 0 &&
+    summary.duplicateScriptOrders.length === 0 &&
+    summary.duplicateProductionCodes.length === 0;
+  if (nothingToReport) {
     console.log('All clear.');
     return;
   }
@@ -60,7 +73,7 @@ function printReport(root: string, summary: IndexBuildSummary): void {
   }
 
   if (summary.warnings.length > 0) {
-    console.log(`⚠ ${summary.warnings.length} file(s) with misplaced-field warnings:`);
+    console.log(`⚠ ${summary.warnings.length} file(s) with non-blocking warnings:`);
     for (const entry of summary.warnings) {
       for (const warning of entry.warnings) {
         console.log(`  ${path.relative(root, entry.filePath)} — ${warning.message}`);
@@ -75,6 +88,29 @@ function printReport(root: string, summary: IndexBuildSummary): void {
       console.log(
         `  ${path.relative(root, relation.filePath)} — relation "${relation.relationType}" targets unknown entity "${relation.target}"`,
       );
+    }
+    console.log('');
+  }
+
+  if (summary.duplicateScriptOrders.length > 0) {
+    console.log(`⚠ ${summary.duplicateScriptOrders.length} duplicate script Order(s):`);
+    for (const duplicate of summary.duplicateScriptOrders) {
+      const where = duplicate.group ? `"${duplicate.group}"` : 'scripts/';
+      console.log(`  Order ${duplicate.order} in ${where} is claimed by ${duplicate.filePaths.length} scripts:`);
+      for (const filePath of duplicate.filePaths) {
+        console.log(`    ${path.relative(root, filePath)}`);
+      }
+    }
+    console.log('');
+  }
+
+  if (summary.duplicateProductionCodes.length > 0) {
+    console.log(`✘ ${summary.duplicateProductionCodes.length} duplicate Production Code(s):`);
+    for (const duplicate of summary.duplicateProductionCodes) {
+      console.log(`  Production Code "${duplicate.productionCode}" is claimed by ${duplicate.filePaths.length} scripts:`);
+      for (const filePath of duplicate.filePaths) {
+        console.log(`    ${path.relative(root, filePath)}`);
+      }
     }
   }
 }

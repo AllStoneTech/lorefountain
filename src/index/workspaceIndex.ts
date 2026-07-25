@@ -144,6 +144,17 @@ export class WorkspaceIndex implements vscode.Disposable {
         `[LoreFountain] WARNING ${relation.filePath}: relation "${relation.relationType}" targets unknown entity "${relation.target}".`,
       );
     }
+    for (const duplicate of summary.duplicateScriptOrders) {
+      const where = duplicate.group ? `"${duplicate.group}"` : 'scripts/';
+      this.outputChannel.appendLine(
+        `[LoreFountain] WARNING: ${duplicate.filePaths.length} scripts in ${where} all claim Order: ${duplicate.order} — ${duplicate.filePaths.join(', ')}`,
+      );
+    }
+    for (const duplicate of summary.duplicateProductionCodes) {
+      this.outputChannel.appendLine(
+        `[LoreFountain] ERROR: ${duplicate.filePaths.length} scripts share Production Code "${duplicate.productionCode}" — ${duplicate.filePaths.join(', ')}`,
+      );
+    }
   }
 }
 

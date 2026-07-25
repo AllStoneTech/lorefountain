@@ -107,6 +107,11 @@
         "category": "LoreFountain"
       },
       {
+        "command": "lorefountain.newScript",
+        "title": "New Script",
+        "category": "LoreFountain"
+      },
+      {
         "command": "lorefountain.promoteNoteToEntity",
         "title": "Promote Note to Entity",
         "category": "LoreFountain"
@@ -190,6 +195,10 @@
         {
           "id": "lorefountain.worldView",
           "name": "World"
+        },
+        {
+          "id": "lorefountain.scriptsView",
+          "name": "Scripts"
         }
       ]
     },
@@ -214,6 +223,11 @@
           "command": "lorefountain.migrateExistingLore",
           "when": "view == lorefountain.worldView",
           "group": "9_lorefountain"
+        },
+        {
+          "command": "lorefountain.newScript",
+          "when": "view == lorefountain.scriptsView",
+          "group": "navigation"
         }
       ],
       "editor/title": [

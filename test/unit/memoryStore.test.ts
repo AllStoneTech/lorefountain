@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createMemoryIndexStore } from '../../src/index/memoryStore';
 import type { Entity } from '../../src/model/entity';
 import type { GlossaryTerm } from '../../src/model/glossary';
+import type { Script } from '../../src/model/script';
 
 function makeEntity(overrides: Partial<Entity> = {}): Entity {
   return {
@@ -19,6 +20,15 @@ function makeGlossaryTerm(overrides: Partial<GlossaryTerm> = {}): GlossaryTerm {
     filePath: '/world/glossary/ase.md',
     body: 'The life force.',
     frontmatter: { term: 'Ase', schema_version: 1 },
+    ...overrides,
+  };
+}
+
+function makeScript(overrides: Partial<Script> = {}): Script {
+  return {
+    id: '1x01-pilot',
+    filePath: '/scripts/1x01-pilot.fountain',
+    frontmatter: { title: 'Pilot', order: 1, productionCode: '1x01' },
     ...overrides,
   };
 }
@@ -80,6 +90,41 @@ describe('createMemoryIndexStore', () => {
     expect(store.listGlossaryTerms()).toHaveLength(0);
   });
 
+  it('upserts and retrieves a script by id and by path', () => {
+    const store = createMemoryIndexStore();
+    store.upsertScript(makeScript());
+
+    expect(store.getScriptById('1x01-pilot')).toEqual({
+      id: '1x01-pilot',
+      filePath: '/scripts/1x01-pilot.fountain',
+      title: 'Pilot',
+      order: 1,
+      productionCode: '1x01',
+    });
+    expect(store.getScriptByPath('/scripts/1x01-pilot.fountain')?.id).toBe('1x01-pilot');
+    expect(store.listScripts()).toHaveLength(1);
+  });
+
+  it('re-upserting a script at the same file path replaces the old row, matched by path even if the id changed', () => {
+    const store = createMemoryIndexStore();
+    store.upsertScript(makeScript());
+    store.upsertScript(makeScript({ id: '1x01-renamed' }));
+
+    expect(store.listScripts()).toHaveLength(1);
+    expect(store.getScriptById('1x01-pilot')).toBeUndefined();
+    expect(store.getScriptById('1x01-renamed')).toBeDefined();
+  });
+
+  it('removeScriptByPath removes the matching row and leaves others intact', () => {
+    const store = createMemoryIndexStore();
+    store.upsertScript(makeScript());
+    store.upsertScript(makeScript({ id: '1x02', filePath: '/scripts/1x02.fountain', frontmatter: { order: 2 } }));
+
+    store.removeScriptByPath('/scripts/1x01-pilot.fountain');
+
+    expect(store.listScripts().map((s) => s.id)).toEqual(['1x02']);
+  });
+
   it('stats reflects current entity and glossary counts', () => {
     const store = createMemoryIndexStore();
     store.upsertEntity(makeEntity());
@@ -88,14 +133,16 @@ describe('createMemoryIndexStore', () => {
     expect(store.stats()).toEqual({ entityCount: 1, glossaryCount: 1 });
   });
 
-  it('clear empties everything', () => {
+  it('clear empties everything, including scripts', () => {
     const store = createMemoryIndexStore();
     store.upsertEntity(makeEntity());
     store.upsertGlossaryTerm(makeGlossaryTerm());
+    store.upsertScript(makeScript());
     store.clear();
 
     expect(store.listEntities()).toEqual([]);
     expect(store.listGlossaryTerms()).toEqual([]);
+    expect(store.listScripts()).toEqual([]);
     expect(store.stats()).toEqual({ entityCount: 0, glossaryCount: 0 });
   });
 

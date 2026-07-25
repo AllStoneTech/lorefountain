@@ -5,11 +5,12 @@
  * mentions (Spec §4.5) and detects dangling relation targets after every
  * (re)index.
  *
- * `.fountain` scripts are indexed too (Spec §4.5/§13.6 — a script's presence
- * as a mention source, not just entity/glossary bodies): a script is a
- * mention *source* only, never a target and never a stored record — it
- * contributes outgoing mention edges (so it shows up in an entity's
- * backlinks) but has no frontmatter/schema to validate.
+ * `.fountain` scripts are indexed too (Spec §4.5/§13.6): a script is a
+ * mention *source* only, never a mention *target* — nothing links "to" a
+ * script the way it can to an entity or glossary term — but it is stored as
+ * its own {@link ScriptRecord} (title-page metadata: title, `Order`,
+ * Production Code — see `model/script.ts`), not merely a mention source,
+ * so a "Scripts" tree view has something to list and sort.
  *
  * Every time a script's text is read here — full build or incremental
  * reindex — its cue sidecar (Spec §15) is also regenerated via
@@ -38,6 +39,21 @@
  * when it sits directly in `world/` or `world/glossary/` — LoreFountain
  * scaffolds one into each of those folders (`readmeFiles.ts`), and without
  * this exclusion every project that adopts it would fail to index.
+ *
+ * Two script-specific checks run in the same full-candidate-list pass as
+ * dangling relations (only from {@link buildIndexFromDisk} — see the same
+ * caveat as the mentions-consistency note above; an incremental
+ * {@link reindexFile} does not re-check these across every other script,
+ * only `Rebuild Index`/the validator does): two scripts sharing an `Order`
+ * within the same immediate subfolder of `scripts/` (its "season" by
+ * convention, though this module doesn't need to know that word — grouping
+ * is purely "same parent folder") are a soft, warning-level ambiguity, since
+ * nothing is lost — display just falls back to filename order. Two scripts
+ * sharing a Production Code, by contrast, is an identity collision reported
+ * at error severity (surfaced via `duplicateProductionCodes`, and treated as
+ * exit-code-worthy by `cli/validate.ts`, same as a dangling relation) —
+ * Production Codes are meant to be permanent and unique, assigned once by
+ * "New Script" and never recomputed.
  */
 
 import * as fsp from 'node:fs/promises';
@@ -46,10 +62,11 @@ import { updateCueSidecar } from '../cues/sidecar';
 import type { ValidationIssue } from '../model/errors';
 import { parseEntityFile, type EntityWarning } from '../model/entity';
 import { parseGlossaryFile } from '../model/glossary';
+import { parseScriptTitlePage, type ScriptWarning } from '../model/script';
 import { idFromFilePath } from '../model/slug';
 import { extractMentionTargets, type MentionCandidate } from './mentions';
 import { findDanglingRelations } from './relations';
-import type { IndexStore } from './store';
+import type { IndexStore, ScriptRecord } from './store';
 
 /** Subfolders of `world/` that are never walked for entity files (Spec §5). */
 const ENTITY_EXCLUDED_SUBDIRS = ['glossary', 'timeline', 'notes'];
@@ -67,10 +84,18 @@ export interface IndexBuildIssue {
   issues?: ValidationIssue[];
 }
 
-/** One entity file that parsed successfully but had a misplaced-field warning (Spec §4.3/§4.4, ADR-0004). */
+/** A non-blocking warning about a script's title page changing its Production Code since it was last indexed — see the module doc comment on why this only fires for an incremental {@link reindexFile}, never a full build. */
+export interface ScriptDriftWarning extends ValidationIssue {
+  code: 'production-code-changed';
+}
+
+/** Every kind of non-blocking, per-file warning the index can produce. */
+export type IndexWarning = EntityWarning | ScriptWarning | ScriptDriftWarning;
+
+/** One file that parsed successfully but had a non-blocking warning (misplaced field, unusable Order/Production Code, or Production Code drift). */
 export interface IndexBuildWarning {
   filePath: string;
-  warnings: EntityWarning[];
+  warnings: IndexWarning[];
 }
 
 /** One relation (Spec §4.5) whose `target` doesn't resolve to a known entity id. */
@@ -78,6 +103,20 @@ export interface IndexBuildDanglingRelation {
   filePath: string;
   target: string;
   relationType: string;
+}
+
+/** Two or more scripts in the same immediate subfolder of `scripts/` claiming the same `Order` — ambiguous display position, but nothing is lost (falls back to filename order). */
+export interface IndexBuildDuplicateOrder {
+  /** The shared parent folder's name, or `''` for scripts sitting directly in `scripts/`. */
+  group: string;
+  order: number;
+  filePaths: string[];
+}
+
+/** Two or more scripts sharing the same Production Code — an identity collision, not merely a display ambiguity. */
+export interface IndexBuildDuplicateProductionCode {
+  productionCode: string;
+  filePaths: string[];
 }
 
 /** Summary of a full {@link buildIndexFromDisk} pass. */
@@ -88,6 +127,8 @@ export interface IndexBuildSummary {
   malformed: IndexBuildIssue[];
   warnings: IndexBuildWarning[];
   danglingRelations: IndexBuildDanglingRelation[];
+  duplicateScriptOrders: IndexBuildDuplicateOrder[];
+  duplicateProductionCodes: IndexBuildDuplicateProductionCode[];
 }
 
 /** The three kinds of file the index tracks. Notes (§13.4) are never indexed. */
@@ -95,7 +136,7 @@ export type IndexableFileKind = 'entity' | 'glossary' | 'script';
 
 /** Outcome of {@link reindexFile}. */
 export type ReindexFileResult =
-  | { ok: true; warnings: EntityWarning[]; danglingRelations: IndexBuildDanglingRelation[] }
+  | { ok: true; warnings: IndexWarning[]; danglingRelations: IndexBuildDanglingRelation[] }
   | { ok: false; reason: IndexBuildIssue['reason']; message: string; issues?: ValidationIssue[] };
 
 /**
@@ -122,6 +163,8 @@ export async function buildIndexFromDisk(
     malformed: [],
     warnings: [],
     danglingRelations: [],
+    duplicateScriptOrders: [],
+    duplicateProductionCodes: [],
   };
 
   const entityFiles = (await listFilesWithExtension(folders.world, '.md', ENTITY_EXCLUDED_SUBDIRS)).filter(
@@ -151,8 +194,9 @@ export async function buildIndexFromDisk(
     }
   }
 
-  // Scripts have no schema to validate and nothing to upsert — just read the
-  // text now and defer mention computation to the one full pass below
+  // Scripts have no schema to validate, so reading never "fails" the way
+  // entity/glossary parsing can — read the text, parse the title page, and
+  // upsert now, but defer mention computation to the one full pass below
   // (avoids computing against a still-partial candidate list, and avoids
   // reading each script file twice).
   const scriptFiles = await listFilesWithExtension(folders.scripts, '.fountain');
@@ -163,6 +207,12 @@ export async function buildIndexFromDisk(
       scriptTexts.set(filePath, text);
       summary.scriptCount += 1;
       await updateCueSidecar(filePath, text);
+
+      const { script, warnings } = parseScriptTitlePage(text, { id: idFromFilePath(filePath), filePath });
+      store.upsertScript(script);
+      if (warnings.length > 0) {
+        summary.warnings.push({ filePath, warnings });
+      }
     } catch (err) {
       summary.malformed.push({ filePath, reason: 'read-error', message: errorMessage(err) });
     }
@@ -171,7 +221,14 @@ export async function buildIndexFromDisk(
   // A single pass over the now-complete candidate list, after every file has
   // been upserted — see the module doc comment on why this differs from the
   // per-file recompute an incremental `reindexFile` call does on its own.
-  summary.danglingRelations = recomputeAllMentionsAndFindDanglingRelations(store, scriptTexts);
+  const { danglingRelations, duplicateScriptOrders, duplicateProductionCodes } = recomputeMentionsAndFindIssues(
+    store,
+    scriptTexts,
+    folders.scripts,
+  );
+  summary.danglingRelations = danglingRelations;
+  summary.duplicateScriptOrders = duplicateScriptOrders;
+  summary.duplicateProductionCodes = duplicateProductionCodes;
 
   return summary;
 }
@@ -208,11 +265,26 @@ export async function reindexFile(
 
   if (kind === 'script') {
     await updateCueSidecar(filePath, text);
+
+    const priorProductionCode = store.getScriptByPath(filePath)?.productionCode;
+    const { script, warnings } = parseScriptTitlePage(text, { id, filePath });
+    store.upsertScript(script);
+
+    const allWarnings: IndexWarning[] = [...warnings];
+    const newProductionCode = script.frontmatter.productionCode;
+    if (priorProductionCode !== undefined && newProductionCode !== undefined && priorProductionCode !== newProductionCode) {
+      allWarnings.push({
+        code: 'production-code-changed',
+        path: 'production_code',
+        message: `Production Code changed from "${priorProductionCode}" to "${newProductionCode}" — production codes are meant to be permanent once assigned.`,
+      });
+    }
+
     if (recomputeMentions) {
       const candidates = buildMentionCandidates(store);
       store.setMentionsForSource({ id, kind: 'script', filePath }, extractMentionTargets(text, candidates));
     }
-    return { ok: true, warnings: [], danglingRelations: [] };
+    return { ok: true, warnings: allWarnings, danglingRelations: [] };
   }
 
   if (kind === 'entity') {
@@ -268,6 +340,7 @@ export function removeFileFromIndex(store: IndexStore, filePath: string, kind: I
   } else if (kind === 'glossary') {
     store.removeGlossaryTermByPath(filePath);
   } else {
+    store.removeScriptByPath(filePath);
     store.removeMentionsForSource({ id: idFromFilePath(filePath), kind: 'script' });
   }
 }
@@ -288,17 +361,25 @@ export function buildMentionCandidates(store: IndexStore): MentionCandidate[] {
   return candidates;
 }
 
+/** Result of {@link recomputeMentionsAndFindIssues}. */
+interface CrossFileIssues {
+  danglingRelations: IndexBuildDanglingRelation[];
+  duplicateScriptOrders: IndexBuildDuplicateOrder[];
+  duplicateProductionCodes: IndexBuildDuplicateProductionCode[];
+}
+
 /**
  * Recompute every entity's, glossary term's, and script's outgoing mentions
  * against the store's complete, current candidate list, and detect dangling
- * relation targets across every entity. Intended to run once, after every
- * file in a full disk build has already been upserted/read (see the module
- * doc comment).
+ * relation targets and script Order/Production Code collisions across the
+ * whole project. Intended to run once, after every file in a full disk build
+ * has already been upserted/read (see the module doc comment).
  */
-function recomputeAllMentionsAndFindDanglingRelations(
+function recomputeMentionsAndFindIssues(
   store: IndexStore,
   scriptTexts: ReadonlyMap<string, string>,
-): IndexBuildDanglingRelation[] {
+  scriptsRoot: string,
+): CrossFileIssues {
   const candidates = buildMentionCandidates(store);
   const entities = store.listEntities();
   const knownEntityIds = new Set(entities.map((entity) => entity.id));
@@ -332,7 +413,70 @@ function recomputeAllMentionsAndFindDanglingRelations(
     );
   }
 
-  return danglingRelations;
+  const { duplicateScriptOrders, duplicateProductionCodes } = findScriptIssues(store.listScripts(), scriptsRoot);
+  return { danglingRelations, duplicateScriptOrders, duplicateProductionCodes };
+}
+
+/**
+ * Detect two script-level collisions across the whole project: two scripts
+ * in the same immediate subfolder of `scripts/` sharing an `Order` (warning —
+ * see {@link IndexBuildDuplicateOrder}), and two scripts anywhere sharing a
+ * Production Code (error — see {@link IndexBuildDuplicateProductionCode}).
+ */
+function findScriptIssues(
+  scripts: readonly ScriptRecord[],
+  scriptsRoot: string,
+): Pick<CrossFileIssues, 'duplicateScriptOrders' | 'duplicateProductionCodes'> {
+  // Keyed by group name, one inner map per group from order -> file paths --
+  // avoids encoding (group, order) into a single delimited string, since a
+  // group name (a folder name, e.g. "Season 01") may itself contain spaces
+  // that would make a flat key ambiguous to split back apart.
+  const byGroupThenOrder = new Map<string, Map<number, string[]>>();
+  const byProductionCode = new Map<string, string[]>();
+
+  for (const script of scripts) {
+    if (script.order !== undefined) {
+      const group = deriveScriptGroup(scriptsRoot, script.filePath);
+      const byOrder = byGroupThenOrder.get(group) ?? new Map<number, string[]>();
+      const filePaths = byOrder.get(script.order) ?? [];
+      filePaths.push(script.filePath);
+      byOrder.set(script.order, filePaths);
+      byGroupThenOrder.set(group, byOrder);
+    }
+    if (script.productionCode !== undefined) {
+      const filePaths = byProductionCode.get(script.productionCode) ?? [];
+      filePaths.push(script.filePath);
+      byProductionCode.set(script.productionCode, filePaths);
+    }
+  }
+
+  const duplicateScriptOrders: IndexBuildDuplicateOrder[] = [];
+  for (const [group, byOrder] of byGroupThenOrder) {
+    for (const [order, filePaths] of byOrder) {
+      if (filePaths.length < 2) continue;
+      duplicateScriptOrders.push({ group, order, filePaths });
+    }
+  }
+
+  const duplicateProductionCodes: IndexBuildDuplicateProductionCode[] = [];
+  for (const [productionCode, filePaths] of byProductionCode) {
+    if (filePaths.length < 2) continue;
+    duplicateProductionCodes.push({ productionCode, filePaths });
+  }
+
+  return { duplicateScriptOrders, duplicateProductionCodes };
+}
+
+/**
+ * The shared grouping key for {@link IndexBuildDuplicateOrder}: the script's
+ * immediate parent subfolder of `scripts/`, or `''` if it sits directly in
+ * `scripts/`. Exported for the Scripts tree view, which groups its top level
+ * the same way.
+ */
+export function deriveScriptGroup(scriptsRoot: string, filePath: string): string {
+  const relative = path.relative(scriptsRoot, path.dirname(filePath));
+  if (relative === '') return '';
+  return relative.split(path.sep)[0];
 }
 
 /**

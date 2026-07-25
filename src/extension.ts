@@ -16,12 +16,18 @@
  * of those yet. Command Palette invocation activates an extension regardless
  * of `activationEvents`, so `initializeWorkspace` is the bootstrap path for
  * that case. Multi-root workspaces get one independent index per folder.
+ *
+ * Also listens for `.fountain` renames/moves (`vscode.workspace.onDidRenameFiles`)
+ * to relocate a script's cue sidecar alongside it — the sidecar is a
+ * separate file next to the script, so a plain filesystem rename wouldn't
+ * otherwise carry it along (`cues/sidecar.ts`'s `relocateCueSidecar`).
  */
 
 import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { registerEntityCreationCommands } from './commands/createEntity';
+import { registerCreateScriptCommand } from './commands/createScript';
 import { registerExportTranscriptCommand } from './commands/exportTranscript';
 import { registerMigrateExistingLoreCommand } from './commands/migrateExistingLore';
 import { registerNoteCommands } from './commands/notes';
@@ -33,10 +39,12 @@ import { writeDefaultConfigIfAbsent } from './config/configFile';
 import { detectExistingCoreFolders } from './config/existingFolders';
 import { scaffoldReadmesIfAbsent } from './config/readmeFiles';
 import { getWorkspaceFolders } from './config/workspaceConfig';
+import { relocateCueSidecar } from './cues/sidecar';
 import { WorkspaceIndex } from './index/workspaceIndex';
 import type { IndexStore } from './index/store';
 import { createFountainHoverProvider } from './providers/hoverProvider';
 import { createWikilinkCompletionProvider } from './providers/completionProvider';
+import { ScriptsTreeProvider } from './providers/scriptsTreeProvider';
 import { createStoryCardEditorProvider, STORY_CARD_VIEW_TYPE } from './providers/storyCardEditorProvider';
 import { WorldTreeProvider } from './providers/worldTreeProvider';
 import { checkGitSafety } from './safety/gitSafetyBanner';
@@ -47,6 +55,7 @@ const indexes = new Map<string, WorkspaceIndex>();
 let hoverRegistration: vscode.Disposable | undefined;
 let completionRegistration: vscode.Disposable | undefined;
 let treeProvider: WorldTreeProvider;
+let scriptsTreeProvider: ScriptsTreeProvider;
 
 /**
  * Called by VS Code when the extension is activated.
@@ -63,6 +72,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('lorefountain.initializeWorkspace', () => void initializeWorkspace()),
   );
   registerEntityCreationCommands(context, pickTargetWorkspaceFolder);
+  registerCreateScriptCommand(context, pickTargetWorkspaceFolder);
   registerNoteCommands(context, pickTargetWorkspaceFolder);
   registerReferenceCommands(context, outputChannel, findStoreForFolder);
   registerExportTranscriptCommand(context);
@@ -80,6 +90,24 @@ export function activate(context: vscode.ExtensionContext): void {
 
   treeProvider = new WorldTreeProvider(findStoreForFolder);
   context.subscriptions.push(vscode.window.registerTreeDataProvider('lorefountain.worldView', treeProvider));
+
+  scriptsTreeProvider = new ScriptsTreeProvider(findStoreForFolder);
+  context.subscriptions.push(
+    vscode.window.createTreeView('lorefountain.scriptsView', {
+      treeDataProvider: scriptsTreeProvider,
+      dragAndDropController: scriptsTreeProvider,
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.workspace.onDidRenameFiles((event) => {
+      for (const { oldUri, newUri } of event.files) {
+        if (oldUri.fsPath.toLowerCase().endsWith('.fountain')) {
+          void relocateCueSidecar(oldUri.fsPath, newUri.fsPath);
+        }
+      }
+    }),
+  );
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeWorkspaceFolders((event) => {
@@ -162,7 +190,10 @@ async function addIndexFor(folder: vscode.WorkspaceFolder): Promise<void> {
   try {
     const index = await WorkspaceIndex.create(folder, outputChannel);
     indexes.set(folder.uri.toString(), index);
-    index.onDidChangeIndex(() => treeProvider.refresh());
+    index.onDidChangeIndex(() => {
+      treeProvider.refresh();
+      scriptsTreeProvider.refresh();
+    });
     await index.rebuild();
     void checkGitSafetyForFolder(folder);
   } catch (err) {
