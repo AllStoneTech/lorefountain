@@ -1,12 +1,16 @@
 # LoreFountain — World-Building Reference
 
-Read this before creating or editing any file under `{{WORLD_FOLDER}}/`. It works with any coding agent — no tool-specific syntax required.
+Read this before creating or editing any file under `world/`. It works with any coding agent — no tool-specific syntax required.
+
+`world/` here means this project's actual world folder — check `AGENTS.md`'s "Folder names" section for how to find its real name if this project doesn't use the default.
 
 ## Where things go
 
-- Characters, locations, factions, objects, and concepts go directly in `{{WORLD_FOLDER}}/` — one file per entity.
-- Terminology/glossary entries go in `{{WORLD_FOLDER}}/glossary/`.
-- Never write into `{{IMPORTS_FOLDER}}/` — that folder holds the writer's own source material and is never modified by LoreFountain or by an AI working in this project.
+- Characters, locations, factions, objects, and concepts go directly in `world/` — one file per entity.
+- Terminology/glossary entries go in `world/glossary/`.
+- Half-formed ideas that aren't ready to be a real entity yet go in `world/notes/` — free-form Markdown, no frontmatter, no schema, never validated. If the writer describes something too vague to schema-fy ("what if the ship has a hidden deck"), put it here rather than forcing it into an entity file with guessed fields. Promote it to a real entity later, once there's enough to say.
+- `world/timeline/` is reserved for a future feature that doesn't exist yet — nothing reads it. Don't create files there.
+- Never write into `imports/` — that folder holds the writer's own source material and is never modified by LoreFountain or by an AI working in this project.
 - Filename is the entity's name, lowercased, with spaces and punctuation replaced by hyphens (e.g. "The Ark" becomes `the-ark.md`). If a file with that name already exists, don't overwrite it without asking — a human or an earlier pass may have already started it.
 
 ## Entity file format
@@ -59,3 +63,5 @@ tags: [<a few short freeform labels, if useful>]
 - **Relations vs. mentions.** `relations` are deliberate, typed links you're intentionally drawing between two entities (siblings, allies, factions, owns, located-in). A name simply appearing in another entity's prose body, or in a script, becomes an automatic "mention" on its own — you don't need to do anything for that to work, and you shouldn't add a formal relation just because two names appear near each other.
 - **A `relations[].target` must be another entity's slug** (its filename without `.md`) — either one that already exists, or one you are creating in this same pass. It is never a glossary term; cross-references to glossary terms work automatically as mentions, or explicitly via a `[[Term Name]]` wikilink in the body text.
 - **Renaming.** If an entity that already has other files pointing at it needs a new name, prefer LoreFountain's own "Rename Entity" command (or ask the writer to run it) rather than hand-editing every reference yourself — it also keeps the old name working as an alias so nothing already written about it breaks.
+- **Some things only the writer can do.** "Rename Entity," "Show Broken References," and "Structured Search" (Command Palette or the LoreFountain World view) only run inside VS Code — if you're working through file edits alone, you can't invoke them yourself. Tell the writer these exist and when to use them instead of trying to replicate their exact behavior by hand (e.g. don't hand-write a broken-reference report; tell them to run "Show Broken References").
+- **Check your own work.** After creating or editing any files, run `node agents/validate.js` from the project root. It reports the same checks LoreFountain runs live — malformed files and dangling relation targets — with no VS Code needed. Fix anything it reports before telling the writer you're done, and include its final output in your summary.

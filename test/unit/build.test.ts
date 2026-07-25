@@ -80,6 +80,22 @@ describe('buildIndexFromDisk', () => {
     expect(store.listEntities().map((e) => e.id)).toEqual(['sango']);
   });
 
+  it('excludes README.md (any case) from both the entity and glossary walks', async () => {
+    await writeFile(tmpRoot, 'world/sango.md', characterMd('Sango'));
+    await writeFile(tmpRoot, 'world/README.md', '# world/\n\nHuman-facing docs, not an entity.\n');
+    await writeFile(tmpRoot, 'world/glossary/Readme.md', '# glossary/\n\nHuman-facing docs, not a glossary term.\n');
+
+    const summary = await buildIndexFromDisk(store, {
+      world: path.join(tmpRoot, 'world'),
+      glossary: path.join(tmpRoot, 'world', 'glossary'),
+      scripts: path.join(tmpRoot, 'scripts'),
+    });
+
+    expect(summary.entityCount).toBe(1);
+    expect(summary.glossaryCount).toBe(0);
+    expect(summary.malformed).toEqual([]);
+  });
+
   it('indexes glossary files separately', async () => {
     await writeFile(tmpRoot, 'world/glossary/ase.md', ['---', 'term: Ase', 'gloss: Life force', '---', ''].join('\n'));
 

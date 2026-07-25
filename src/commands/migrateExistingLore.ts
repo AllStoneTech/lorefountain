@@ -8,8 +8,7 @@
  * it into.
  *
  * The prompt is read from the workspace's own `agents/initiator.md`
- * (scaffolded by `initializeWorkspace`, with this project's actual folder
- * names already substituted in) rather than the extension's bundled
+ * (scaffolded by `initializeWorkspace`) rather than the extension's bundled
  * template directly — so a writer's own edits to that file are honored,
  * and so the same file an AI would read on its own (per `AGENTS.md`) is
  * exactly what this command hands over. Falls back to scaffolding it on
@@ -23,7 +22,6 @@ import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { scaffoldAgentFilesIfAbsent } from '../config/agentFiles';
-import { getWorkspaceFolders } from '../config/workspaceConfig';
 
 /**
  * Register the "Migrate Existing Lore" command.
@@ -49,12 +47,7 @@ async function migrateExistingLoreCommand(
   const folder = await pickTargetWorkspaceFolder();
   if (!folder) return;
 
-  const { folders } = await getWorkspaceFolders(folder);
-  await scaffoldAgentFilesIfAbsent(path.join(context.extensionPath, 'resources'), folder.uri.fsPath, {
-    world: path.relative(folder.uri.fsPath, folders.world) || 'world',
-    scripts: path.relative(folder.uri.fsPath, folders.scripts) || 'scripts',
-    imports: path.relative(folder.uri.fsPath, folders.imports) || 'imports',
-  });
+  await scaffoldAgentFilesIfAbsent(path.join(context.extensionPath, 'resources'), folder.uri.fsPath);
 
   const prompt = await fsp.readFile(path.join(folder.uri.fsPath, 'agents', 'initiator.md'), 'utf8');
 

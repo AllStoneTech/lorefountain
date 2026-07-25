@@ -149,11 +149,13 @@ export class WorkspaceIndex implements vscode.Disposable {
 
 /**
  * Classify a changed file path within `world/` as an entity, a glossary
- * term, or something to skip (the reserved `timeline/`/`notes/` subfolders,
- * per Spec §5/§13.4 — timeline events have no model yet, and notes are
- * deliberately never indexed).
+ * term, or something to skip: the reserved `timeline/`/`notes/` subfolders
+ * (per Spec §5/§13.4 — timeline events have no model yet, and notes are
+ * deliberately never indexed), and any scaffolded `README.md` (see
+ * `build.ts`'s module doc comment on why it's excluded everywhere).
  */
 function classifyWorldFile(filePath: string, worldPath: string): WorldFileKind {
+  if (path.basename(filePath).toLowerCase() === 'readme.md') return 'skip';
   const relative = path.relative(worldPath, filePath);
   const [firstSegment] = relative.split(path.sep);
   if (firstSegment === 'glossary') return 'glossary';

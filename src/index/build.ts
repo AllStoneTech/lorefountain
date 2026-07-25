@@ -33,6 +33,11 @@
  * themselves reindexed or a full rebuild runs. This is a deliberate v1
  * simplification, not an oversight: "Rebuild Index" is the always-correct
  * escape valve (ADR-0007).
+ *
+ * `README.md` (any case) is never treated as an entity or glossary file, even
+ * when it sits directly in `world/` or `world/glossary/` — LoreFountain
+ * scaffolds one into each of those folders (`readmeFiles.ts`), and without
+ * this exclusion every project that adopts it would fail to index.
  */
 
 import * as fsp from 'node:fs/promises';
@@ -48,6 +53,11 @@ import type { IndexStore } from './store';
 
 /** Subfolders of `world/` that are never walked for entity files (Spec §5). */
 const ENTITY_EXCLUDED_SUBDIRS = ['glossary', 'timeline', 'notes'];
+
+/** Case-insensitive check for the scaffolded `README.md` LoreFountain writes into every folder — documentation, never an entity/glossary file. */
+function isReadme(filePath: string): boolean {
+  return path.basename(filePath).toLowerCase() === 'readme.md';
+}
 
 /** One file that failed to parse during a build or incremental reindex. */
 export interface IndexBuildIssue {
@@ -114,7 +124,9 @@ export async function buildIndexFromDisk(
     danglingRelations: [],
   };
 
-  const entityFiles = await listFilesWithExtension(folders.world, '.md', ENTITY_EXCLUDED_SUBDIRS);
+  const entityFiles = (await listFilesWithExtension(folders.world, '.md', ENTITY_EXCLUDED_SUBDIRS)).filter(
+    (filePath) => !isReadme(filePath),
+  );
   for (const filePath of entityFiles) {
     const result = await reindexFile(store, filePath, 'entity', { recomputeMentions: false });
     if (result.ok) {
@@ -127,7 +139,9 @@ export async function buildIndexFromDisk(
     }
   }
 
-  const glossaryFiles = await listFilesWithExtension(folders.glossary, '.md');
+  const glossaryFiles = (await listFilesWithExtension(folders.glossary, '.md')).filter(
+    (filePath) => !isReadme(filePath),
+  );
   for (const filePath of glossaryFiles) {
     const result = await reindexFile(store, filePath, 'glossary', { recomputeMentions: false });
     if (result.ok) {

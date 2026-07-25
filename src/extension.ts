@@ -31,6 +31,7 @@ import { registerTryLoreFountainCommand } from './commands/tryLoreFountain';
 import { scaffoldAgentFilesIfAbsent } from './config/agentFiles';
 import { writeDefaultConfigIfAbsent } from './config/configFile';
 import { detectExistingCoreFolders } from './config/existingFolders';
+import { scaffoldReadmesIfAbsent } from './config/readmeFiles';
 import { getWorkspaceFolders } from './config/workspaceConfig';
 import { WorkspaceIndex } from './index/workspaceIndex';
 import type { IndexStore } from './index/store';
@@ -249,7 +250,7 @@ async function initializeWorkspace(): Promise<void> {
     const proceed = 'Use Existing Folder(s)';
     const choice = await vscode.window.showWarningMessage(
       `LoreFountain found an existing "${names.join('" and "')}" folder in "${folder.name}". ` +
-        "LoreFountain never touches anything outside its own folders — proceeding will index what's already there and add only what's missing (a config file, agent instructions for AI coding tools, and any of glossary/timeline/notes/imports that don't exist yet).",
+        "LoreFountain never touches anything outside its own folders — proceeding will index what's already there and add only what's missing (a config file, agent instructions and a validator for AI coding tools, READMEs, and any of glossary/timeline/notes/imports that don't exist yet).",
       { modal: true },
       proceed,
     );
@@ -262,11 +263,15 @@ async function initializeWorkspace(): Promise<void> {
     ),
   );
   const wroteConfig = await writeDefaultConfigIfAbsent(folder.uri.fsPath);
-  await scaffoldAgentFilesIfAbsent(path.join(extensionContext.extensionPath, 'resources'), folder.uri.fsPath, {
+
+  const resourcesPath = path.join(extensionContext.extensionPath, 'resources');
+  const folderNames = {
     world: path.relative(folder.uri.fsPath, folders.world) || 'world',
     scripts: path.relative(folder.uri.fsPath, folders.scripts) || 'scripts',
     imports: path.relative(folder.uri.fsPath, folders.imports) || 'imports',
-  });
+  };
+  await scaffoldAgentFilesIfAbsent(resourcesPath, folder.uri.fsPath);
+  await scaffoldReadmesIfAbsent(resourcesPath, folder.uri.fsPath, folderNames, folder.name);
 
   const existingIndex = indexes.get(folder.uri.toString());
   if (existingIndex) {

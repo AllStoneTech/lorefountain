@@ -1,15 +1,19 @@
-// esbuild bundler for the LoreFountain VS Code extension.
+// esbuild bundler for the LoreFountain VS Code extension, plus its
+// companion headless validator script.
 //
-// Bundles src/extension.ts -> dist/extension.js as a CommonJS module for the
-// VS Code extension host. The `vscode` module is provided by the host at
-// runtime and must stay external. Run with `--watch` for incremental rebuilds
-// during development, or `--production` for a minified release bundle.
+// Two independent bundles:
+// 1. src/extension.ts -> dist/extension.js — the VS Code extension itself
+//    (CommonJS, `vscode` external, sql.js WASM copied alongside).
+// 2. src/cli/validate.ts -> resources/agents/validate.js — a fully
+//    self-contained, dependency-free script with NO `vscode` import,
+//    scaffolded by `Initialize Workspace` into every LoreFountain project
+//    so an AI (or CI) can validate a project's files with a plain
+//    `node validate.js`, no VS Code involved. It intentionally does not
+//    use sql.js (see `src/index/memoryStore.ts`) specifically so this
+//    bundle needs no WASM binary to keep colocated wherever it ends up.
 //
-// sql.js's WASM binary is copied next to the bundle after every build. sql.js
-// locates it via a `__dirname`-relative path baked into its own module code;
-// once esbuild inlines that code into dist/extension.js, `__dirname` resolves
-// to dist/ at runtime, so the .wasm must live there too or sql.js throws
-// ENOENT on load (confirmed by a standalone repro — this is not optional).
+// Run with `--watch` for incremental rebuilds during development, or
+// `--production` for minified release bundles.
 
 const esbuild = require('esbuild');
 const fs = require('fs');
@@ -27,7 +31,7 @@ function copySqlWasm() {
 }
 
 async function main() {
-  const ctx = await esbuild.context({
+  const extensionCtx = await esbuild.context({
     entryPoints: ['src/extension.ts'],
     bundle: true,
     format: 'cjs',
@@ -46,7 +50,8 @@ async function main() {
         // matches these literal lines with its own problem matcher so VS
         // Code knows when the "watch" background task has finished a build
         // cycle, without depending on the connor4312.esbuild-problem-matchers
-        // extension's "$esbuild-watch" shorthand.
+        // extension's "$esbuild-watch" shorthand. Kept exactly as tasks.json
+        // expects — do not rename without updating that matcher too.
         name: 'copy-sql-wasm',
         setup(build) {
           build.onStart(() => {
@@ -61,12 +66,41 @@ async function main() {
     ],
   });
 
+  const validatorCtx = await esbuild.context({
+    entryPoints: ['src/cli/validate.ts'],
+    bundle: true,
+    format: 'cjs',
+    platform: 'node',
+    target: 'node22',
+    outfile: 'resources/agents/validate.js',
+    minify: production,
+    sourcemap: false,
+    sourcesContent: false,
+    logLevel: 'info',
+    plugins: [
+      {
+        name: 'log-cli-build',
+        setup(build) {
+          build.onStart(() => {
+            console.log('[esbuild:validator] build started');
+          });
+          build.onEnd(() => {
+            console.log('[esbuild:validator] build finished');
+          });
+        },
+      },
+    ],
+  });
+
   if (watch) {
-    await ctx.watch();
+    await extensionCtx.watch();
+    await validatorCtx.watch();
     console.log('[esbuild] watching for changes...');
   } else {
-    await ctx.rebuild();
-    await ctx.dispose();
+    await extensionCtx.rebuild();
+    await validatorCtx.rebuild();
+    await extensionCtx.dispose();
+    await validatorCtx.dispose();
   }
 }
 

@@ -24,6 +24,9 @@ export const DEFAULT_FOLDERS: Required<FolderSettings> = {
   imports: 'imports',
 };
 
+/** This workspace's actual folder names (relative to the workspace root, e.g. `"world"`) — every key resolved, no optionals. Used wherever a folder's *name* (not its absolute path) is needed, e.g. substituting it into a scaffolded README. */
+export type FolderNames = Required<FolderSettings>;
+
 /** Resolved, absolute workspace folder paths. */
 export interface WorkspaceFolders {
   /** `.fountain` scripts. */
