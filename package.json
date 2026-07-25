@@ -136,6 +136,11 @@
         "command": "lorefountain.tryLoreFountain",
         "title": "Try LoreFountain (Sample Workspace)",
         "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.migrateExistingLore",
+        "title": "Migrate Existing Lore",
+        "category": "LoreFountain"
       }
     ],
     "customEditors": [
@@ -202,6 +207,11 @@
         },
         {
           "command": "lorefountain.structuredSearch",
+          "when": "view == lorefountain.worldView",
+          "group": "9_lorefountain"
+        },
+        {
+          "command": "lorefountain.migrateExistingLore",
           "when": "view == lorefountain.worldView",
           "group": "9_lorefountain"
         }

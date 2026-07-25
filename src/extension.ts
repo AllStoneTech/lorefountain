@@ -23,6 +23,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { registerEntityCreationCommands } from './commands/createEntity';
 import { registerExportTranscriptCommand } from './commands/exportTranscript';
+import { registerMigrateExistingLoreCommand } from './commands/migrateExistingLore';
 import { registerNoteCommands } from './commands/notes';
 import { registerReferenceCommands } from './commands/renameEntity';
 import { registerStructuredSearchCommand } from './commands/structuredSearch';
@@ -65,6 +66,7 @@ export function activate(context: vscode.ExtensionContext): void {
   registerExportTranscriptCommand(context);
   registerStructuredSearchCommand(context, outputChannel, pickTargetWorkspaceFolder, findStoreForFolder);
   registerTryLoreFountainCommand(context);
+  registerMigrateExistingLoreCommand(context, pickTargetWorkspaceFolder);
 
   context.subscriptions.push(
     vscode.window.registerCustomEditorProvider(

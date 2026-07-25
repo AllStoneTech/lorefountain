@@ -6,6 +6,50 @@ revisit.
 
 ---
 
+## ADR-0019 — Phase F: migration prompt is a static template + find/replace, not agent-driven generation
+
+**Date:** 2026-07-24 · **Status:** Accepted
+
+Spec §13.5's "Migrate Existing Lore" command implemented as a single static
+template (`resources/migrate-existing-lore-prompt.md`) + `src/commands/migrateExistingLore.ts`,
+which only substitutes this workspace's actual `imports`/`world` folder
+names into the template, copies the result to the clipboard, and opens it
+for reference.
+
+1. **The command does not itself read any source documents or generate any
+   entity files.** The spec is explicit that this ships as "a premade,
+   ready-to-run prompt... AI-agnostic — plain natural-language instructions
+   with no tool-specific syntax" — the migration work happens in whichever
+   AI coding agent the writer pastes the prompt into, which may not be
+   LoreFountain's own host editor at all. Building an in-extension
+   generator would be a different, un-asked-for feature (and would tie the
+   free tier to a specific AI provider, which the spec explicitly rejects
+   for this workflow, citing FictionLab.net's own AI-agnostic positioning
+   as precedent).
+2. **The template inlines the full entity/glossary schema in plain
+   English** (every field from `model/entity.ts`'s discriminated union and
+   `model/glossary.ts`, including which fields are type-specific) rather
+   than referencing this repo's own `docs/LoreFountain_Spec.md` — the
+   prompt must be self-contained, since the target project (someone's own
+   story-bible folder) has no reason to contain LoreFountain's spec.
+3. **Explicit ground rules against fabrication**: "never invent facts,"
+   omit an uncertain field rather than guess it, skip a file that already
+   exists rather than overwrite it. These aren't in the spec bullet
+   verbatim but follow directly from files-as-truth (§2) and from this
+   being a one-time batch conversion of someone's real, often-irreplaceable
+   creative material — an agent given this prompt should behave
+   conservatively by default.
+4. **`{{IMPORTS_FOLDER}}`/`{{WORLD_FOLDER}}` placeholders** are resolved to
+   this workspace's actual configured folder names (not hardcoded
+   `imports`/`world`) via simple string substitution — no templating
+   library needed for two placeholders.
+5. Verified live in the Extension Development Host: the command opened an
+   untitled Markdown document with both placeholders correctly resolved to
+   the demo workspace's actual folder names, and copied the identical text
+   to the clipboard.
+
+---
+
 ## ADR-0018 — Pre-Phase-F: initialization asks before adopting pre-existing `world`/`scripts` folders
 
 **Date:** 2026-07-24 · **Status:** Accepted
