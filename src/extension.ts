@@ -56,6 +56,8 @@ let hoverRegistration: vscode.Disposable | undefined;
 let completionRegistration: vscode.Disposable | undefined;
 let treeProvider: WorldTreeProvider;
 let scriptsTreeProvider: ScriptsTreeProvider;
+/** Fires whenever any workspace folder's index changes — the pro module (if loaded) subscribes once via `ProActivationContext.onIndexChanged` to refresh its own views, without `extension.ts` needing to know anything about what those views are. */
+const indexChangeEmitter = new vscode.EventEmitter<void>();
 
 /**
  * Called by VS Code when the extension is activated.
@@ -136,20 +138,53 @@ export function activate(context: vscode.ExtensionContext): void {
     void addIndexFor(folder);
   }
 
+  context.subscriptions.push(indexChangeEmitter);
+
   const proModule = loadProModule();
   if (proModule) {
-    proModule.activate({ extensionContext: context, outputChannel });
+    proModule.activate({
+      extensionContext: context,
+      outputChannel,
+      getStoreForFolder: findStoreForFolder,
+      onIndexChanged: indexChangeEmitter.event,
+    });
+  } else {
+    // No submodule access to lorefountain-pro (or nothing built there yet)
+    // — register a plain explanatory placeholder instead of leaving the
+    // view showing VS Code's generic "no data provider" error. Real
+    // license-gated "grayed out" treatment is deferred until the licensing
+    // backend exists (ADR-0024); this is just "the view exists, here's why
+    // it's empty."
+    context.subscriptions.push(
+      vscode.window.registerTreeDataProvider('lorefountain.continuityView', createContinuityPlaceholderProvider()),
+    );
   }
+}
+
+/** Single-leaf placeholder for the Continuity view when no pro module is loaded — see the `else` branch above. */
+function createContinuityPlaceholderProvider(): vscode.TreeDataProvider<string> {
+  return {
+    getTreeItem: (label: string) => new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None),
+    getChildren: () => ['LoreFountain Pro required — Continuity Management is a paid-tier feature.'],
+  };
 }
 
 /**
  * What the free tier hands the pro module at activation — mirrors
  * `lorefountain-pro`'s own `ProActivationContext`, duplicated here rather
- * than imported since that repo isn't always present (see below).
+ * than imported since that repo isn't always present (see below). Only
+ * genuine runtime state goes through this — a pure function/type from the
+ * free tier (`extractScenePresence`, `IndexStore`, etc.) is something the
+ * pro module can just import directly via a relative path reaching into
+ * `../../src/...`, since it's always built nested inside this repo, never
+ * standalone.
  */
 interface ProActivationContext {
   extensionContext: vscode.ExtensionContext;
   outputChannel: vscode.OutputChannel;
+  getStoreForFolder: (folder: vscode.WorkspaceFolder) => IndexStore | undefined;
+  /** Fires whenever any workspace folder's index changes, so the pro module can refresh its own views. */
+  onIndexChanged: vscode.Event<void>;
 }
 
 interface ProModule {
@@ -232,6 +267,7 @@ async function addIndexFor(folder: vscode.WorkspaceFolder): Promise<void> {
     index.onDidChangeIndex(() => {
       treeProvider.refresh();
       scriptsTreeProvider.refresh();
+      indexChangeEmitter.fire();
     });
     await index.rebuild();
     void checkGitSafetyForFolder(folder);

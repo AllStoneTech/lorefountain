@@ -32,7 +32,7 @@ relations:
 <A short prose summary of this entity, in your own words.>
 ```
 
-`type: character` may also include `sound_motif`, `casting_notes`, `appears_in` (a list of episode/script identifiers), and `first_appearance`.
+`type: character` may also include `sound_motif`, `casting_notes`, `appears_in` (a list of episode/script identifiers), `first_appearance`, and `voice_actor` (the actor cast in the role, if known — only fill this in if the writer tells you, never guess).
 
 `type: location` may also include `parent_location` (the slug of a containing location) and `mobility` (`fixed`, `mobile-per-episode`, or `mobile-continuous`).
 

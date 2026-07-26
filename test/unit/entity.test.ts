@@ -164,6 +164,28 @@ describe('parseEntityFile — misplaced type-specific fields (warnings, not erro
     expect(result.warnings).toEqual([]);
   });
 
+  it('accepts voice_actor on a character with no warnings', () => {
+    const result = parseEntityFile(file(['name: Sango', 'type: character', 'voice_actor: Jane Doe']), {
+      id: 'sango',
+      filePath: '/world/sango.md',
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect((result.entity.frontmatter as Record<string, unknown>).voice_actor).toBe('Jane Doe');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('flags voice_actor as misplaced on a non-character entity', () => {
+    const result = parseEntityFile(file(['name: The Ark', 'type: location', 'voice_actor: Jane Doe']), {
+      id: 'the-ark',
+      filePath: '/world/the-ark.md',
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0]).toMatchObject({ code: 'misplaced-field', path: 'voice_actor' });
+  });
+
   it('reports no warnings for faction/object/concept, which have no bespoke fields', () => {
     const result = parseEntityFile(file(['name: The Orisha Pantheon', 'type: faction']), {
       id: 'pantheon',

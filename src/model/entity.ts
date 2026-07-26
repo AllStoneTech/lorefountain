@@ -88,6 +88,8 @@ const characterFrontmatterSchema = z
     casting_notes: z.string().optional(),
     appears_in: z.array(z.string()).optional(),
     first_appearance: z.string().optional(),
+    /** The actor voicing this character, if cast — free-tier data; doubling-conflict detection (LoreFountain Pro, Spec §17/§22) is what actually does something with it. */
+    voice_actor: z.string().optional(),
   })
   .catchall(z.unknown());
 
@@ -145,7 +147,7 @@ export type EntityFrontmatter = z.infer<typeof entityFrontmatterSchema>;
  * was wrongly placed *on*.
  */
 const TYPE_SPECIFIC_FIELDS: Record<EntityType, readonly string[]> = {
-  character: ['sound_motif', 'casting_notes', 'appears_in', 'first_appearance'],
+  character: ['sound_motif', 'casting_notes', 'appears_in', 'first_appearance', 'voice_actor'],
   location: ['parent_location', 'mobility'],
   faction: [],
   object: [],
