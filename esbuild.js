@@ -1,7 +1,8 @@
 // esbuild bundler for the LoreFountain VS Code extension, plus its
-// companion headless validator script.
+// companion headless validator script and (when present) the private
+// paid-tier module.
 //
-// Two independent bundles:
+// Two always-built bundles:
 // 1. src/extension.ts -> dist/extension.js — the VS Code extension itself
 //    (CommonJS, `vscode` external, sql.js WASM copied alongside).
 // 2. src/cli/validate.ts -> resources/agents/validate.js — a fully
@@ -11,6 +12,16 @@
 //    `node validate.js`, no VS Code involved. It intentionally does not
 //    use sql.js (see `src/index/memoryStore.ts`) specifically so this
 //    bundle needs no WASM binary to keep colocated wherever it ends up.
+//
+// One conditional bundle:
+// 3. pro/src/index.ts -> dist/pro.js — the paid-tier ("LoreFountain Pro")
+//    feature source, kept in a separate private repo
+//    (github.com/AllStoneTech/lorefountain-pro) and consumed here as a git
+//    submodule at pro/. Built only if pro/src/index.ts exists on disk — a
+//    clone/build with no submodule access to that private repo simply
+//    doesn't have the file, and this script skips it silently, producing
+//    exactly the same free-tier-only extension it always has. See
+//    src/extension.ts's `loadProModule` for the runtime side of this.
 //
 // Run with `--watch` for incremental rebuilds during development, or
 // `--production` for minified release bundles.
@@ -92,15 +103,52 @@ async function main() {
     ],
   });
 
+  const proEntryPoint = path.join('pro', 'src', 'index.ts');
+  const hasProModule = fs.existsSync(path.join(__dirname, proEntryPoint));
+  const proCtx = hasProModule
+    ? await esbuild.context({
+        entryPoints: [proEntryPoint],
+        bundle: true,
+        format: 'cjs',
+        platform: 'node',
+        target: 'node22',
+        outfile: 'dist/pro.js',
+        external: ['vscode'],
+        minify: production,
+        sourcemap: !production,
+        sourcesContent: false,
+        logLevel: 'info',
+        plugins: [
+          {
+            name: 'log-pro-build',
+            setup(build) {
+              build.onStart(() => {
+                console.log('[esbuild:pro] build started');
+              });
+              build.onEnd(() => {
+                console.log('[esbuild:pro] build finished');
+              });
+            },
+          },
+        ],
+      })
+    : null;
+  if (!hasProModule) {
+    console.log('[esbuild:pro] pro/src/index.ts not present — building free-tier only');
+  }
+
   if (watch) {
     await extensionCtx.watch();
     await validatorCtx.watch();
+    if (proCtx) await proCtx.watch();
     console.log('[esbuild] watching for changes...');
   } else {
     await extensionCtx.rebuild();
     await validatorCtx.rebuild();
+    if (proCtx) await proCtx.rebuild();
     await extensionCtx.dispose();
     await validatorCtx.dispose();
+    if (proCtx) await proCtx.dispose();
   }
 }
 

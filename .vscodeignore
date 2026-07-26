@@ -11,8 +11,10 @@ node_modules/**
 docs/**
 coverage/**
 imports/**
+pro/**
 
 .gitignore
+.gitmodules
 .vscodeignore
 esbuild.js
 eslint.config.mjs

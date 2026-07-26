@@ -135,6 +135,45 @@ export function activate(context: vscode.ExtensionContext): void {
   for (const folder of vscode.workspace.workspaceFolders ?? []) {
     void addIndexFor(folder);
   }
+
+  const proModule = loadProModule();
+  if (proModule) {
+    proModule.activate({ extensionContext: context, outputChannel });
+  }
+}
+
+/**
+ * What the free tier hands the pro module at activation — mirrors
+ * `lorefountain-pro`'s own `ProActivationContext`, duplicated here rather
+ * than imported since that repo isn't always present (see below).
+ */
+interface ProActivationContext {
+  extensionContext: vscode.ExtensionContext;
+  outputChannel: vscode.OutputChannel;
+}
+
+interface ProModule {
+  activate(ctx: ProActivationContext): void;
+}
+
+/**
+ * Load the compiled paid-tier bundle (`dist/pro.js`), if present. Built
+ * from the private `lorefountain-pro` repo, consumed here as a git
+ * submodule (`pro/`) — a build with no access to that repo simply never
+ * produces this file (see `esbuild.js`), and this returns `undefined`
+ * exactly as if no pro module existed, never throwing.
+ */
+function loadProModule(): ProModule | undefined {
+  try {
+    // A static `import` would make esbuild try to resolve dist/pro.js at
+    // bundle time, defeating the whole point — it may genuinely not exist.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require(path.join(__dirname, 'pro.js')) as ProModule;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'MODULE_NOT_FOUND') return undefined;
+    outputChannel.appendLine(`[LoreFountain] Pro module failed to load: ${errorMessage(err)}`);
+    return undefined;
+  }
 }
 
 /**
