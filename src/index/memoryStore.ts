@@ -17,10 +17,12 @@
 import type { Entity, EntityFrontmatter } from '../model/entity';
 import type { GlossaryTerm, GlossaryTermFrontmatter } from '../model/glossary';
 import type { Script } from '../model/script';
+import type { TimelineEvent, TimelineEventFrontmatter } from '../model/timeline';
 import type { MentionKind, MentionTarget } from './mentions';
 import type {
   EntityRecord,
   EntitySearchHit,
+  EventRecord,
   GlossaryRecord,
   GlossarySearchHit,
   IndexStats,
@@ -37,6 +39,7 @@ export function createMemoryIndexStore(): IndexStore {
   const entitiesById = new Map<string, EntityRecord>();
   const glossaryById = new Map<string, GlossaryRecord>();
   const scriptsById = new Map<string, ScriptRecord>();
+  const eventsById = new Map<string, EventRecord>();
   const mentionsBySource = new Map<string, MentionTarget[]>();
 
   return {
@@ -108,6 +111,23 @@ export function createMemoryIndexStore(): IndexStore {
       return [...scriptsById.values()];
     },
 
+    upsertEvent(event: TimelineEvent): void {
+      removeMatchingEntity(eventsById, event.filePath, event.id);
+      eventsById.set(event.id, toEventRecord(event));
+    },
+
+    removeEventByPath(filePath: string): void {
+      removeByFilePath(eventsById, filePath);
+    },
+
+    getEventById(id: string): EventRecord | undefined {
+      return eventsById.get(id);
+    },
+
+    listEvents(): EventRecord[] {
+      return [...eventsById.values()];
+    },
+
     setMentionsForSource(source: MentionSource, targets: readonly MentionTarget[]): void {
       mentionsBySource.set(mentionKey(source.kind, source.id), [...targets]);
     },
@@ -121,13 +141,14 @@ export function createMemoryIndexStore(): IndexStore {
     },
 
     stats(): IndexStats {
-      return { entityCount: entitiesById.size, glossaryCount: glossaryById.size };
+      return { entityCount: entitiesById.size, glossaryCount: glossaryById.size, eventCount: eventsById.size };
     },
 
     clear(): void {
       entitiesById.clear();
       glossaryById.clear();
       scriptsById.clear();
+      eventsById.clear();
       mentionsBySource.clear();
     },
 
@@ -203,5 +224,17 @@ function toScriptRecord(script: Script): ScriptRecord {
     title: script.frontmatter.title,
     order: script.frontmatter.order,
     productionCode: script.frontmatter.productionCode,
+  };
+}
+
+function toEventRecord(event: TimelineEvent): EventRecord {
+  const frontmatter: TimelineEventFrontmatter = event.frontmatter;
+  return {
+    id: event.id,
+    name: frontmatter.name,
+    filePath: event.filePath,
+    schemaVersion: frontmatter.schema_version,
+    data: frontmatter,
+    body: event.body,
   };
 }

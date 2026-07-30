@@ -8,7 +8,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist/', 'out/', 'node_modules/', '.vscode-test/', 'resources/agents/validate.js'],
+    ignores: ['dist/', 'out/', 'node_modules/', '.vscode-test/', '**/agents/validate.js'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

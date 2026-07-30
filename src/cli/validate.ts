@@ -38,6 +38,7 @@ async function main(): Promise<void> {
   const summary = await buildIndexFromDisk(store, {
     world: folders.world,
     glossary: folders.glossary,
+    timeline: folders.timeline,
     scripts: folders.scripts,
   });
 
@@ -45,18 +46,22 @@ async function main(): Promise<void> {
   process.exitCode =
     summary.malformed.length > 0 ||
     summary.danglingRelations.length > 0 ||
+    summary.danglingEpisodes.length > 0 ||
     summary.duplicateProductionCodes.length > 0
       ? 1
       : 0;
 }
 
 function printReport(root: string, summary: IndexBuildSummary): void {
-  console.log(`${summary.entityCount} entities, ${summary.glossaryCount} glossary terms, ${summary.scriptCount} scripts parsed.\n`);
+  console.log(
+    `${summary.entityCount} entities, ${summary.glossaryCount} glossary terms, ${summary.eventCount} Timeline events, ${summary.scriptCount} scripts parsed.\n`,
+  );
 
   const nothingToReport =
     summary.malformed.length === 0 &&
     summary.warnings.length === 0 &&
     summary.danglingRelations.length === 0 &&
+    summary.danglingEpisodes.length === 0 &&
     summary.duplicateScriptOrders.length === 0 &&
     summary.duplicateProductionCodes.length === 0;
   if (nothingToReport) {
@@ -88,6 +93,14 @@ function printReport(root: string, summary: IndexBuildSummary): void {
       console.log(
         `  ${path.relative(root, relation.filePath)} — relation "${relation.relationType}" targets unknown entity "${relation.target}"`,
       );
+    }
+    console.log('');
+  }
+
+  if (summary.danglingEpisodes.length > 0) {
+    console.log(`✘ ${summary.danglingEpisodes.length} dangling arc episode(s):`);
+    for (const episode of summary.danglingEpisodes) {
+      console.log(`  ${path.relative(root, episode.filePath)} — arc references unknown episode "${episode.code}"`);
     }
     console.log('');
   }

@@ -11,10 +11,13 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   createEntity,
   createGlossaryTerm,
+  createTimelineEvent,
   readEntity,
   readGlossaryTerm,
+  readTimelineEvent,
   writeEntity,
   writeGlossaryTerm,
+  writeTimelineEvent,
 } from '../../src/entities/service';
 
 describe('createEntity', () => {
@@ -111,6 +114,82 @@ describe('createGlossaryTerm', () => {
     expect(second.ok).toBe(false);
     if (second.ok) return;
     expect(second.reason).toBe('already-exists');
+  });
+});
+
+describe('createTimelineEvent', () => {
+  let tmpRoot: string;
+
+  beforeEach(async () => {
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'lorefountain-timeline-service-'));
+  });
+
+  afterEach(async () => {
+    await fs.rm(tmpRoot, { recursive: true, force: true });
+  });
+
+  it('creates a minimal event file with only name set', async () => {
+    const timelineFolder = path.join(tmpRoot, 'world', 'timeline');
+    const result = await createTimelineEvent(timelineFolder, 'The Founding of the Pantheon');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.event.id).toBe('the-founding-of-the-pantheon');
+    expect(result.event.frontmatter.name).toBe('The Founding of the Pantheon');
+  });
+
+  it('rejects a blank name', async () => {
+    const result = await createTimelineEvent(tmpRoot, '');
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe('invalid-name');
+  });
+
+  it('reports already-exists for a duplicate event name', async () => {
+    await createTimelineEvent(tmpRoot, 'The Long Silence');
+    const second = await createTimelineEvent(tmpRoot, 'The Long Silence');
+    expect(second.ok).toBe(false);
+    if (second.ok) return;
+    expect(second.reason).toBe('already-exists');
+  });
+});
+
+describe('readTimelineEvent / writeTimelineEvent', () => {
+  let tmpRoot: string;
+
+  beforeEach(async () => {
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'lorefountain-timeline-rw-'));
+  });
+
+  afterEach(async () => {
+    await fs.rm(tmpRoot, { recursive: true, force: true });
+  });
+
+  it('reads back a created event identically', async () => {
+    const created = await createTimelineEvent(tmpRoot, 'The Long Silence');
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const read = await readTimelineEvent(created.filePath);
+    expect(read.ok).toBe(true);
+    if (!read.ok) return;
+    expect(read.event.frontmatter).toEqual(created.event.frontmatter);
+  });
+
+  it('writeTimelineEvent persists an edited event, readable back with the change', async () => {
+    const created = await createTimelineEvent(tmpRoot, 'The Long Silence');
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const updated = {
+      ...created.event,
+      frontmatter: { ...created.event.frontmatter, chronological_order: 5 },
+    };
+    await writeTimelineEvent(updated);
+
+    const read = await readTimelineEvent(created.filePath);
+    expect(read.ok).toBe(true);
+    if (!read.ok) return;
+    expect(read.event.frontmatter.chronological_order).toBe(5);
   });
 });
 

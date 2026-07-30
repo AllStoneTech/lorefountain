@@ -67,6 +67,13 @@ export function buildStoryCardHtml(cspSource: string, nonce: string): string {
     align-items: center;
     margin-bottom: 0.4rem;
   }
+  .episode-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.4rem;
+    align-items: center;
+    margin-bottom: 0.4rem;
+  }
   button {
     background: var(--vscode-button-secondaryBackground, var(--vscode-button-background));
     color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
@@ -80,6 +87,8 @@ export function buildStoryCardHtml(cspSource: string, nonce: string): string {
   button:hover { opacity: 0.9; }
   #addRelation { margin-top: 0.2rem; }
   .remove-relation { padding: 0.35rem 0.5rem; }
+  #addEpisode { margin-top: 0.2rem; }
+  .remove-episode { padding: 0.35rem 0.5rem; }
 </style>
 </head>
 <body>
@@ -95,6 +104,7 @@ export function buildStoryCardHtml(cspSource: string, nonce: string): string {
     <option value="faction">Faction</option>
     <option value="object">Object</option>
     <option value="concept">Concept</option>
+    <option value="arc">Arc</option>
   </select>
 
   <label for="aliases">Aliases</label>
@@ -133,6 +143,13 @@ export function buildStoryCardHtml(cspSource: string, nonce: string): string {
       <option value="mobile-per-episode">Mobile (per episode)</option>
       <option value="mobile-continuous">Mobile (continuous)</option>
     </select>
+  </fieldset>
+
+  <fieldset id="arcFields">
+    <legend>Arc</legend>
+    <div id="episodes"></div>
+    <button id="addEpisode" type="button">+ Add Episode</button>
+    <p class="hint">Script Production Codes (e.g. "1x03") this arc spans — independent of season, in any order.</p>
   </fieldset>
 
   <fieldset>
@@ -194,6 +211,33 @@ export function buildStoryCardHtml(cspSource: string, nonce: string): string {
         relations.forEach((row, index) => container.appendChild(relationRow(row, index)));
       }
 
+      function episodeRow(code, index) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'episode-row';
+
+        const codeInput = document.createElement('input');
+        codeInput.type = 'text';
+        codeInput.placeholder = 'Production Code (e.g. 1x03)';
+        codeInput.value = code;
+        codeInput.addEventListener('change', () => updateEpisode(index, codeInput.value));
+
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.className = 'remove-episode';
+        removeButton.textContent = '\\u2715';
+        removeButton.title = 'Remove episode';
+        removeButton.addEventListener('click', () => removeEpisode(index));
+
+        wrapper.append(codeInput, removeButton);
+        return wrapper;
+      }
+
+      function renderEpisodes(episodes) {
+        const container = el('episodes');
+        container.innerHTML = '';
+        episodes.forEach((code, index) => container.appendChild(episodeRow(code, index)));
+      }
+
       function currentFormState() {
         return {
           id: state.id,
@@ -209,6 +253,7 @@ export function buildStoryCardHtml(cspSource: string, nonce: string): string {
           castingNotes: el('castingNotes').value,
           parentLocation: el('parentLocation').value,
           mobility: el('mobility').value,
+          episodes: state.episodes,
         };
       }
 
@@ -228,9 +273,21 @@ export function buildStoryCardHtml(cspSource: string, nonce: string): string {
         postEdit();
       }
 
+      function updateEpisode(index, value) {
+        state.episodes = state.episodes.map((code, i) => (i === index ? value : code));
+        postEdit();
+      }
+
+      function removeEpisode(index) {
+        state.episodes = state.episodes.filter((_, i) => i !== index);
+        renderEpisodes(state.episodes);
+        postEdit();
+      }
+
       function updateTypeVisibility(type) {
         el('characterFields').classList.toggle('hidden', type !== 'character');
         el('locationFields').classList.toggle('hidden', type !== 'location');
+        el('arcFields').classList.toggle('hidden', type !== 'arc');
       }
 
       function populateParentLocationOptions(currentValue) {
@@ -258,6 +315,7 @@ export function buildStoryCardHtml(cspSource: string, nonce: string): string {
         populateParentLocationOptions(formState.parentLocation);
         el('mobility').value = formState.mobility;
         renderRelations(formState.relations);
+        renderEpisodes(formState.episodes);
         updateTypeVisibility(formState.type);
       }
 
@@ -271,7 +329,7 @@ export function buildStoryCardHtml(cspSource: string, nonce: string): string {
       let state = {
         id: '', name: '', type: 'character', aliases: '', pronunciation: '', tags: '',
         canonStatus: '', body: '', relations: [], soundMotif: '', castingNotes: '',
-        parentLocation: '', mobility: '',
+        parentLocation: '', mobility: '', episodes: [],
       };
 
       for (const id of ['name', 'aliases', 'pronunciation', 'tags', 'body', 'soundMotif', 'castingNotes']) {
@@ -287,6 +345,10 @@ export function buildStoryCardHtml(cspSource: string, nonce: string): string {
       el('addRelation').addEventListener('click', () => {
         state.relations = [...state.relations, { target: '', relationType: '', attitude: '' }];
         renderRelations(state.relations);
+      });
+      el('addEpisode').addEventListener('click', () => {
+        state.episodes = [...state.episodes, ''];
+        renderEpisodes(state.episodes);
       });
 
       window.addEventListener('message', (event) => {

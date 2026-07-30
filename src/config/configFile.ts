@@ -32,6 +32,12 @@ export const loreFountainConfigSchema = z
         imports: z.string().optional(),
       })
       .optional(),
+    world: z
+      .object({
+        /** World-tree category ids to hide from the World view (e.g. `"faction"`, `"arc"`, `"notes"`) — a project that doesn't use a category can declutter its sidebar without deleting anything. Loose strings, not a shared enum: an unrecognized id here is harmless, matching this file's existing tolerant-parsing posture. */
+        hiddenCategories: z.array(z.string()).optional(),
+      })
+      .optional(),
   })
   .catchall(z.unknown());
 
@@ -94,6 +100,11 @@ export function folderSettingsFromConfig(config: LoreFountainConfig): FolderSett
   };
 }
 
+/** Extract `world.hiddenCategories` from a parsed config, defaulting to none hidden. */
+export function hiddenCategoriesFromConfig(config: LoreFountainConfig): string[] {
+  return config.world?.hiddenCategories ?? [];
+}
+
 /**
  * Write a default `lorefountain.config.json` to a workspace root, unless one
  * already exists there.
@@ -120,6 +131,41 @@ export async function writeDefaultConfigIfAbsent(workspaceRoot: string): Promise
   };
   await fsp.writeFile(filePath, `${JSON.stringify(defaultConfig, null, 2)}\n`, 'utf8');
   return true;
+}
+
+/**
+ * Merge partial updates into `lorefountain.config.json` and write it back —
+ * the general-purpose counterpart to {@link writeDefaultConfigIfAbsent}
+ * (write-if-absent only). Reads the existing file first (falling back to `{}`
+ * if it's missing or currently invalid) so `$schema`, unrelated top-level
+ * keys, and unrelated `folders`/`world` sub-fields survive the write
+ * untouched — only the fields present in `updates` change.
+ *
+ * @param workspaceRoot - Absolute path to the workspace root.
+ * @param updates - Fields to merge in; `folders`/`world` are merged one level deep, everything else shallowly at the top level.
+ */
+export async function writeLoreFountainConfig(
+  workspaceRoot: string,
+  updates: LoreFountainConfig,
+): Promise<void> {
+  const filePath = path.join(workspaceRoot, CONFIG_FILE_NAME);
+  const existing = await readLoreFountainConfig(workspaceRoot);
+  const base: LoreFountainConfig = existing.ok ? existing.config : {};
+
+  const merged: LoreFountainConfig = {
+    ...base,
+    ...updates,
+    folders: mergeSection(base.folders, updates.folders),
+    world: mergeSection(base.world, updates.world),
+  };
+
+  await fsp.writeFile(filePath, `${JSON.stringify(merged, null, 2)}\n`, 'utf8');
+}
+
+/** Shallow-merge two optional config sub-objects, or return `undefined` if both are absent (so the merged config doesn't grow an empty `{}` section). */
+function mergeSection<T extends object>(base: T | undefined, update: T | undefined): T | undefined {
+  if (!base && !update) return undefined;
+  return { ...base, ...update } as T;
 }
 
 /** Extract a message from an unknown thrown value. */

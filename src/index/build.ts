@@ -38,7 +38,10 @@
  * `README.md` (any case) is never treated as an entity or glossary file, even
  * when it sits directly in `world/` or `world/glossary/` — LoreFountain
  * scaffolds one into each of those folders (`readmeFiles.ts`), and without
- * this exclusion every project that adopts it would fail to index.
+ * this exclusion every project that adopts it would fail to index. Same for
+ * `world/OVERVIEW.md` (any case) — the freeform Story Overview (ADR-0029,
+ * `storyOverview.ts`) has no frontmatter at all, so without this exclusion
+ * it would fail entity schema validation on every save.
  *
  * Two script-specific checks run in the same full-candidate-list pass as
  * dangling relations (only from {@link buildIndexFromDisk} — see the same
@@ -63,17 +66,25 @@ import type { ValidationIssue } from '../model/errors';
 import { parseEntityFile, type EntityWarning } from '../model/entity';
 import { parseGlossaryFile } from '../model/glossary';
 import { parseScriptTitlePage, type ScriptWarning } from '../model/script';
+import { parseTimelineEventFile } from '../model/timeline';
 import { idFromFilePath } from '../model/slug';
 import { extractMentionTargets, type MentionCandidate } from './mentions';
-import { findDanglingRelations } from './relations';
+import { findDanglingEpisodeCodes, findDanglingRelations } from './relations';
 import type { IndexStore, ScriptRecord } from './store';
 
 /** Subfolders of `world/` that are never walked for entity files (Spec §5). */
 const ENTITY_EXCLUDED_SUBDIRS = ['glossary', 'timeline', 'notes'];
 
-/** Case-insensitive check for the scaffolded `README.md` LoreFountain writes into every folder — documentation, never an entity/glossary file. */
-function isReadme(filePath: string): boolean {
-  return path.basename(filePath).toLowerCase() === 'readme.md';
+/**
+ * Case-insensitive check for LoreFountain's own reference docs that sit
+ * inside indexed folders but are never entity/glossary/event files: the
+ * scaffolded `README.md`, and `world/OVERVIEW.md` (the Story Overview,
+ * ADR-0029 — freeform prose, no frontmatter, would otherwise fail entity
+ * schema validation on every save).
+ */
+function isNonEntityDoc(filePath: string): boolean {
+  const name = path.basename(filePath).toLowerCase();
+  return name === 'readme.md' || name === 'overview.md';
 }
 
 /** One file that failed to parse during a build or incremental reindex. */
@@ -105,6 +116,12 @@ export interface IndexBuildDanglingRelation {
   relationType: string;
 }
 
+/** One code in an Arc entity's `episodes` field that doesn't resolve to any known script's Production Code. */
+export interface IndexBuildDanglingEpisode {
+  filePath: string;
+  code: string;
+}
+
 /** Two or more scripts in the same immediate subfolder of `scripts/` claiming the same `Order` — ambiguous display position, but nothing is lost (falls back to filename order). */
 export interface IndexBuildDuplicateOrder {
   /** The shared parent folder's name, or `''` for scripts sitting directly in `scripts/`. */
@@ -124,51 +141,61 @@ export interface IndexBuildSummary {
   entityCount: number;
   glossaryCount: number;
   scriptCount: number;
+  eventCount: number;
   malformed: IndexBuildIssue[];
   warnings: IndexBuildWarning[];
   danglingRelations: IndexBuildDanglingRelation[];
+  danglingEpisodes: IndexBuildDanglingEpisode[];
   duplicateScriptOrders: IndexBuildDuplicateOrder[];
   duplicateProductionCodes: IndexBuildDuplicateProductionCode[];
 }
 
-/** The three kinds of file the index tracks. Notes (§13.4) are never indexed. */
-export type IndexableFileKind = 'entity' | 'glossary' | 'script';
+/** The four kinds of file the index tracks. Notes (§13.4) are never indexed. */
+export type IndexableFileKind = 'entity' | 'glossary' | 'script' | 'event';
 
 /** Outcome of {@link reindexFile}. */
 export type ReindexFileResult =
-  | { ok: true; warnings: IndexWarning[]; danglingRelations: IndexBuildDanglingRelation[] }
+  | {
+      ok: true;
+      warnings: IndexWarning[];
+      danglingRelations: IndexBuildDanglingRelation[];
+      danglingEpisodes: IndexBuildDanglingEpisode[];
+    }
   | { ok: false; reason: IndexBuildIssue['reason']; message: string; issues?: ValidationIssue[] };
 
 /**
  * Rebuild the index by walking `folders.world` (for entities, excluding the
  * reserved `glossary/`, `timeline/`, and `notes/` subfolders), `folders.glossary`
- * (for glossary terms), and `folders.scripts` (for `.fountain` scripts as
- * mention sources), upserting/registering every file that parses/reads.
+ * (for glossary terms), `folders.timeline` (for Timeline events, Spec §4.6),
+ * and `folders.scripts` (for `.fountain` scripts as mention sources),
+ * upserting/registering every file that parses/reads.
  *
  * Safe to call against a workspace where these folders don't exist yet — an
  * absent folder simply contributes zero files, not an error.
  *
  * @param store - The index to populate.
- * @param folders - Absolute paths to the `world`, `glossary`, and `scripts` folders.
+ * @param folders - Absolute paths to the `world`, `glossary`, `timeline`, and `scripts` folders.
  * @returns Counts of what was indexed, plus any malformed files or warnings.
  */
 export async function buildIndexFromDisk(
   store: IndexStore,
-  folders: { world: string; glossary: string; scripts: string },
+  folders: { world: string; glossary: string; timeline: string; scripts: string },
 ): Promise<IndexBuildSummary> {
   const summary: IndexBuildSummary = {
     entityCount: 0,
     glossaryCount: 0,
     scriptCount: 0,
+    eventCount: 0,
     malformed: [],
     warnings: [],
     danglingRelations: [],
+    danglingEpisodes: [],
     duplicateScriptOrders: [],
     duplicateProductionCodes: [],
   };
 
   const entityFiles = (await listFilesWithExtension(folders.world, '.md', ENTITY_EXCLUDED_SUBDIRS)).filter(
-    (filePath) => !isReadme(filePath),
+    (filePath) => !isNonEntityDoc(filePath),
   );
   for (const filePath of entityFiles) {
     const result = await reindexFile(store, filePath, 'entity', { recomputeMentions: false });
@@ -183,12 +210,24 @@ export async function buildIndexFromDisk(
   }
 
   const glossaryFiles = (await listFilesWithExtension(folders.glossary, '.md')).filter(
-    (filePath) => !isReadme(filePath),
+    (filePath) => !isNonEntityDoc(filePath),
   );
   for (const filePath of glossaryFiles) {
     const result = await reindexFile(store, filePath, 'glossary', { recomputeMentions: false });
     if (result.ok) {
       summary.glossaryCount += 1;
+    } else {
+      summary.malformed.push({ filePath, reason: result.reason, message: result.message, issues: result.issues });
+    }
+  }
+
+  const eventFiles = (await listFilesWithExtension(folders.timeline, '.md')).filter(
+    (filePath) => !isNonEntityDoc(filePath),
+  );
+  for (const filePath of eventFiles) {
+    const result = await reindexFile(store, filePath, 'event', { recomputeMentions: false });
+    if (result.ok) {
+      summary.eventCount += 1;
     } else {
       summary.malformed.push({ filePath, reason: result.reason, message: result.message, issues: result.issues });
     }
@@ -221,12 +260,10 @@ export async function buildIndexFromDisk(
   // A single pass over the now-complete candidate list, after every file has
   // been upserted — see the module doc comment on why this differs from the
   // per-file recompute an incremental `reindexFile` call does on its own.
-  const { danglingRelations, duplicateScriptOrders, duplicateProductionCodes } = recomputeMentionsAndFindIssues(
-    store,
-    scriptTexts,
-    folders.scripts,
-  );
+  const { danglingRelations, danglingEpisodes, duplicateScriptOrders, duplicateProductionCodes } =
+    recomputeMentionsAndFindIssues(store, scriptTexts, folders.scripts);
   summary.danglingRelations = danglingRelations;
+  summary.danglingEpisodes = danglingEpisodes;
   summary.duplicateScriptOrders = duplicateScriptOrders;
   summary.duplicateProductionCodes = duplicateProductionCodes;
 
@@ -284,7 +321,7 @@ export async function reindexFile(
       const candidates = buildMentionCandidates(store);
       store.setMentionsForSource({ id, kind: 'script', filePath }, extractMentionTargets(text, candidates));
     }
-    return { ok: true, warnings: allWarnings, danglingRelations: [] };
+    return { ok: true, warnings: allWarnings, danglingRelations: [], danglingEpisodes: [] };
   }
 
   if (kind === 'entity') {
@@ -295,6 +332,7 @@ export async function reindexFile(
     store.upsertEntity(result.entity);
 
     let danglingRelations: IndexBuildDanglingRelation[] = [];
+    let danglingEpisodes: IndexBuildDanglingEpisode[] = [];
     if (recomputeMentions) {
       const candidates = buildMentionCandidates(store);
       store.setMentionsForSource(
@@ -305,24 +343,56 @@ export async function reindexFile(
       danglingRelations = findDanglingRelations(result.entity.frontmatter.relations, knownEntityIds).map(
         (relation) => ({ filePath, target: relation.target, relationType: relation.relationType }),
       );
+      if (result.entity.frontmatter.type === 'arc') {
+        const knownProductionCodes = knownProductionCodesFrom(store);
+        danglingEpisodes = findDanglingEpisodeCodes(result.entity.frontmatter.episodes, knownProductionCodes).map(
+          (code) => ({ filePath, code }),
+        );
+      }
     }
-    return { ok: true, warnings: result.warnings, danglingRelations };
+    return { ok: true, warnings: result.warnings, danglingRelations, danglingEpisodes };
   }
 
-  const result = parseGlossaryFile(text, { id, filePath });
+  if (kind === 'glossary') {
+    const result = parseGlossaryFile(text, { id, filePath });
+    if (!result.ok) {
+      return { ok: false, reason: result.reason, message: result.message, issues: result.issues };
+    }
+    store.upsertGlossaryTerm(result.term);
+
+    if (recomputeMentions) {
+      const candidates = buildMentionCandidates(store);
+      store.setMentionsForSource(
+        { id: result.term.id, kind: 'glossary', filePath },
+        extractMentionTargets(result.term.body, candidates, result.term.id),
+      );
+    }
+    return { ok: true, warnings: [], danglingRelations: [], danglingEpisodes: [] };
+  }
+
+  const result = parseTimelineEventFile(text, { id, filePath });
   if (!result.ok) {
     return { ok: false, reason: result.reason, message: result.message, issues: result.issues };
   }
-  store.upsertGlossaryTerm(result.term);
+  store.upsertEvent(result.event);
 
   if (recomputeMentions) {
     const candidates = buildMentionCandidates(store);
     store.setMentionsForSource(
-      { id: result.term.id, kind: 'glossary', filePath },
-      extractMentionTargets(result.term.body, candidates, result.term.id),
+      { id: result.event.id, kind: 'event', filePath },
+      extractMentionTargets(result.event.body, candidates, result.event.id),
     );
   }
-  return { ok: true, warnings: [], danglingRelations: [] };
+  return { ok: true, warnings: [], danglingRelations: [], danglingEpisodes: [] };
+}
+
+/** Every Production Code currently known to the store, for {@link findDanglingEpisodeCodes}. */
+function knownProductionCodesFrom(store: IndexStore): Set<string> {
+  const codes = new Set<string>();
+  for (const script of store.listScripts()) {
+    if (script.productionCode !== undefined) codes.add(script.productionCode);
+  }
+  return codes;
 }
 
 /**
@@ -332,13 +402,16 @@ export async function reindexFile(
  *
  * @param store - The index to update.
  * @param filePath - Absolute path to the deleted file.
- * @param kind - Whether the file was an entity, a glossary term, or a script.
+ * @param kind - Whether the file was an entity, a glossary term, a Timeline event, or a script.
  */
 export function removeFileFromIndex(store: IndexStore, filePath: string, kind: IndexableFileKind): void {
   if (kind === 'entity') {
     store.removeEntityByPath(filePath);
   } else if (kind === 'glossary') {
     store.removeGlossaryTermByPath(filePath);
+  } else if (kind === 'event') {
+    store.removeEventByPath(filePath);
+    store.removeMentionsForSource({ id: idFromFilePath(filePath), kind: 'event' });
   } else {
     store.removeScriptByPath(filePath);
     store.removeMentionsForSource({ id: idFromFilePath(filePath), kind: 'script' });
@@ -346,9 +419,9 @@ export function removeFileFromIndex(store: IndexStore, filePath: string, kind: I
 }
 
 /**
- * Build the full mention-candidate list from every entity and glossary term
- * currently in the store. Exported for the hover/completion providers
- * (Phase C), which need the same candidate list to match against.
+ * Build the full mention-candidate list from every entity, glossary term,
+ * and Timeline event currently in the store. Exported for the hover/completion
+ * providers (Phase C), which need the same candidate list to match against.
  */
 export function buildMentionCandidates(store: IndexStore): MentionCandidate[] {
   const candidates: MentionCandidate[] = [];
@@ -358,12 +431,16 @@ export function buildMentionCandidates(store: IndexStore): MentionCandidate[] {
   for (const term of store.listGlossaryTerms()) {
     candidates.push({ id: term.id, kind: 'glossary', names: [term.term, ...(term.data.aliases ?? [])] });
   }
+  for (const event of store.listEvents()) {
+    candidates.push({ id: event.id, kind: 'event', names: [event.name] });
+  }
   return candidates;
 }
 
 /** Result of {@link recomputeMentionsAndFindIssues}. */
 interface CrossFileIssues {
   danglingRelations: IndexBuildDanglingRelation[];
+  danglingEpisodes: IndexBuildDanglingEpisode[];
   duplicateScriptOrders: IndexBuildDuplicateOrder[];
   duplicateProductionCodes: IndexBuildDuplicateProductionCode[];
 }
@@ -383,7 +460,9 @@ function recomputeMentionsAndFindIssues(
   const candidates = buildMentionCandidates(store);
   const entities = store.listEntities();
   const knownEntityIds = new Set(entities.map((entity) => entity.id));
+  const knownProductionCodes = knownProductionCodesFrom(store);
   const danglingRelations: IndexBuildDanglingRelation[] = [];
+  const danglingEpisodes: IndexBuildDanglingEpisode[] = [];
 
   for (const entity of entities) {
     store.setMentionsForSource(
@@ -397,12 +476,24 @@ function recomputeMentionsAndFindIssues(
         relationType: relation.relationType,
       });
     }
+    if (entity.data.type === 'arc') {
+      for (const code of findDanglingEpisodeCodes(entity.data.episodes, knownProductionCodes)) {
+        danglingEpisodes.push({ filePath: entity.filePath, code });
+      }
+    }
   }
 
   for (const term of store.listGlossaryTerms()) {
     store.setMentionsForSource(
       { id: term.id, kind: 'glossary', filePath: term.filePath },
       extractMentionTargets(term.body, candidates, term.id),
+    );
+  }
+
+  for (const event of store.listEvents()) {
+    store.setMentionsForSource(
+      { id: event.id, kind: 'event', filePath: event.filePath },
+      extractMentionTargets(event.body, candidates, event.id),
     );
   }
 
@@ -414,7 +505,7 @@ function recomputeMentionsAndFindIssues(
   }
 
   const { duplicateScriptOrders, duplicateProductionCodes } = findScriptIssues(store.listScripts(), scriptsRoot);
-  return { danglingRelations, duplicateScriptOrders, duplicateProductionCodes };
+  return { danglingRelations, danglingEpisodes, duplicateScriptOrders, duplicateProductionCodes };
 }
 
 /**

@@ -13,7 +13,7 @@
 
 import * as vscode from 'vscode';
 import { getWorkspaceFolders } from '../config/workspaceConfig';
-import { createEntity, createGlossaryTerm } from '../entities/service';
+import { createEntity, createGlossaryTerm, createTimelineEvent } from '../entities/service';
 import type { EntityType } from '../model/entity';
 import { STORY_CARD_VIEW_TYPE } from '../providers/storyCardEditorProvider';
 
@@ -24,10 +24,11 @@ export const ENTITY_TYPE_COMMANDS: ReadonlyArray<{ commandId: string; type: Enti
   { commandId: 'lorefountain.newFaction', type: 'faction', label: 'Faction' },
   { commandId: 'lorefountain.newObject', type: 'object', label: 'Object' },
   { commandId: 'lorefountain.newConcept', type: 'concept', label: 'Concept' },
+  { commandId: 'lorefountain.newArc', type: 'arc', label: 'Arc' },
 ];
 
 /**
- * Register the "New Character/Location/Faction/Object/Concept" and "New
+ * Register the "New Character/Location/Faction/Object/Concept/Arc" and "New
  * Glossary Term" commands.
  *
  * @param context - The extension context to register disposables against.
@@ -44,6 +45,7 @@ export function registerEntityCreationCommands(
   }
   context.subscriptions.push(
     vscode.commands.registerCommand('lorefountain.newGlossaryTerm', () => void createGlossaryTermCommand(pickTargetWorkspaceFolder)),
+    vscode.commands.registerCommand('lorefountain.newEvent', () => void createTimelineEventCommand(pickTargetWorkspaceFolder)),
   );
 }
 
@@ -108,5 +110,35 @@ async function createGlossaryTermCommand(
 
   // Glossary terms stay plain Markdown (Spec §4.7 — lightweight, no Story
   // Card editor): open with the standard text editor.
+  await vscode.window.showTextDocument(vscode.Uri.file(result.filePath));
+}
+
+async function createTimelineEventCommand(
+  pickTargetWorkspaceFolder: () => Promise<vscode.WorkspaceFolder | undefined>,
+): Promise<void> {
+  const folder = await pickTargetWorkspaceFolder();
+  if (!folder) return;
+
+  const name = await vscode.window.showInputBox({
+    title: 'New Event',
+    prompt: 'Name for the new Timeline event',
+    validateInput: (value) => (value.trim() ? undefined : 'Enter a name.'),
+  });
+  if (name === undefined) return;
+
+  const { folders } = await getWorkspaceFolders(folder);
+  const result = await createTimelineEvent(folders.timeline, name);
+
+  if (!result.ok) {
+    const message =
+      result.reason === 'already-exists'
+        ? `LoreFountain: "${name}" already exists (${result.filePath}).`
+        : `LoreFountain: "${name}" isn't a usable name.`;
+    void vscode.window.showErrorMessage(message);
+    return;
+  }
+
+  // Timeline events stay plain Markdown for v1, same posture as glossary
+  // terms (Spec §4.7) — no Story Card editor.
   await vscode.window.showTextDocument(vscode.Uri.file(result.filePath));
 }

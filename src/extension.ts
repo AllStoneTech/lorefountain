@@ -29,6 +29,7 @@ import * as vscode from 'vscode';
 import { registerEntityCreationCommands } from './commands/createEntity';
 import { registerCreateScriptCommand } from './commands/createScript';
 import { registerExportTranscriptCommand } from './commands/exportTranscript';
+import { registerLicensingCommands } from './commands/licensing';
 import { registerMigrateExistingLoreCommand } from './commands/migrateExistingLore';
 import { registerNoteCommands } from './commands/notes';
 import { registerReferenceCommands } from './commands/renameEntity';
@@ -38,13 +39,16 @@ import { scaffoldAgentFilesIfAbsent } from './config/agentFiles';
 import { writeDefaultConfigIfAbsent } from './config/configFile';
 import { detectExistingCoreFolders } from './config/existingFolders';
 import { scaffoldReadmesIfAbsent } from './config/readmeFiles';
+import { scaffoldStoryOverviewIfAbsent } from './config/storyOverview';
 import { getWorkspaceFolders } from './config/workspaceConfig';
 import { relocateCueSidecar } from './cues/sidecar';
 import { WorkspaceIndex } from './index/workspaceIndex';
 import type { IndexStore } from './index/store';
+import { getLicenseStatus } from './licensing/licenseState';
 import { createFountainHoverProvider } from './providers/hoverProvider';
 import { createWikilinkCompletionProvider } from './providers/completionProvider';
 import { ScriptsTreeProvider } from './providers/scriptsTreeProvider';
+import { openSettingsPanel } from './providers/settingsPanel';
 import { createStoryCardEditorProvider, STORY_CARD_VIEW_TYPE } from './providers/storyCardEditorProvider';
 import { WorldTreeProvider } from './providers/worldTreeProvider';
 import { checkGitSafety } from './safety/gitSafetyBanner';
@@ -60,11 +64,15 @@ let scriptsTreeProvider: ScriptsTreeProvider;
 const indexChangeEmitter = new vscode.EventEmitter<void>();
 
 /**
- * Called by VS Code when the extension is activated.
+ * Called by VS Code when the extension is activated. Async because deciding
+ * whether the pro tier activates now waits on {@link getLicenseStatus}
+ * (currently instant — see `licensing/validateLicense.ts`'s stub — but
+ * written so a real network-backed check drops in without restructuring
+ * this function).
  *
  * @param context - The extension context provided by the VS Code host.
  */
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
   extensionContext = context;
   outputChannel = vscode.window.createOutputChannel('LoreFountain');
   context.subscriptions.push(outputChannel);
@@ -72,6 +80,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('lorefountain.reindexWorkspace', () => void rebuildAllWorkspaceIndexes()),
     vscode.commands.registerCommand('lorefountain.initializeWorkspace', () => void initializeWorkspace()),
+    vscode.commands.registerCommand('lorefountain.openSettings', () => void openSettings()),
   );
   registerEntityCreationCommands(context, pickTargetWorkspaceFolder);
   registerCreateScriptCommand(context, pickTargetWorkspaceFolder);
@@ -81,6 +90,7 @@ export function activate(context: vscode.ExtensionContext): void {
   registerStructuredSearchCommand(context, outputChannel, pickTargetWorkspaceFolder, findStoreForFolder);
   registerTryLoreFountainCommand(context);
   registerMigrateExistingLoreCommand(context, pickTargetWorkspaceFolder);
+  registerLicensingCommands(context);
 
   context.subscriptions.push(
     vscode.window.registerCustomEditorProvider(
@@ -140,32 +150,94 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(indexChangeEmitter);
 
+  await activateProTier(context);
+}
+
+/**
+ * Decide whether the pro tier actually activates, and register it (or an
+ * explanatory placeholder) accordingly. Two independent gates, both must
+ * pass: the `pro/` submodule must be bundled at all (unchanged from
+ * ADR-0024), and — new as of ADR-0026/this licensing work — a valid license
+ * key must be on file (per {@link getLicenseStatus}, currently backed by a
+ * stub that always says valid, see `licensing/validateLicense.ts`).
+ *
+ * @param context - The extension context to register disposables against.
+ */
+async function activateProTier(context: vscode.ExtensionContext): Promise<void> {
   const proModule = loadProModule();
-  if (proModule) {
+  if (!proModule) {
+    // No submodule access to lorefountain-pro (or nothing built there yet)
+    // — nothing to click through to fix, so no command attached.
+    registerProPlaceholders(context, {
+      message: 'LoreFountain Pro required — Continuity Management is a paid-tier feature.',
+    });
+    return;
+  }
+
+  let licenseStatus: Awaited<ReturnType<typeof getLicenseStatus>>;
+  try {
+    licenseStatus = await getLicenseStatus(context);
+  } catch (err) {
+    // Never let a license-check failure take down the rest of activation —
+    // same "never throw" posture as loadProModule/parseEntityFile/etc.
+    // elsewhere in this codebase. Falls back to "unlicensed" so the
+    // placeholder below always registers something, rather than leaving
+    // lorefountain.continuityView with no provider at all.
+    outputChannel.appendLine(`[LoreFountain] License check failed: ${errorMessage(err)}`);
+    licenseStatus = undefined;
+  }
+
+  if (licenseStatus?.valid) {
     proModule.activate({
       extensionContext: context,
       outputChannel,
       getStoreForFolder: findStoreForFolder,
       onIndexChanged: indexChangeEmitter.event,
     });
-  } else {
-    // No submodule access to lorefountain-pro (or nothing built there yet)
-    // — register a plain explanatory placeholder instead of leaving the
-    // view showing VS Code's generic "no data provider" error. Real
-    // license-gated "grayed out" treatment is deferred until the licensing
-    // backend exists (ADR-0024); this is just "the view exists, here's why
-    // it's empty."
-    context.subscriptions.push(
-      vscode.window.registerTreeDataProvider('lorefountain.continuityView', createContinuityPlaceholderProvider()),
-    );
+    return;
   }
+
+  const message = licenseStatus
+    ? `LoreFountain Pro: license not valid${licenseStatus.reason ? ` (${licenseStatus.reason})` : ''} — click to enter a new key.`
+    : 'LoreFountain Pro: click to enter your license key and unlock Continuity Management.';
+  registerProPlaceholders(context, { message, command: 'lorefountain.enterLicenseKey' });
 }
 
-/** Single-leaf placeholder for the Continuity view when no pro module is loaded — see the `else` branch above. */
-function createContinuityPlaceholderProvider(): vscode.TreeDataProvider<string> {
+/**
+ * Register a plain explanatory placeholder instead of leaving the
+ * Continuity view showing VS Code's generic "no data provider" error, and a
+ * matching placeholder for `viewAsOfEpisode` — used whenever the pro tier
+ * isn't actually active, whatever the reason. When `command` is given (the
+ * "no valid license" case, where clicking through actually fixes it), both
+ * the tree row and the command itself jump straight to it instead of just
+ * describing what to do — the project owner flagged the earlier text-only placeholder as
+ * unintuitive (2026-07-28): the fix was findable only via the Command
+ * Palette, not discoverable from the view itself.
+ */
+function registerProPlaceholders(context: vscode.ExtensionContext, options: { message: string; command?: string }): void {
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider('lorefountain.continuityView', createContinuityPlaceholderProvider(options)),
+    vscode.commands.registerCommand('lorefountain.viewAsOfEpisode', () =>
+      options.command
+        ? void vscode.commands.executeCommand(options.command)
+        : void vscode.window.showInformationMessage(options.message),
+    ),
+  );
+}
+
+/** Single-leaf placeholder for the Continuity view when the pro tier isn't active — see {@link registerProPlaceholders}. */
+function createContinuityPlaceholderProvider(options: { message: string; command?: string }): vscode.TreeDataProvider<string> {
   return {
-    getTreeItem: (label: string) => new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None),
-    getChildren: () => ['LoreFountain Pro required — Continuity Management is a paid-tier feature.'],
+    getTreeItem: (label: string) => {
+      const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
+      if (options.command) {
+        item.command = { command: options.command, title: 'Enter License Key' };
+        item.iconPath = new vscode.ThemeIcon('key');
+        item.tooltip = 'Click to enter your LoreFountain Pro license key';
+      }
+      return item;
+    },
+    getChildren: () => [options.message],
   };
 }
 
@@ -356,7 +428,7 @@ async function initializeWorkspace(): Promise<void> {
     const proceed = 'Use Existing Folder(s)';
     const choice = await vscode.window.showWarningMessage(
       `LoreFountain found an existing "${names.join('" and "')}" folder in "${folder.name}". ` +
-        "LoreFountain never touches anything outside its own folders — proceeding will index what's already there and add only what's missing (a config file, agent instructions and a validator for AI coding tools, READMEs, and any of glossary/timeline/notes/imports that don't exist yet).",
+        "LoreFountain never touches anything outside its own folders — proceeding will index what's already there and add only what's missing (a config file, agent instructions and a validator for AI coding tools, READMEs, a Story Overview template, and any of glossary/timeline/notes/imports that don't exist yet).",
       { modal: true },
       proceed,
     );
@@ -378,6 +450,7 @@ async function initializeWorkspace(): Promise<void> {
   };
   await scaffoldAgentFilesIfAbsent(resourcesPath, folder.uri.fsPath);
   await scaffoldReadmesIfAbsent(resourcesPath, folder.uri.fsPath, folderNames, folder.name);
+  await scaffoldStoryOverviewIfAbsent(resourcesPath, folders.world, folder.name);
 
   const existingIndex = indexes.get(folder.uri.toString());
   if (existingIndex) {
@@ -391,6 +464,13 @@ async function initializeWorkspace(): Promise<void> {
       ? `LoreFountain: initialized "${folder.name}" — created lorefountain.config.json and the standard folders.`
       : `LoreFountain: standard folders ensured for "${folder.name}" (lorefountain.config.json already existed).`,
   );
+}
+
+/** Open the settings webview panel for a target workspace folder, refreshing the World tree after a save. */
+async function openSettings(): Promise<void> {
+  const folder = await pickTargetWorkspaceFolder();
+  if (!folder) return;
+  openSettingsPanel(folder, () => treeProvider.refresh());
 }
 
 /** Resolve which workspace folder a workspace-scoped command should target. */

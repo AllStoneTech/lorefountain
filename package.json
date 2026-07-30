@@ -97,6 +97,11 @@
         "category": "LoreFountain"
       },
       {
+        "command": "lorefountain.newArc",
+        "title": "New Arc",
+        "category": "LoreFountain"
+      },
+      {
         "command": "lorefountain.newGlossaryTerm",
         "title": "New Glossary Term",
         "category": "LoreFountain"
@@ -104,6 +109,11 @@
       {
         "command": "lorefountain.newNote",
         "title": "New Note",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.newEvent",
+        "title": "New Event",
         "category": "LoreFountain"
       },
       {
@@ -146,6 +156,32 @@
         "command": "lorefountain.migrateExistingLore",
         "title": "Migrate Existing Lore",
         "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.viewAsOfEpisode",
+        "title": "View As of Episode",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.enterLicenseKey",
+        "title": "Enter License Key",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.showLicenseStatus",
+        "title": "Show License Status",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.clearLicenseKey",
+        "title": "Remove License Key",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.openSettings",
+        "title": "Settings",
+        "category": "LoreFountain",
+        "icon": "$(gear)"
       }
     ],
     "customEditors": [
@@ -214,6 +250,11 @@
           "group": "navigation"
         },
         {
+          "command": "lorefountain.openSettings",
+          "when": "view == lorefountain.worldView",
+          "group": "navigation"
+        },
+        {
           "command": "lorefountain.showBrokenReferences",
           "when": "view == lorefountain.worldView",
           "group": "9_lorefountain"
@@ -268,8 +309,18 @@
           "group": "inline"
         },
         {
+          "command": "lorefountain.newArc",
+          "when": "view == lorefountain.worldView && viewItem == lorefountain.category.arc",
+          "group": "inline"
+        },
+        {
           "command": "lorefountain.newGlossaryTerm",
           "when": "view == lorefountain.worldView && viewItem == lorefountain.category.glossary",
+          "group": "inline"
+        },
+        {
+          "command": "lorefountain.newEvent",
+          "when": "view == lorefountain.worldView && viewItem == lorefountain.category.timeline",
           "group": "inline"
         },
         {
@@ -309,7 +360,7 @@
           {
             "id": "createEntity",
             "title": "Create Your First Entity",
-            "description": "Entities are the characters, locations, factions, objects, and concepts of your world — each one a plain Markdown file. Create one from the Command Palette or the World view.\n[New Character](command:lorefountain.newCharacter)",
+            "description": "Entities are the characters, locations, factions, objects, concepts, and arcs of your world — each one a plain Markdown file. Create one from the Command Palette or the World view.\n[New Character](command:lorefountain.newCharacter)",
             "media": {
               "markdown": "resources/walkthrough/create-entity.md"
             },
@@ -318,7 +369,8 @@
               "onCommand:lorefountain.newLocation",
               "onCommand:lorefountain.newFaction",
               "onCommand:lorefountain.newObject",
-              "onCommand:lorefountain.newConcept"
+              "onCommand:lorefountain.newConcept",
+              "onCommand:lorefountain.newArc"
             ]
           },
           {

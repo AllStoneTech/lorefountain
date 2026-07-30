@@ -33,3 +33,22 @@ export function findDanglingRelations(
     .filter((relation) => !knownEntityIds.has(relation.target))
     .map((relation) => ({ target: relation.target, relationType: relation.relation_type }));
 }
+
+/**
+ * Find every code in an Arc entity's `episodes` field that doesn't resolve to
+ * any currently-known script's Production Code. Unlike Timeline events'
+ * `production_code` (which resolves silently to "unset" if unmatched, per
+ * ADR-0026), an Arc's whole purpose is precise episode targeting — a
+ * mistyped or stale code here is surfaced, not swallowed.
+ *
+ * @param episodes - The arc's `episodes` field (absent treated as empty).
+ * @param knownProductionCodes - Every script Production Code currently in the index.
+ * @returns The subset of codes that don't resolve, in original order.
+ */
+export function findDanglingEpisodeCodes(
+  episodes: readonly string[] | undefined,
+  knownProductionCodes: ReadonlySet<string>,
+): string[] {
+  if (!episodes || episodes.length === 0) return [];
+  return episodes.filter((code) => !knownProductionCodes.has(code));
+}

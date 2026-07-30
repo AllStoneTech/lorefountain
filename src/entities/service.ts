@@ -28,6 +28,12 @@ import {
   serializeGlossaryTerm,
   type GlossaryTerm,
 } from '../model/glossary';
+import {
+  timelineEventSchema,
+  parseTimelineEventFile,
+  serializeTimelineEvent,
+  type TimelineEvent,
+} from '../model/timeline';
 import { idFromFilePath, slugify } from '../model/slug';
 
 /** Outcome of {@link createEntity}. */
@@ -106,6 +112,43 @@ export async function createGlossaryTerm(
   return { ok: true, term: glossaryTerm, filePath };
 }
 
+/** Outcome of {@link createTimelineEvent}. */
+export type CreateTimelineEventResult =
+  | { ok: true; event: TimelineEvent; filePath: string }
+  | { ok: false; reason: 'invalid-name'; name: string }
+  | { ok: false; reason: 'already-exists'; filePath: string };
+
+/**
+ * Scaffold a new Timeline event file with only `name` set (Spec §4.6).
+ *
+ * @param timelineFolder - Absolute path to the workspace's `world/timeline` folder.
+ * @param name - The event's display name; its id is derived by slugifying this.
+ * @returns The created event and its file path, or a described, non-throwing failure.
+ */
+export async function createTimelineEvent(
+  timelineFolder: string,
+  name: string,
+): Promise<CreateTimelineEventResult> {
+  const trimmedName = name.trim();
+  const id = slugify(trimmedName);
+  if (!trimmedName || !id) {
+    return { ok: false, reason: 'invalid-name', name };
+  }
+
+  const filePath = path.join(timelineFolder, `${id}.md`);
+  if (await fileExists(filePath)) {
+    return { ok: false, reason: 'already-exists', filePath };
+  }
+
+  const frontmatter = timelineEventSchema.parse({ name: trimmedName });
+  const event: TimelineEvent = { id, filePath, body: '', frontmatter };
+
+  await fsp.mkdir(timelineFolder, { recursive: true });
+  await fsp.writeFile(filePath, serializeTimelineEvent(event), 'utf8');
+
+  return { ok: true, event, filePath };
+}
+
 /** Outcome of {@link readEntity}. */
 export type ReadEntityResult =
   | { ok: true; entity: Entity }
@@ -177,6 +220,42 @@ export async function writeEntity(entity: Entity): Promise<void> {
  */
 export async function writeGlossaryTerm(term: GlossaryTerm): Promise<void> {
   await fsp.writeFile(term.filePath, serializeGlossaryTerm(term), 'utf8');
+}
+
+/** Outcome of {@link readTimelineEvent}. */
+export type ReadTimelineEventResult =
+  | { ok: true; event: TimelineEvent }
+  | {
+      ok: false;
+      reason: 'read-error' | 'malformed-yaml' | 'invalid-schema';
+      filePath: string;
+      message: string;
+      issues?: ValidationIssue[];
+    };
+
+/**
+ * Read and validate a Timeline event file from disk.
+ *
+ * @param filePath - Absolute path to the event `.md` file.
+ * @returns The parsed event, or a described, non-throwing failure.
+ */
+export async function readTimelineEvent(filePath: string): Promise<ReadTimelineEventResult> {
+  let text: string;
+  try {
+    text = await fsp.readFile(filePath, 'utf8');
+  } catch (err) {
+    return { ok: false, reason: 'read-error', filePath, message: errorMessage(err) };
+  }
+  return parseTimelineEventFile(text, { id: idFromFilePath(filePath), filePath });
+}
+
+/**
+ * Write a Timeline event's current state back to its file.
+ *
+ * @param event - The event to persist.
+ */
+export async function writeTimelineEvent(event: TimelineEvent): Promise<void> {
+  await fsp.writeFile(event.filePath, serializeTimelineEvent(event), 'utf8');
 }
 
 async function fileExists(filePath: string): Promise<boolean> {

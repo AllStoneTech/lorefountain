@@ -17,7 +17,7 @@ import { buildIndexFromDisk, reindexFile, removeFileFromIndex, type IndexBuildSu
 import { createSqlJsIndexStore } from './sqlJsStore';
 import type { IndexStore } from './store';
 
-type WorldFileKind = 'entity' | 'glossary' | 'skip';
+type WorldFileKind = 'entity' | 'glossary' | 'event' | 'skip';
 
 export class WorkspaceIndex implements vscode.Disposable {
   private readonly disposables: vscode.Disposable[] = [];
@@ -60,6 +60,7 @@ export class WorkspaceIndex implements vscode.Disposable {
     const summary = await buildIndexFromDisk(this.store, {
       world: folders.world,
       glossary: folders.glossary,
+      timeline: folders.timeline,
       scripts: folders.scripts,
     });
     this.logSummary(summary);
@@ -110,7 +111,7 @@ export class WorkspaceIndex implements vscode.Disposable {
     this.changeEmitter.fire();
   }
 
-  private async handleReindex(filePath: string, kind: 'entity' | 'glossary' | 'script'): Promise<void> {
+  private async handleReindex(filePath: string, kind: 'entity' | 'glossary' | 'event' | 'script'): Promise<void> {
     const result = await reindexFile(this.store, filePath, kind);
     if (!result.ok) {
       this.outputChannel.appendLine(`[LoreFountain] SKIPPED (${result.reason}) ${filePath}: ${result.message}`);
@@ -124,12 +125,17 @@ export class WorkspaceIndex implements vscode.Disposable {
         `[LoreFountain] WARNING ${filePath}: relation "${relation.relationType}" targets unknown entity "${relation.target}".`,
       );
     }
+    for (const episode of result.danglingEpisodes) {
+      this.outputChannel.appendLine(
+        `[LoreFountain] WARNING ${filePath}: arc references unknown episode "${episode.code}".`,
+      );
+    }
     this.changeEmitter.fire();
   }
 
   private logSummary(summary: IndexBuildSummary): void {
     this.outputChannel.appendLine(
-      `[LoreFountain] ${this.folder.name}: ${summary.entityCount} entities, ${summary.glossaryCount} glossary terms, ${summary.scriptCount} scripts indexed.`,
+      `[LoreFountain] ${this.folder.name}: ${summary.entityCount} entities, ${summary.glossaryCount} glossary terms, ${summary.eventCount} Timeline events, ${summary.scriptCount} scripts indexed.`,
     );
     for (const issue of summary.malformed) {
       this.outputChannel.appendLine(`[LoreFountain] SKIPPED (${issue.reason}) ${issue.filePath}: ${issue.message}`);
@@ -142,6 +148,11 @@ export class WorkspaceIndex implements vscode.Disposable {
     for (const relation of summary.danglingRelations) {
       this.outputChannel.appendLine(
         `[LoreFountain] WARNING ${relation.filePath}: relation "${relation.relationType}" targets unknown entity "${relation.target}".`,
+      );
+    }
+    for (const episode of summary.danglingEpisodes) {
+      this.outputChannel.appendLine(
+        `[LoreFountain] WARNING ${episode.filePath}: arc references unknown episode "${episode.code}".`,
       );
     }
     for (const duplicate of summary.duplicateScriptOrders) {
@@ -160,16 +171,19 @@ export class WorkspaceIndex implements vscode.Disposable {
 
 /**
  * Classify a changed file path within `world/` as an entity, a glossary
- * term, or something to skip: the reserved `timeline/`/`notes/` subfolders
- * (per Spec §5/§13.4 — timeline events have no model yet, and notes are
- * deliberately never indexed), and any scaffolded `README.md` (see
- * `build.ts`'s module doc comment on why it's excluded everywhere).
+ * term, a Timeline event, or something to skip: the reserved `notes/`
+ * subfolder (per Spec §13.4 — notes are deliberately never indexed), any
+ * scaffolded `README.md`, and `world/OVERVIEW.md` (the Story Overview,
+ * ADR-0029 — see `build.ts`'s module doc comment on why both are excluded
+ * everywhere).
  */
 function classifyWorldFile(filePath: string, worldPath: string): WorldFileKind {
-  if (path.basename(filePath).toLowerCase() === 'readme.md') return 'skip';
+  const baseName = path.basename(filePath).toLowerCase();
+  if (baseName === 'readme.md' || baseName === 'overview.md') return 'skip';
   const relative = path.relative(worldPath, filePath);
   const [firstSegment] = relative.split(path.sep);
   if (firstSegment === 'glossary') return 'glossary';
-  if (firstSegment === 'timeline' || firstSegment === 'notes') return 'skip';
+  if (firstSegment === 'timeline') return 'event';
+  if (firstSegment === 'notes') return 'skip';
   return 'entity';
 }

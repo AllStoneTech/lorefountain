@@ -13,6 +13,7 @@
 import type { Entity, EntityType, EntityFrontmatter } from '../model/entity';
 import type { GlossaryTerm, GlossaryTermFrontmatter } from '../model/glossary';
 import type { Script } from '../model/script';
+import type { TimelineEvent, TimelineEventFrontmatter } from '../model/timeline';
 import type { MentionKind, MentionTarget } from './mentions';
 
 /** A stored, indexed entity row plus its full validated frontmatter. */
@@ -51,6 +52,17 @@ export interface ScriptRecord {
   order?: number;
   /** Permanent SxEE identifier from `Production Code:` (e.g. `"1x01"`) — never recomputed once assigned. */
   productionCode?: string;
+}
+
+/** A stored, indexed Timeline event row plus its full validated frontmatter (Spec §4.6). */
+export interface EventRecord {
+  id: string;
+  name: string;
+  filePath: string;
+  schemaVersion: number;
+  /** Full validated frontmatter, the JSON1-backed column (Spec §2.2). */
+  data: TimelineEventFrontmatter;
+  body: string;
 }
 
 /** One full-text search match against entities. */
@@ -108,6 +120,7 @@ export interface MentionBacklink {
 export interface IndexStats {
   entityCount: number;
   glossaryCount: number;
+  eventCount: number;
 }
 
 /**
@@ -162,6 +175,17 @@ export interface IndexStore {
 
   /** Every indexed script, in no particular order — callers sort by season/`order`/filename themselves. */
   listScripts(): ScriptRecord[];
+
+  /** Insert or replace a Timeline event row, matched by either `event.filePath` or `event.id`. */
+  upsertEvent(event: TimelineEvent): void;
+
+  /** Remove the event row for a given file path, if any. Safe to call when absent. */
+  removeEventByPath(filePath: string): void;
+
+  getEventById(id: string): EventRecord | undefined;
+
+  /** Every indexed Timeline event, in no particular order — callers sort by narrative/chronological order themselves. */
+  listEvents(): EventRecord[];
 
   /**
    * Replace every outgoing mention edge for a source (Spec §4.5) — an

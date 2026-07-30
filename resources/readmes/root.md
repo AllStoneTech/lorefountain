@@ -4,7 +4,7 @@ This project uses **[LoreFountain](https://github.com/AllStoneTech/lorefountain)
 
 ## What's in each folder
 
-- **`{{WORLD_FOLDER}}/`** — the story world: characters, locations, factions, objects, and concepts, one file per entity. See `{{WORLD_FOLDER}}/README.md`.
+- **`{{WORLD_FOLDER}}/`** — the story world: characters, locations, factions, objects, concepts, and arcs, one file per entity. See `{{WORLD_FOLDER}}/README.md`.
 - **`{{WORLD_FOLDER}}/glossary/`** — invented terminology and vocabulary. See `{{WORLD_FOLDER}}/glossary/README.md`.
 - **`{{WORLD_FOLDER}}/notes/`** — a low-stakes scratch space for half-formed ideas. See `{{WORLD_FOLDER}}/notes/README.md`.
 - **`{{SCRIPTS_FOLDER}}/`** — the actual `.fountain` scripts. See `{{SCRIPTS_FOLDER}}/README.md`.

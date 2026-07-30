@@ -25,9 +25,9 @@
  * target Y at all" matters (building the index's mention edges).
  */
 
-export type MentionKind = 'entity' | 'glossary' | 'script';
+export type MentionKind = 'entity' | 'glossary' | 'script' | 'event';
 
-/** One entity, glossary term, or script, as a source of mentionable name strings. */
+/** One entity, glossary term, Timeline event, or script, as a source of mentionable name strings. */
 export interface MentionCandidate {
   id: string;
   kind: MentionKind;

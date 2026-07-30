@@ -195,6 +195,44 @@ describe('parseEntityFile — misplaced type-specific fields (warnings, not erro
     if (!result.ok) return;
     expect(result.warnings).toEqual([]);
   });
+
+  it('flags episodes as misplaced on a non-arc entity', () => {
+    const result = parseEntityFile(file(['name: Sango', 'type: character', 'episodes: ["1x03"]']), {
+      id: 'sango',
+      filePath: '/world/sango.md',
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0]).toMatchObject({ code: 'misplaced-field', path: 'episodes' });
+  });
+});
+
+describe('parseEntityFile — arc type', () => {
+  it('parses an arc with an episodes list', () => {
+    const result = parseEntityFile(
+      file(['name: Imperium in Imperio', 'type: arc', 'episodes: ["1x03", "1x04", "1x07"]']),
+      { id: 'imperium-in-imperio', filePath: '/world/imperium-in-imperio.md' },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.entity.frontmatter.type).toBe('arc');
+    if (result.entity.frontmatter.type !== 'arc') return;
+    expect(result.entity.frontmatter.episodes).toEqual(['1x03', '1x04', '1x07']);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('accepts an arc with no episodes yet', () => {
+    const result = parseEntityFile(file(['name: A New Arc', 'type: arc']), {
+      id: 'a-new-arc',
+      filePath: '/world/a-new-arc.md',
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.entity.frontmatter.type).toBe('arc');
+    if (result.entity.frontmatter.type !== 'arc') return;
+    expect(result.entity.frontmatter.episodes).toBeUndefined();
+  });
 });
 
 describe('serializeEntity', () => {
@@ -214,6 +252,25 @@ describe('serializeEntity', () => {
     };
     const serialized = serializeEntity(entity);
     const reparsed = parseEntityFile(serialized, { id: 'esu', filePath: '/world/esu.md' });
+    expect(reparsed.ok).toBe(true);
+    if (!reparsed.ok) return;
+    expect(reparsed.entity.frontmatter).toEqual(entity.frontmatter);
+    expect(reparsed.entity.body).toBe(entity.body);
+  });
+
+  it('round-trips an arc entity with an episodes list', () => {
+    const entity: Entity = {
+      id: 'imperium-in-imperio',
+      filePath: '/world/imperium-in-imperio.md',
+      body: 'A conspiracy arc spanning Season 1.',
+      frontmatter: entityFrontmatterSchema.parse({
+        name: 'Imperium in Imperio',
+        type: 'arc',
+        episodes: ['1x03', '1x04', '1x07'],
+      }),
+    };
+    const serialized = serializeEntity(entity);
+    const reparsed = parseEntityFile(serialized, { id: 'imperium-in-imperio', filePath: '/world/imperium-in-imperio.md' });
     expect(reparsed.ok).toBe(true);
     if (!reparsed.ok) return;
     expect(reparsed.entity.frontmatter).toEqual(entity.frontmatter);

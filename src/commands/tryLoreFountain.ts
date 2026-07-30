@@ -47,6 +47,33 @@ A battered long-haul cargo ship, held together by duct tape and stubbornness.
   },
 ];
 
+const SAMPLE_OVERVIEW = {
+  fileName: 'OVERVIEW.md',
+  content: `# Story Overview
+
+## Premise
+
+A freighter pilot and her barely-held-together ship keep finding trouble at the edge of known space.
+
+## Setting
+
+Interstellar, near-future — cargo runs between colonies nobody important cares about.
+
+## Key Characters
+
+- **Nova Reyes** — quick-witted freighter pilot, talks to her ship more than her crew.
+- **The Wayfarer** — the ship itself, more character than location.
+
+## Synopsis
+
+<!-- Fill this in as the story grows. -->
+
+## Themes
+
+<!-- What is this story actually about, underneath the plot? -->
+`,
+};
+
 const SAMPLE_GLOSSARY_TERM = {
   fileName: 'jump-drive.md',
   content: `---
@@ -123,6 +150,7 @@ async function scaffoldSampleWorkspace(root: string): Promise<void> {
   for (const entity of SAMPLE_ENTITIES) {
     await fsp.writeFile(path.join(folders.world, entity.fileName), entity.content, 'utf8');
   }
+  await fsp.writeFile(path.join(folders.world, SAMPLE_OVERVIEW.fileName), SAMPLE_OVERVIEW.content, 'utf8');
   await fsp.writeFile(path.join(folders.glossary, SAMPLE_GLOSSARY_TERM.fileName), SAMPLE_GLOSSARY_TERM.content, 'utf8');
   await fsp.writeFile(path.join(folders.scripts, SAMPLE_SCRIPT.fileName), SAMPLE_SCRIPT.content, 'utf8');
 }

@@ -30,6 +30,7 @@ function blankCharacterForm(overrides: Partial<EntityFormState> = {}): EntityFor
     castingNotes: '',
     parentLocation: '',
     mobility: '',
+    episodes: [],
     ...overrides,
   };
 }
@@ -86,6 +87,18 @@ describe('entityToFormState', () => {
     expect(form.soundMotif).toBe('');
     expect(form.castingNotes).toBe('');
   });
+
+  it('surfaces the episodes list only for an arc', () => {
+    const form = entityToFormState(
+      entity({ name: 'Imperium in Imperio', type: 'arc', episodes: ['1x03', '1x04', '1x07'] }),
+    );
+    expect(form.episodes).toEqual(['1x03', '1x04', '1x07']);
+  });
+
+  it('defaults episodes to an empty array for a non-arc entity', () => {
+    const form = entityToFormState(entity());
+    expect(form.episodes).toEqual([]);
+  });
 });
 
 describe('applyFormStateToEntity', () => {
@@ -140,6 +153,26 @@ describe('applyFormStateToEntity', () => {
     expect(updated.frontmatter.mobility).toBe('mobile-continuous');
   });
 
+  it('applies arc-specific episodes, dropping blank rows and trimming whitespace', () => {
+    const updated = applyFormStateToEntity(
+      entity({ name: 'Imperium in Imperio', type: 'arc' }, ''),
+      blankCharacterForm({ type: 'arc', episodes: [' 1x03 ', '', '1x04'] }),
+    );
+    expect(updated.frontmatter.type).toBe('arc');
+    if (updated.frontmatter.type !== 'arc') return;
+    expect(updated.frontmatter.episodes).toEqual(['1x03', '1x04']);
+  });
+
+  it('clears episodes entirely when the form has none', () => {
+    const updated = applyFormStateToEntity(
+      entity({ name: 'Imperium in Imperio', type: 'arc', episodes: ['1x03'] }, ''),
+      blankCharacterForm({ type: 'arc', episodes: [] }),
+    );
+    expect(updated.frontmatter.type).toBe('arc');
+    if (updated.frontmatter.type !== 'arc') return;
+    expect(updated.frontmatter.episodes).toBeUndefined();
+  });
+
   it('applies edited relations, dropping rows with no target or relation type', () => {
     const updated = applyFormStateToEntity(
       entity(),
@@ -191,6 +224,17 @@ describe('applyFormStateToEntity', () => {
       relations: [{ target: 'esu', relation_type: 'ally', attitude: 'wary' }],
       sound_motif: 'thunder',
     });
+    const form = entityToFormState(original);
+    const roundTripped = applyFormStateToEntity(original, form);
+    expect(roundTripped.frontmatter).toEqual(original.frontmatter);
+    expect(roundTripped.body).toBe(original.body);
+  });
+
+  it('round-trips an arc through entityToFormState and back unchanged', () => {
+    const original = entity(
+      { name: 'Imperium in Imperio', type: 'arc', episodes: ['1x03', '1x04', '1x07'] },
+      'A conspiracy arc.',
+    );
     const form = entityToFormState(original);
     const roundTripped = applyFormStateToEntity(original, form);
     expect(roundTripped.frontmatter).toEqual(original.frontmatter);

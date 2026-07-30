@@ -15,7 +15,7 @@
         "world": {
           "type": "string",
           "default": "world",
-          "description": "Folder containing entity .md files (characters, locations, factions, objects, concepts), plus the glossary/, timeline/, and notes/ subfolders."
+          "description": "Folder containing entity .md files (characters, locations, factions, objects, concepts, arcs), plus the glossary/, timeline/, and notes/ subfolders."
         },
         "scripts": {
           "type": "string",
@@ -26,6 +26,21 @@
           "type": "string",
           "default": "imports",
           "description": "Drop-zone folder for existing source docs/bibles to migrate via the 'Migrate Existing Lore' command."
+        }
+      },
+      "additionalProperties": false
+    },
+    "world": {
+      "type": "object",
+      "description": "World-view display settings.",
+      "properties": {
+        "hiddenCategories": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["character", "location", "faction", "object", "concept", "arc", "glossary", "timeline", "notes"]
+          },
+          "description": "World-tree category ids to hide from the sidebar (e.g. a project with no Factions or Arcs can hide those sections without deleting anything)."
         }
       },
       "additionalProperties": false

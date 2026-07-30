@@ -43,6 +43,7 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
       scripts: path.join(tmpRoot, 'scripts'),
     });
 
@@ -57,6 +58,7 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
       scripts: path.join(tmpRoot, 'scripts'),
     });
 
@@ -67,17 +69,36 @@ describe('buildIndexFromDisk', () => {
   it('excludes glossary/, timeline/, and notes/ from the entity walk', async () => {
     await writeFile(tmpRoot, 'world/sango.md', characterMd('Sango'));
     await writeFile(tmpRoot, 'world/glossary/ase.md', ['---', 'term: Ase', '---', ''].join('\n'));
-    await writeFile(tmpRoot, 'world/timeline/ep1.md', '# not yet modeled');
+    await writeFile(tmpRoot, 'world/timeline/founding.md', ['---', 'name: Founding', '---', ''].join('\n'));
     await writeFile(tmpRoot, 'world/notes/idea.md', 'a stray idea, no frontmatter');
 
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
       scripts: path.join(tmpRoot, 'scripts'),
     });
 
     expect(summary.entityCount).toBe(1);
     expect(store.listEntities().map((e) => e.id)).toEqual(['sango']);
+  });
+
+  it('indexes Timeline event files separately, under world/timeline', async () => {
+    await writeFile(
+      tmpRoot,
+      'world/timeline/founding.md',
+      ['---', 'name: The Founding', 'chronological_order: 1', '---', ''].join('\n'),
+    );
+
+    const summary = await buildIndexFromDisk(store, {
+      world: path.join(tmpRoot, 'world'),
+      glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
+      scripts: path.join(tmpRoot, 'scripts'),
+    });
+
+    expect(summary.eventCount).toBe(1);
+    expect(store.getEventById('founding')?.name).toBe('The Founding');
   });
 
   it('excludes README.md (any case) from both the entity and glossary walks', async () => {
@@ -88,11 +109,27 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
       scripts: path.join(tmpRoot, 'scripts'),
     });
 
     expect(summary.entityCount).toBe(1);
     expect(summary.glossaryCount).toBe(0);
+    expect(summary.malformed).toEqual([]);
+  });
+
+  it('excludes world/OVERVIEW.md (any case) from the entity walk', async () => {
+    await writeFile(tmpRoot, 'world/sango.md', characterMd('Sango'));
+    await writeFile(tmpRoot, 'world/OVERVIEW.md', '# Story Overview\n\n## Premise\n\nFreeform, no frontmatter.\n');
+
+    const summary = await buildIndexFromDisk(store, {
+      world: path.join(tmpRoot, 'world'),
+      glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
+      scripts: path.join(tmpRoot, 'scripts'),
+    });
+
+    expect(summary.entityCount).toBe(1);
     expect(summary.malformed).toEqual([]);
   });
 
@@ -102,6 +139,7 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
       scripts: path.join(tmpRoot, 'scripts'),
     });
 
@@ -117,6 +155,7 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
       scripts: path.join(tmpRoot, 'scripts'),
     });
 
@@ -135,6 +174,7 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
       scripts: path.join(tmpRoot, 'scripts'),
     });
 
@@ -147,15 +187,18 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
       scripts: path.join(tmpRoot, 'scripts'),
     });
     expect(summary).toEqual({
       entityCount: 0,
       glossaryCount: 0,
       scriptCount: 0,
+      eventCount: 0,
       malformed: [],
       warnings: [],
       danglingRelations: [],
+      danglingEpisodes: [],
       duplicateScriptOrders: [],
       duplicateProductionCodes: [],
     });
@@ -176,6 +219,7 @@ describe('buildIndexFromDisk', () => {
     await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
       scripts: path.join(tmpRoot, 'scripts'),
     });
 
@@ -203,6 +247,7 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
       scripts: path.join(tmpRoot, 'scripts'),
     });
 
@@ -233,10 +278,52 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
       scripts: path.join(tmpRoot, 'scripts'),
     });
 
     expect(summary.danglingRelations).toEqual([]);
+  });
+
+  it('detects a dangling arc episode code and reports it in the summary', async () => {
+    await writeFile(
+      tmpRoot,
+      'scripts/Season 01/1x03-reveal/1x03-reveal.fountain',
+      ['Title: Reveal', 'Production Code: 1x03', ''].join('\n'),
+    );
+    await writeFile(
+      tmpRoot,
+      'world/imperium-in-imperio.md',
+      ['---', 'name: Imperium in Imperio', 'type: arc', 'episodes: ["1x03", "1x99"]', '---', ''].join('\n'),
+    );
+
+    const summary = await buildIndexFromDisk(store, {
+      world: path.join(tmpRoot, 'world'),
+      glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
+      scripts: path.join(tmpRoot, 'scripts'),
+    });
+
+    expect(summary.danglingEpisodes).toHaveLength(1);
+    expect(summary.danglingEpisodes[0]).toMatchObject({ code: '1x99' });
+  });
+
+  it('does not report an arc episode code that resolves to a known script', async () => {
+    await writeFile(tmpRoot, 'scripts/1x03.fountain', ['Title: Reveal', 'Production Code: 1x03', ''].join('\n'));
+    await writeFile(
+      tmpRoot,
+      'world/imperium-in-imperio.md',
+      ['---', 'name: Imperium in Imperio', 'type: arc', 'episodes: ["1x03"]', '---', ''].join('\n'),
+    );
+
+    const summary = await buildIndexFromDisk(store, {
+      world: path.join(tmpRoot, 'world'),
+      glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
+      scripts: path.join(tmpRoot, 'scripts'),
+    });
+
+    expect(summary.danglingEpisodes).toEqual([]);
   });
 
   it('indexes .fountain scripts as mention sources, resolvable via backlinks', async () => {
@@ -250,6 +337,7 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
       scripts: path.join(tmpRoot, 'scripts'),
     });
 
@@ -270,6 +358,7 @@ describe('buildIndexFromDisk', () => {
     await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
       scripts: path.join(tmpRoot, 'scripts'),
     });
 
@@ -294,6 +383,7 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
       scripts: path.join(tmpRoot, 'scripts'),
     });
 
@@ -309,6 +399,7 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
       scripts: path.join(tmpRoot, 'scripts'),
     });
 
@@ -323,6 +414,7 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
       scripts: path.join(tmpRoot, 'scripts'),
     });
 
@@ -339,6 +431,7 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
       scripts: path.join(tmpRoot, 'scripts'),
     });
 
@@ -352,6 +445,7 @@ describe('buildIndexFromDisk', () => {
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),
       glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
       scripts: path.join(tmpRoot, 'scripts'),
     });
     expect(summary.entityCount).toBe(0);
@@ -406,6 +500,53 @@ describe('reindexFile and removeFileFromIndex', () => {
     expect(() => removeFileFromIndex(store, '/never/indexed.md', 'entity')).not.toThrow();
   });
 
+  it('re-parses and upserts a single changed Timeline event file', async () => {
+    const filePath = await writeFile(
+      tmpRoot,
+      'world/timeline/founding.md',
+      ['---', 'name: The Founding', '---', ''].join('\n'),
+    );
+    const first = await reindexFile(store, filePath, 'event');
+    expect(first.ok).toBe(true);
+    expect(store.getEventById('founding')?.name).toBe('The Founding');
+
+    await fs.writeFile(filePath, ['---', 'name: The Founding', 'chronological_order: 1', '---', ''].join('\n'), 'utf8');
+    const second = await reindexFile(store, filePath, 'event');
+    expect(second.ok).toBe(true);
+    expect(store.getEventById('founding')?.data.chronological_order).toBe(1);
+    expect(store.listEvents()).toHaveLength(1);
+  });
+
+  it('removeFileFromIndex removes a previously-indexed Timeline event', async () => {
+    const filePath = await writeFile(
+      tmpRoot,
+      'world/timeline/founding.md',
+      ['---', 'name: The Founding', '---', ''].join('\n'),
+    );
+    await reindexFile(store, filePath, 'event');
+    expect(store.getEventById('founding')).toBeDefined();
+
+    removeFileFromIndex(store, filePath, 'event');
+    expect(store.getEventById('founding')).toBeUndefined();
+  });
+
+  it('an event mentioning an entity in its body is resolvable via that entity\'s backlinks', async () => {
+    await writeFile(tmpRoot, 'world/sango.md', characterMd('Sango'));
+    await reindexFile(store, path.join(tmpRoot, 'world', 'sango.md'), 'entity');
+
+    const eventPath = await writeFile(
+      tmpRoot,
+      'world/timeline/founding.md',
+      ['---', 'name: The Founding', '---', '', 'Sango presides over the founding.'].join('\n'),
+    );
+    await reindexFile(store, eventPath, 'event');
+
+    const backlinks = store.getBacklinks({ id: 'sango', kind: 'entity' });
+    expect(backlinks).toEqual([
+      { id: 'founding', kind: 'event', name: 'The Founding', filePath: expect.stringContaining('founding.md') },
+    ]);
+  });
+
   it('recomputes a single reindexed file\'s outgoing mentions against current candidates', async () => {
     await writeFile(tmpRoot, 'world/sango.md', characterMd('Sango'));
     await reindexFile(store, path.join(tmpRoot, 'world', 'sango.md'), 'entity');
@@ -442,6 +583,33 @@ describe('reindexFile and removeFileFromIndex', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.danglingRelations).toEqual([{ filePath, target: 'ghost', relationType: 'enemy' }]);
+  });
+
+  it('reports a dangling arc episode code found on a single reindexed file', async () => {
+    const filePath = await writeFile(
+      tmpRoot,
+      'world/imperium-in-imperio.md',
+      ['---', 'name: Imperium in Imperio', 'type: arc', 'episodes: ["1x99"]', '---', ''].join('\n'),
+    );
+    const result = await reindexFile(store, filePath, 'entity');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.danglingEpisodes).toEqual([{ filePath, code: '1x99' }]);
+  });
+
+  it('does not report an arc episode code that resolves to an already-indexed script', async () => {
+    const scriptPath = await writeFile(tmpRoot, 'scripts/1x03.fountain', ['Title: Reveal', 'Production Code: 1x03', ''].join('\n'));
+    await reindexFile(store, scriptPath, 'script');
+
+    const filePath = await writeFile(
+      tmpRoot,
+      'world/imperium-in-imperio.md',
+      ['---', 'name: Imperium in Imperio', 'type: arc', 'episodes: ["1x03"]', '---', ''].join('\n'),
+    );
+    const result = await reindexFile(store, filePath, 'entity');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.danglingEpisodes).toEqual([]);
   });
 
   it('skipping mention recomputation (recomputeMentions: false) leaves prior mentions untouched', async () => {

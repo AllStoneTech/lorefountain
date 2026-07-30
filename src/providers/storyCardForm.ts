@@ -7,7 +7,7 @@
  * underlying `TextDocument`.
  *
  * Scope, deliberately: the form covers every base field, the type-specific
- * fields for Character/Location, and the relationship picker (§4.5) — not
+ * fields for Character/Location/Arc, and the relationship picker (§4.5) — not
  * `tracked_fields`'s history-log entries or `custom_fields`. Both are
  * preserved on write (never dropped), just not editable here yet; per §6.1,
  * "nothing prevents a power user from opening the raw file" for those.
@@ -48,6 +48,7 @@ export interface EntityFormState {
   castingNotes: string;
   parentLocation: string;
   mobility: Mobility | '';
+  episodes: string[];
 }
 
 /**
@@ -72,6 +73,7 @@ export function entityToFormState(entity: Entity): EntityFormState {
     castingNotes: fm.type === 'character' ? fm.casting_notes ?? '' : '',
     parentLocation: fm.type === 'location' ? fm.parent_location ?? '' : '',
     mobility: fm.type === 'location' ? fm.mobility ?? '' : '',
+    episodes: fm.type === 'arc' ? fm.episodes ?? [] : [],
   };
 }
 
@@ -112,6 +114,10 @@ export function applyFormStateToEntity(entity: Entity, formState: EntityFormStat
   } else if (formState.type === 'location') {
     merged.parent_location = undefinedIfBlank(formState.parentLocation);
     merged.mobility = formState.mobility || undefined;
+  } else if (formState.type === 'arc') {
+    merged.episodes = undefinedIfEmpty(
+      formState.episodes.map((code) => code.trim()).filter((code) => code.length > 0),
+    );
   }
 
   return { ...entity, frontmatter: entityFrontmatterSchema.parse(merged), body: formState.body };

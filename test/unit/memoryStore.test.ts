@@ -3,6 +3,7 @@ import { createMemoryIndexStore } from '../../src/index/memoryStore';
 import type { Entity } from '../../src/model/entity';
 import type { GlossaryTerm } from '../../src/model/glossary';
 import type { Script } from '../../src/model/script';
+import type { TimelineEvent } from '../../src/model/timeline';
 
 function makeEntity(overrides: Partial<Entity> = {}): Entity {
   return {
@@ -29,6 +30,16 @@ function makeScript(overrides: Partial<Script> = {}): Script {
     id: '1x01-pilot',
     filePath: '/scripts/1x01-pilot.fountain',
     frontmatter: { title: 'Pilot', order: 1, productionCode: '1x01' },
+    ...overrides,
+  };
+}
+
+function makeEvent(overrides: Partial<TimelineEvent> = {}): TimelineEvent {
+  return {
+    id: 'founding',
+    filePath: '/world/timeline/founding.md',
+    body: 'The pantheon is founded.',
+    frontmatter: { name: 'The Founding', schema_version: 1 },
     ...overrides,
   };
 }
@@ -125,25 +136,44 @@ describe('createMemoryIndexStore', () => {
     expect(store.listScripts().map((s) => s.id)).toEqual(['1x02']);
   });
 
-  it('stats reflects current entity and glossary counts', () => {
+  it('upserts and retrieves a Timeline event', () => {
+    const store = createMemoryIndexStore();
+    store.upsertEvent(makeEvent());
+
+    expect(store.getEventById('founding')?.name).toBe('The Founding');
+    expect(store.listEvents()).toHaveLength(1);
+  });
+
+  it('removeEventByPath removes the matching row', () => {
+    const store = createMemoryIndexStore();
+    store.upsertEvent(makeEvent());
+    store.removeEventByPath('/world/timeline/founding.md');
+
+    expect(store.listEvents()).toHaveLength(0);
+  });
+
+  it('stats reflects current entity, glossary, and event counts', () => {
     const store = createMemoryIndexStore();
     store.upsertEntity(makeEntity());
     store.upsertGlossaryTerm(makeGlossaryTerm());
+    store.upsertEvent(makeEvent());
 
-    expect(store.stats()).toEqual({ entityCount: 1, glossaryCount: 1 });
+    expect(store.stats()).toEqual({ entityCount: 1, glossaryCount: 1, eventCount: 1 });
   });
 
-  it('clear empties everything, including scripts', () => {
+  it('clear empties everything, including scripts and events', () => {
     const store = createMemoryIndexStore();
     store.upsertEntity(makeEntity());
     store.upsertGlossaryTerm(makeGlossaryTerm());
     store.upsertScript(makeScript());
+    store.upsertEvent(makeEvent());
     store.clear();
 
     expect(store.listEntities()).toEqual([]);
     expect(store.listGlossaryTerms()).toEqual([]);
     expect(store.listScripts()).toEqual([]);
-    expect(store.stats()).toEqual({ entityCount: 0, glossaryCount: 0 });
+    expect(store.listEvents()).toEqual([]);
+    expect(store.stats()).toEqual({ entityCount: 0, glossaryCount: 0, eventCount: 0 });
   });
 
   it('search and backlink methods return empty results (not needed for validation)', () => {

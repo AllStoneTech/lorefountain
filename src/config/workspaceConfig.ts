@@ -8,12 +8,14 @@
  */
 
 import * as vscode from 'vscode';
-import { folderSettingsFromConfig, readLoreFountainConfig } from './configFile';
+import { folderSettingsFromConfig, hiddenCategoriesFromConfig, readLoreFountainConfig } from './configFile';
 import { resolveWorkspaceFolders, type WorkspaceFolders } from './folders';
 
 /** Result of {@link getWorkspaceFolders}: resolved paths, plus any config-file problem to report. */
 export interface WorkspaceFoldersResult {
   folders: WorkspaceFolders;
+  /** World-tree category ids to hide, from `world.hiddenCategories` (empty if unset or the config file is missing/invalid). */
+  hiddenCategories: string[];
   /** Set when `lorefountain.config.json` exists but failed to parse/validate; folders still fall back to defaults. */
   configIssue?: string;
 }
@@ -39,9 +41,13 @@ export async function getWorkspaceFolders(
   if (!result.ok) {
     return {
       folders: resolveWorkspaceFolders(root),
+      hiddenCategories: [],
       configIssue: `lorefountain.config.json (${result.reason}): ${result.message}`,
     };
   }
 
-  return { folders: resolveWorkspaceFolders(root, folderSettingsFromConfig(result.config)) };
+  return {
+    folders: resolveWorkspaceFolders(root, folderSettingsFromConfig(result.config)),
+    hiddenCategories: hiddenCategoriesFromConfig(result.config),
+  };
 }

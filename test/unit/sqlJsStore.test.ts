@@ -10,6 +10,7 @@ import type { IndexStore } from '../../src/index/store';
 import { entityFrontmatterSchema, type Entity } from '../../src/model/entity';
 import { glossaryTermSchema, type GlossaryTerm } from '../../src/model/glossary';
 import type { Script, ScriptFrontmatter } from '../../src/model/script';
+import { timelineEventSchema, type TimelineEvent } from '../../src/model/timeline';
 
 function entity(opts: {
   id: string;
@@ -45,6 +46,20 @@ function glossaryTerm(opts: {
 
 function script(opts: { id: string; filePath: string; frontmatter?: ScriptFrontmatter }): Script {
   return { id: opts.id, filePath: opts.filePath, frontmatter: opts.frontmatter ?? {} };
+}
+
+function timelineEvent(opts: {
+  id: string;
+  filePath: string;
+  body?: string;
+  frontmatter?: Record<string, unknown>;
+}): TimelineEvent {
+  return {
+    id: opts.id,
+    filePath: opts.filePath,
+    body: opts.body ?? '',
+    frontmatter: timelineEventSchema.parse({ name: 'The Founding', ...opts.frontmatter }),
+  };
 }
 
 describe('SqlJsIndexStore', () => {
@@ -156,6 +171,36 @@ describe('SqlJsIndexStore', () => {
     });
   });
 
+  describe('events', () => {
+    it('upserts and retrieves a Timeline event by id', () => {
+      store.upsertEvent(
+        timelineEvent({ id: 'founding', filePath: '/world/timeline/founding.md', frontmatter: { name: 'The Founding', chronological_order: 1 } }),
+      );
+      const record = store.getEventById('founding');
+      expect(record?.name).toBe('The Founding');
+      expect(record?.data.chronological_order).toBe(1);
+    });
+
+    it('lists events', () => {
+      store.upsertEvent(timelineEvent({ id: 'founding', filePath: '/world/timeline/founding.md' }));
+      store.upsertEvent(timelineEvent({ id: 'silence', filePath: '/world/timeline/silence.md', frontmatter: { name: 'The Long Silence' } }));
+      expect(store.listEvents().map((e) => e.id).sort()).toEqual(['founding', 'silence']);
+    });
+
+    it('removes an event by file path', () => {
+      store.upsertEvent(timelineEvent({ id: 'founding', filePath: '/world/timeline/founding.md' }));
+      store.removeEventByPath('/world/timeline/founding.md');
+      expect(store.getEventById('founding')).toBeUndefined();
+    });
+
+    it('upsert matches an existing row by id even if the file path changed (rename-safety)', () => {
+      store.upsertEvent(timelineEvent({ id: 'founding', filePath: '/world/timeline/founding.md' }));
+      store.upsertEvent(timelineEvent({ id: 'founding', filePath: '/world/timeline/the-founding.md' }));
+      expect(store.listEvents()).toHaveLength(1);
+      expect(store.getEventById('founding')?.filePath).toBe('/world/timeline/the-founding.md');
+    });
+  });
+
   describe('scripts', () => {
     it('upserts and retrieves a script by id and by path, with full title-page metadata', () => {
       store.upsertScript(
@@ -237,6 +282,15 @@ describe('SqlJsIndexStore', () => {
       expect(backlinks).toEqual([{ id: 'ase', kind: 'glossary', name: 'Ase', filePath: '/world/glossary/ase.md' }]);
     });
 
+    it('resolves an event-to-entity mention as a backlink', () => {
+      store.upsertEntity(entity({ id: 'sango', filePath: '/world/sango.md', frontmatter: { name: 'Sango', type: 'character' } }));
+      store.upsertEvent(timelineEvent({ id: 'founding', filePath: '/world/timeline/founding.md', frontmatter: { name: 'The Founding' } }));
+      store.setMentionsForSource({ id: 'founding', kind: 'event', filePath: '/world/timeline/founding.md' }, [{ id: 'sango', kind: 'entity' }]);
+
+      const backlinks = store.getBacklinks({ id: 'sango', kind: 'entity' });
+      expect(backlinks).toEqual([{ id: 'founding', kind: 'event', name: 'The Founding', filePath: '/world/timeline/founding.md' }]);
+    });
+
     it('setMentionsForSource replaces the full set rather than appending', () => {
       store.upsertEntity(entity({ id: 'sango', filePath: '/world/sango.md' }));
       store.upsertEntity(entity({ id: 'esu', filePath: '/world/esu.md', frontmatter: { name: 'Esu', type: 'character' } }));
@@ -297,14 +351,14 @@ describe('SqlJsIndexStore', () => {
     it('reports accurate counts', () => {
       store.upsertEntity(entity({ id: 'sango', filePath: '/world/sango.md' }));
       store.upsertGlossaryTerm(glossaryTerm({ id: 'ase', filePath: '/world/glossary/ase.md' }));
-      expect(store.stats()).toEqual({ entityCount: 1, glossaryCount: 1 });
+      expect(store.stats()).toEqual({ entityCount: 1, glossaryCount: 1, eventCount: 0 });
     });
 
     it('clear empties all tables (safe to rebuild afterward)', () => {
       store.upsertEntity(entity({ id: 'sango', filePath: '/world/sango.md' }));
       store.upsertGlossaryTerm(glossaryTerm({ id: 'ase', filePath: '/world/glossary/ase.md' }));
       store.clear();
-      expect(store.stats()).toEqual({ entityCount: 0, glossaryCount: 0 });
+      expect(store.stats()).toEqual({ entityCount: 0, glossaryCount: 0, eventCount: 0 });
       expect(store.searchEntities('sango')).toEqual([]);
 
       store.upsertEntity(entity({ id: 'sango', filePath: '/world/sango.md' }));

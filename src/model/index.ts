@@ -11,3 +11,4 @@ export * from './slug';
 export * from './frontmatter';
 export * from './entity';
 export * from './glossary';
+export * from './timeline';

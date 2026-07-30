@@ -19,10 +19,12 @@ import initSqlJs, { type Database, type SqlValue } from 'sql.js';
 import type { Entity, EntityFrontmatter, EntityType } from '../model/entity';
 import type { GlossaryTerm, GlossaryTermFrontmatter } from '../model/glossary';
 import type { Script } from '../model/script';
+import type { TimelineEvent, TimelineEventFrontmatter } from '../model/timeline';
 import type { MentionKind, MentionTarget } from './mentions';
 import type {
   EntityRecord,
   EntitySearchHit,
+  EventRecord,
   GlossaryRecord,
   GlossarySearchHit,
   IndexStats,
@@ -65,6 +67,17 @@ CREATE TABLE scripts (
   title TEXT,
   "order" INTEGER,
   production_code TEXT
+);
+
+-- No FTS shadow table: unlike glossary, events have no exposed full-text
+-- search yet (IndexStore has no searchEvents) — add one if/when that's needed.
+CREATE TABLE events (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  file_path TEXT NOT NULL UNIQUE,
+  schema_version INTEGER NOT NULL,
+  data TEXT NOT NULL,
+  body TEXT NOT NULL
 );
 
 CREATE TABLE mentions (
@@ -236,6 +249,37 @@ class SqlJsIndexStore implements IndexStore {
     return this.queryScripts('SELECT * FROM scripts');
   }
 
+  upsertEvent(event: TimelineEvent): void {
+    this.deleteEventRows(event.id, event.filePath);
+    this.db.run(
+      `INSERT INTO events (id, name, file_path, schema_version, data, body)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        event.id,
+        event.frontmatter.name,
+        event.filePath,
+        event.frontmatter.schema_version,
+        JSON.stringify(event.frontmatter),
+        event.body,
+      ],
+    );
+  }
+
+  removeEventByPath(filePath: string): void {
+    const id = this.singleValue<string>('SELECT id FROM events WHERE file_path = ?', [filePath]);
+    if (id === undefined) return;
+    this.deleteEventRows(id, filePath);
+    this.removeMentionsForSource({ id, kind: 'event' });
+  }
+
+  getEventById(id: string): EventRecord | undefined {
+    return this.queryEvents('SELECT * FROM events WHERE id = ?', [id])[0];
+  }
+
+  listEvents(): EventRecord[] {
+    return this.queryEvents('SELECT * FROM events ORDER BY name');
+  }
+
   setMentionsForSource(source: MentionSource, targets: readonly MentionTarget[]): void {
     this.removeMentionsForSource(source);
     for (const target of targets) {
@@ -252,17 +296,18 @@ class SqlJsIndexStore implements IndexStore {
   }
 
   getBacklinks(target: MentionEndpoint): MentionBacklink[] {
-    // A script source has no entities/glossary row to resolve a display name
-    // from — e.name/g.term are NULL for it, so the caller falls back to the
-    // file's basename.
+    // A script source has no entities/glossary/events row to resolve a
+    // display name from — e.name/g.term/ev.name are NULL for it, so the
+    // caller falls back to the file's basename.
     const rows = this.queryAll<{ id: string; kind: string; file_path: string; name: string | null }>(
       `SELECT m.source_id AS id, m.source_kind AS kind, m.source_file_path AS file_path,
-              COALESCE(e.name, g.term) AS name
+              COALESCE(e.name, g.term, ev.name) AS name
        FROM mentions m
        LEFT JOIN entities e ON e.id = m.source_id AND m.source_kind = 'entity'
        LEFT JOIN glossary g ON g.id = m.source_id AND m.source_kind = 'glossary'
+       LEFT JOIN events ev ON ev.id = m.source_id AND m.source_kind = 'event'
        WHERE m.target_id = ? AND m.target_kind = ?
-       ORDER BY COALESCE(e.name, g.term, m.source_file_path)`,
+       ORDER BY COALESCE(e.name, g.term, ev.name, m.source_file_path)`,
       [target.id, target.kind],
     );
     return rows.map((row) => ({
@@ -277,12 +322,13 @@ class SqlJsIndexStore implements IndexStore {
     return {
       entityCount: this.singleValue<number>('SELECT COUNT(*) FROM entities') ?? 0,
       glossaryCount: this.singleValue<number>('SELECT COUNT(*) FROM glossary') ?? 0,
+      eventCount: this.singleValue<number>('SELECT COUNT(*) FROM events') ?? 0,
     };
   }
 
   clear(): void {
     this.db.run(
-      'DELETE FROM entities; DELETE FROM entities_fts; DELETE FROM glossary; DELETE FROM glossary_fts; DELETE FROM scripts; DELETE FROM mentions;',
+      'DELETE FROM entities; DELETE FROM entities_fts; DELETE FROM glossary; DELETE FROM glossary_fts; DELETE FROM scripts; DELETE FROM events; DELETE FROM mentions;',
     );
   }
 
@@ -319,8 +365,17 @@ class SqlJsIndexStore implements IndexStore {
     this.db.run('DELETE FROM scripts WHERE id = ? OR file_path = ?', [id, filePath]);
   }
 
+  /** Remove any event row matching `id` OR `filePath`. */
+  private deleteEventRows(id: string, filePath: string): void {
+    this.db.run('DELETE FROM events WHERE id = ? OR file_path = ?', [id, filePath]);
+  }
+
   private queryScripts(sql: string, params: SqlValue[] = []): ScriptRecord[] {
     return this.queryAll<ScriptRow>(sql, params).map(rowToScriptRecord);
+  }
+
+  private queryEvents(sql: string, params: SqlValue[] = []): EventRecord[] {
+    return this.queryAll<EventRow>(sql, params).map(rowToEventRecord);
   }
 
   private queryOneEntity(sql: string, params: SqlValue[]): EntityRecord | undefined {
@@ -396,6 +451,15 @@ interface ScriptRow {
   production_code: string | null;
 }
 
+interface EventRow {
+  id: string;
+  name: string;
+  file_path: string;
+  schema_version: number;
+  data: string;
+  body: string;
+}
+
 /**
  * Map a raw entities-table row to an {@link EntityRecord}. `data` was written
  * from an already Zod-validated {@link EntityFrontmatter} at upsert time, so
@@ -434,5 +498,17 @@ function rowToScriptRecord(row: ScriptRow): ScriptRecord {
     title: row.title ?? undefined,
     order: row.order ?? undefined,
     productionCode: row.production_code ?? undefined,
+  };
+}
+
+/** Map a raw events-table row to an {@link EventRecord}. Same trust boundary as {@link rowToEntityRecord}. */
+function rowToEventRecord(row: EventRow): EventRecord {
+  return {
+    id: row.id,
+    name: row.name,
+    filePath: row.file_path,
+    schemaVersion: row.schema_version,
+    data: JSON.parse(row.data) as TimelineEventFrontmatter,
+    body: row.body,
   };
 }

@@ -28,8 +28,8 @@ import {
   serializeMarkdownWithFrontmatter,
 } from './frontmatter';
 
-/** The five base entity types (Spec §4.2). */
-export const ENTITY_TYPES = ['character', 'location', 'faction', 'object', 'concept'] as const;
+/** The six base entity types (Spec §4.2). */
+export const ENTITY_TYPES = ['character', 'location', 'faction', 'object', 'concept', 'arc'] as const;
 export const entityTypeSchema = z.enum(ENTITY_TYPES);
 export type EntityType = z.infer<typeof entityTypeSchema>;
 
@@ -118,6 +118,15 @@ const conceptFrontmatterSchema = z
   .object({ ...baseEntityFields, type: z.literal('concept') })
   .catchall(z.unknown());
 
+/** Arc-specific fields. An arc's `episodes` list is a set of script Production Codes (e.g. `"1x03"`), letting it span or be confined to any subset of episodes independent of season boundaries. */
+const arcFrontmatterSchema = z
+  .object({
+    ...baseEntityFields,
+    type: z.literal('arc'),
+    episodes: z.array(z.string()).optional(),
+  })
+  .catchall(z.unknown());
+
 /**
  * Entity frontmatter schema (Spec §4): a discriminated union on `type`.
  *
@@ -130,6 +139,7 @@ export const entityFrontmatterSchema = z.discriminatedUnion('type', [
   factionFrontmatterSchema,
   objectFrontmatterSchema,
   conceptFrontmatterSchema,
+  arcFrontmatterSchema,
 ]);
 
 export type CharacterFrontmatter = z.infer<typeof characterFrontmatterSchema>;
@@ -137,6 +147,7 @@ export type LocationFrontmatter = z.infer<typeof locationFrontmatterSchema>;
 export type FactionFrontmatter = z.infer<typeof factionFrontmatterSchema>;
 export type ObjectFrontmatter = z.infer<typeof objectFrontmatterSchema>;
 export type ConceptFrontmatter = z.infer<typeof conceptFrontmatterSchema>;
+export type ArcFrontmatter = z.infer<typeof arcFrontmatterSchema>;
 export type EntityFrontmatter = z.infer<typeof entityFrontmatterSchema>;
 
 /**
@@ -152,6 +163,7 @@ const TYPE_SPECIFIC_FIELDS: Record<EntityType, readonly string[]> = {
   faction: [],
   object: [],
   concept: [],
+  arc: ['episodes'],
 };
 
 /** A non-blocking warning about frontmatter that parsed successfully but looks off. */
