@@ -12,6 +12,7 @@ docs/**
 coverage/**
 imports/**
 pro/**
+demos/**
 
 .gitignore
 .gitmodules
