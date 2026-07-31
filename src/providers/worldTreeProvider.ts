@@ -20,6 +20,7 @@ import type { EntityType } from '../model/entity';
 import type { IndexStore } from '../index/store';
 import { titleizeSlug } from '../model/slug';
 import { STORY_CARD_VIEW_TYPE } from './storyCardEditorProvider';
+import { STORY_OVERVIEW_VIEW_TYPE } from './storyOverviewEditorProvider';
 
 /** Exported for reuse by the settings panel, which offers the same categories as show/hide checkboxes. */
 export type Category = EntityType | 'glossary' | 'timeline' | 'notes';
@@ -98,7 +99,17 @@ export class WorldTreeProvider implements vscode.TreeDataProvider<WorldTreeNode>
         const item = new vscode.TreeItem('Story Overview', vscode.TreeItemCollapsibleState.None);
         item.contextValue = 'lorefountain.storyOverview';
         item.iconPath = new vscode.ThemeIcon('book');
-        item.command = { command: 'vscode.open', title: 'Open', arguments: [vscode.Uri.file(node.filePath)] };
+        // Explicitly target the Story Overview custom editor, not
+        // `vscode.open` — this file sits directly in `world/`, which is also
+        // the Story Card custom editor's selector (`**/world/*.md`,
+        // package.json). Without an explicit view type here, resolution
+        // between two "default"-priority custom editors over overlapping
+        // selectors isn't something to rely on.
+        item.command = {
+          command: 'vscode.openWith',
+          title: 'Open',
+          arguments: [vscode.Uri.file(node.filePath), STORY_OVERVIEW_VIEW_TYPE],
+        };
         return item;
       }
       case 'category': {

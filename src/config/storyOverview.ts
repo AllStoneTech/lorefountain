@@ -1,14 +1,17 @@
 /**
- * Story Overview scaffolding (the project owner, 2026-07-29): a single, freeform
- * `world/OVERVIEW.md` answering "what is this story/world actually about" —
- * the first thing a new collaborator or an AI agent should read, distinct
- * from `readmeFiles.ts`'s per-folder READMEs (which explain what a folder
- * is *for*, not what the story itself *is*).
+ * Story Overview scaffolding (the project owner, 2026-07-29, restructured 2026-07-30 per
+ * ADR-0029): a single `world/OVERVIEW.md` answering "what is this
+ * story/world actually about" — the first thing a new collaborator or an AI
+ * agent should read, distinct from `readmeFiles.ts`'s per-folder READMEs
+ * (which explain what a folder is *for*, not what the story itself *is*).
  *
- * Deliberately no schema or validation — a premise/synopsis doesn't fit a
- * database of fields the way canon status or relations do; this is prose
- * with suggested section headers, meant to be edited freely and kept
- * current, not generated once and left stale.
+ * The file carries a handful of short, genuinely universal frontmatter
+ * fields (`title`/`pitch`/`tone`/`genre` — see `model/storyOverview.ts`)
+ * plus one freeform Markdown body. The body's section headers (Premise,
+ * Setting, Synopsis, Themes, ...) are only a suggestion from the template,
+ * never enforced by schema — a premise/synopsis doesn't fit a rigid field
+ * database the way canon status or relations do, and different genres
+ * genuinely want different sections.
  *
  * Never overwrites an existing file, same posture as every other scaffold
  * in this project (`readmeFiles.ts`, `agentFiles.ts`, `configFile.ts`'s

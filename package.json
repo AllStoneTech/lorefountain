@@ -186,6 +186,16 @@
     ],
     "customEditors": [
       {
+        "viewType": "lorefountain.storyOverview",
+        "displayName": "LoreFountain Story Overview",
+        "selector": [
+          {
+            "filenamePattern": "**/world/OVERVIEW.md"
+          }
+        ],
+        "priority": "default"
+      },
+      {
         "viewType": "lorefountain.storyCard",
         "displayName": "LoreFountain Story Card",
         "selector": [

@@ -81,10 +81,15 @@ Every field except `name` is optional — never guess a `chronological_order`, `
 
 ## Story Overview format
 
-`world/OVERVIEW.md` is plain prose, not YAML frontmatter — there's no schema and nothing here is validated. Suggested sections (the scaffolded template ships with these as empty placeholders):
+`world/OVERVIEW.md` has a small YAML frontmatter block with four optional, genuinely universal fields — `title`, `pitch` (a one- or two-sentence logline), `tone`, `genre` — followed by plain-prose Markdown, same as an entity file's split. Only the frontmatter fields are schema-validated; the body below is free-form and nothing there is checked:
 
 ```markdown
-# <Project Name> — Story Overview
+---
+title: <Project Name>
+pitch: <one or two sentences>
+tone: <e.g. wry, elegiac, pulpy>
+genre: <e.g. speculative drama>
+---
 
 ## Premise
 
@@ -107,7 +112,7 @@ Every field except `name` is optional — never guess a `chronological_order`, `
 <What is this story actually about, underneath the plot?>
 ```
 
-Feel free to adjust the section headers if the project genuinely doesn't fit them (a game world might want "Factions" instead of "Key Characters," for instance) — this is a reference document for humans and AI agents, not a validated format.
+Feel free to adjust the body's section headers if the project genuinely doesn't fit them (a game world might want "Factions" instead of "Key Characters," for instance) — only the four frontmatter fields above are ever validated; the body is a reference document for humans and AI agents, not a fixed format. Leave a frontmatter field out entirely rather than writing it blank if the writer hasn't told you its value — never guess a pitch, tone, or genre.
 
 ## Ground rules
 

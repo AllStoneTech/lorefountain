@@ -6,6 +6,20 @@ revisit.
 
 ---
 
+## ADR-0030 — Story Overview restructured: short universal frontmatter fields + one flexible body
+
+**Date:** 2026-07-30 · **Status:** Accepted
+
+ADR-0029 shipped Story Overview as pure freeform Markdown with suggested-but-unenforced section headers. After live use against two real demo projects with genuinely different needs — Of One Blood's literary-adaptation sections vs. Loomwake's TTRPG-flavored "The pitch" / "The central question" / "Why this is unfinished" — the project owner wanted "somewhat structured. Things like title, pitch, tone, etc. Things that are universal to an Overview," while keeping room for a project's own larger sections. Landed on a synthesis rather than picking one side: a handful of fields that are genuinely universal across any story/world (not specific to any genre's section vocabulary) as real frontmatter, and everything else stays exactly what it was — one free Markdown body.
+
+1. **Four optional frontmatter fields — `title`, `pitch`, `tone`, `genre`** (`src/model/storyOverview.ts`, `storyOverviewSchema`, `.catchall(z.unknown())` like every other schema in this project) — chosen because all four apply regardless of genre or format, unlike "Premise"/"Setting"/"Synopsis," which are conventions for a specific kind of story, not universal properties of one. Everything else — Premise, Setting, Key Characters, Synopsis, Themes, or a TTRPG's own headers — stays in the free body, exactly as ADR-0029 shipped it. The template (`resources/story-overview.md`) suggests those default headers; nothing enforces them.
+2. **A dedicated Story Card–style custom editor** (`storyOverviewEditorProvider.ts` + pure `storyOverviewForm.ts`/`storyOverviewHtml.ts`, mirroring the existing Story Card's split of pure conversion logic from `vscode`-facing glue) registered under its own view type (`lorefountain.storyOverview`) with a selector precise to `**/world/OVERVIEW.md` — deliberately not reusing the Story Card editor, which is entity-shaped (name/type/relations) and has nothing to do with a singleton project-level document. The World tree's "Story Overview" row now opens this editor explicitly by view type rather than forcing VS Code's generic `'default'` text editor (ADR-0029's original fix for the entity-form collision) — the collision is now solved by giving Story Overview a real, correctly-scoped home instead of routing around Story Card's broader selector.
+3. **Backward compatible by construction, not by special-casing.** A pre-existing `OVERVIEW.md` with no frontmatter at all (Loomwake's, at the time of this change) parses cleanly through the same tolerant `parseMarkdownWithFrontmatter` every other schema already uses — all four fields simply come back unset, and the entire original text is preserved as the body. No migration script, no version flag.
+4. **The template omits blank placeholder keys** (`pitch:`, `tone:`, `genre:` are not scaffolded at all, only `title` is, via the existing `{{PROJECT_NAME}}` substitution) rather than writing them empty — an empty YAML scalar parses as `null`, and `z.string().optional()` rejects `null` (only `undefined`). Simpler to leave the fields absent until a user actually fills them in via the new card than to special-case null-as-unset in the schema.
+5. **9 new unit tests** (`storyOverviewModel.test.ts`, `storyOverviewForm.test.ts`) covering valid/malformed/schema-invalid parsing, the no-frontmatter legacy-file path, catchall preservation, and the form round-trip — 386 total. Clean `tsc --noEmit`, `eslint`, and a full `npm run package` (still 31 files, no `demos/**` leak). **Not yet live-verified**: the new webview itself is `vscode`-facing glue outside the unit suite, same caveat as every prior custom-editor ADR — worth confirming in a fresh EDH or the real install that Loomwake's `OVERVIEW.md` now opens as a structured card with its existing prose intact in the body field.
+
+---
+
 ## ADR-0028 — Arc as a sixth entity type; config-driven World-category visibility; a settings screen
 
 **Date:** 2026-07-29 · **Status:** Accepted

@@ -50,6 +50,7 @@ import { createWikilinkCompletionProvider } from './providers/completionProvider
 import { ScriptsTreeProvider } from './providers/scriptsTreeProvider';
 import { openSettingsPanel } from './providers/settingsPanel';
 import { createStoryCardEditorProvider, STORY_CARD_VIEW_TYPE } from './providers/storyCardEditorProvider';
+import { createStoryOverviewEditorProvider, STORY_OVERVIEW_VIEW_TYPE } from './providers/storyOverviewEditorProvider';
 import { WorldTreeProvider } from './providers/worldTreeProvider';
 import { checkGitSafety } from './safety/gitSafetyBanner';
 
@@ -96,6 +97,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.window.registerCustomEditorProvider(
       STORY_CARD_VIEW_TYPE,
       createStoryCardEditorProvider(findStoreForDocument),
+      { webviewOptions: { retainContextWhenHidden: true } },
+    ),
+  );
+
+  context.subscriptions.push(
+    vscode.window.registerCustomEditorProvider(
+      STORY_OVERVIEW_VIEW_TYPE,
+      createStoryOverviewEditorProvider(),
       { webviewOptions: { retainContextWhenHidden: true } },
     ),
   );
