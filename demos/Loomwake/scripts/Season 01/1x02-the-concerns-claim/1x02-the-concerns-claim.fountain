@@ -1,0 +1,49 @@
+Title: The Concern's Claim
+Order: 2
+Production Code: 1x02
+
+EXT. HALYARD STATION - DOCKING RING - DAY
+
+AMB: a station over capacity, too many languages at once
+
+Boxed text on arrival:
+
+"Halyard was built for a few dozen ships a week. There are more than that in the docking queue alone, and the station's doing its best not to look nervous about it."
+
+A Tessera Concern courier finds the party before they've cleared customs.
+
+INT. HALYARD STATION - CONCERN OFFICE - CONTINUOUS
+
+AMB: recycled air, a data terminal humming
+
+[[Osei Marchant]] doesn't stand when they enter. [[Auger]] does — warm, immediate, already halfway to a joke.
+
+AUGER
+You're the ones who beat the whole Verge to the Loom. I told the Director someone would. I didn't think it'd be a crew this size.
+
+OSEI MARCHANT
+(pleasant, unhurried)
+Tessera holds the only filed license to salvage that structure. That's not a threat, Captain — it's a fact you're welcome to verify.
+
+CASS IBARRA
+We found something out there before your license existed.
+
+OSEI MARCHANT
+Then I'd very much like to buy it from you. Generously.
+
+GM note: this is the scene to play Auger as genuinely likable — competent, funny, useful. Nothing here should read as villainous. The relation marking Auger's true nature (world/auger.md, production_code 1x09) is not revealed at this point in the material, and this scene shouldn't accidentally telegraph it.
+
+AUGER
+(lower, just to the party, once Marchant's attention is elsewhere)
+Off the record — don't sell it to her outright. Let her pay you to keep looking. Better deal for everyone still standing at the end of this.
+
+It's good advice. That should feel a little strange, later, once the table knows why Auger gave it.
+
+Marchant offers a scouting contract: quiet passes along the Loom's outer hull, first look at anything found in exchange for payment and Concern protection at the site.
+
+OSEI MARCHANT
+Halyard's about to get a great deal more crowded, Captain. You'll want friends with resources before that happens.
+
+MUSIC: STING - a decision point, no resolution yet
+
+GM note — contingencies: if the party refuses the contract or is openly hostile to Marchant, the Concern doesn't become an enemy outright — she simply withdraws the offer and tightens access, which should read in `1x05`'s tracked_fields as a cooler Concern posture than if they'd accepted. Auger's advice and warmth should land the same regardless of how the party feels about Marchant; Auger isn't lying about anything tactical here, only about what they are.
