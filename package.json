@@ -168,6 +168,12 @@
         "category": "LoreFountain"
       },
       {
+        "command": "lorefountain.showEntityGraph",
+        "title": "Show Entity Graph (Pro)",
+        "category": "LoreFountain",
+        "icon": "$(graph)"
+      },
+      {
         "command": "lorefountain.enterLicenseKey",
         "title": "Enter License Key",
         "category": "LoreFountain"
@@ -284,6 +290,11 @@
         },
         {
           "command": "lorefountain.openSettings",
+          "when": "view == lorefountain.worldView",
+          "group": "navigation"
+        },
+        {
+          "command": "lorefountain.showEntityGraph",
           "when": "view == lorefountain.worldView",
           "group": "navigation"
         },
@@ -448,12 +459,14 @@
     "vscode:prepublish": "npm run build -- --production",
     "build": "node esbuild.js",
     "watch": "node esbuild.js --watch",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && npm run typecheck:pro-webview",
+    "typecheck:pro-webview": "node -e \"const fs=require('fs');if(fs.existsSync('pro/src/webview/tsconfig.json')){require('child_process').execSync('tsc --noEmit -p pro/src/webview/tsconfig.json',{stdio:'inherit'})}\"",
     "lint": "eslint .",
     "test:unit": "vitest run",
     "package": "vsce package"
   },
   "dependencies": {
+    "cytoscape": "^3.34.0",
     "fountain-js": "^1.2.4",
     "markdown-it": "^15.0.0",
     "sql.js": "^1.14.1",
@@ -462,6 +475,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/cytoscape": "^3.21.9",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^22.0.0",
     "@types/sql.js": "^1.4.11",

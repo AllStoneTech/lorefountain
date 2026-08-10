@@ -215,25 +215,40 @@ async function activateProTier(context: vscode.ExtensionContext): Promise<void> 
 }
 
 /**
+ * Every plain command (not a tree view) that does nothing but explain/link
+ * to licensing when the pro tier isn't active — see
+ * {@link registerProPlaceholders}. Each one gets fully replaced by its real
+ * registration once `proModule.activate` runs instead (never
+ * double-registered: `activateProTier` only calls
+ * {@link registerProPlaceholders} on the not-licensed branch).
+ */
+const GATED_PRO_COMMANDS: readonly string[] = ['lorefountain.viewAsOfEpisode', 'lorefountain.showEntityGraph'];
+
+/**
  * Register a plain explanatory placeholder instead of leaving the
- * Continuity view showing VS Code's generic "no data provider" error, and a
- * matching placeholder for `viewAsOfEpisode` — used whenever the pro tier
- * isn't actually active, whatever the reason. When `command` is given (the
- * "no valid license" case, where clicking through actually fixes it), both
- * the tree row and the command itself jump straight to it instead of just
- * describing what to do — the project owner flagged the earlier text-only placeholder as
- * unintuitive (2026-07-28): the fix was findable only via the Command
- * Palette, not discoverable from the view itself.
+ * Continuity view showing VS Code's generic "no data provider" error, plus
+ * a matching placeholder for every command in {@link GATED_PRO_COMMANDS} —
+ * used whenever the pro tier isn't actually active, whatever the reason.
+ * When `command` is given (the "no valid license" case, where clicking
+ * through actually fixes it), both the tree row and each placeholder
+ * command jump straight to it instead of just describing what to do —
+ * the project owner flagged the earlier text-only placeholder as unintuitive
+ * (2026-07-28): the fix was findable only via the Command Palette, not
+ * discoverable from the view itself.
  */
 function registerProPlaceholders(context: vscode.ExtensionContext, options: { message: string; command?: string }): void {
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider('lorefountain.continuityView', createContinuityPlaceholderProvider(options)),
-    vscode.commands.registerCommand('lorefountain.viewAsOfEpisode', () =>
-      options.command
-        ? void vscode.commands.executeCommand(options.command)
-        : void vscode.window.showInformationMessage(options.message),
-    ),
   );
+  for (const command of GATED_PRO_COMMANDS) {
+    context.subscriptions.push(
+      vscode.commands.registerCommand(command, () =>
+        options.command
+          ? void vscode.commands.executeCommand(options.command)
+          : void vscode.window.showInformationMessage(options.message),
+      ),
+    );
+  }
 }
 
 /** Single-leaf placeholder for the Continuity view when the pro tier isn't active — see {@link registerProPlaceholders}. */

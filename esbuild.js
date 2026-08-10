@@ -13,7 +13,7 @@
 //    use sql.js (see `src/index/memoryStore.ts`) specifically so this
 //    bundle needs no WASM binary to keep colocated wherever it ends up.
 //
-// One conditional bundle:
+// Two conditional bundles:
 // 3. pro/src/index.ts -> dist/pro.js — the paid-tier ("LoreFountain Pro")
 //    feature source, kept in a separate private repo
 //    (github.com/AllStoneTech/lorefountain-pro) and consumed here as a git
@@ -22,6 +22,12 @@
 //    doesn't have the file, and this script skips it silently, producing
 //    exactly the same free-tier-only extension it always has. See
 //    src/extension.ts's `loadProModule` for the runtime side of this.
+// 4. pro/src/webview/entityGraphClient.ts -> dist/entityGraphClient.js — the
+//    Entity Graph webview's client script (paid tier). Unlike dist/pro.js,
+//    this runs *inside* the webview (a Chromium context, not Node), so it's
+//    bundled with platform: 'browser' / format: 'iife' and no `external` —
+//    the graph-rendering library it imports must ship fully self-contained,
+//    same reasoning as pro.js's own conditional build.
 //
 // Run with `--watch` for incremental rebuilds during development, or
 // `--production` for minified release bundles.
@@ -137,18 +143,54 @@ async function main() {
     console.log('[esbuild:pro] pro/src/index.ts not present — building free-tier only');
   }
 
+  const proWebviewEntryPoint = path.join('pro', 'src', 'webview', 'entityGraphClient.ts');
+  const hasProWebview = hasProModule && fs.existsSync(path.join(__dirname, proWebviewEntryPoint));
+  const proWebviewCtx = hasProWebview
+    ? await esbuild.context({
+        entryPoints: [proWebviewEntryPoint],
+        bundle: true,
+        format: 'iife',
+        platform: 'browser',
+        target: 'es2020',
+        outfile: 'dist/entityGraphClient.js',
+        minify: production,
+        sourcemap: !production,
+        sourcesContent: false,
+        logLevel: 'info',
+        plugins: [
+          {
+            name: 'log-pro-webview-build',
+            setup(build) {
+              build.onStart(() => {
+                console.log('[esbuild:pro-webview] build started');
+              });
+              build.onEnd(() => {
+                console.log('[esbuild:pro-webview] build finished');
+              });
+            },
+          },
+        ],
+      })
+    : null;
+  if (hasProModule && !hasProWebview) {
+    console.log('[esbuild:pro-webview] pro/src/webview/entityGraphClient.ts not present — skipping graph webview bundle');
+  }
+
   if (watch) {
     await extensionCtx.watch();
     await validatorCtx.watch();
     if (proCtx) await proCtx.watch();
+    if (proWebviewCtx) await proWebviewCtx.watch();
     console.log('[esbuild] watching for changes...');
   } else {
     await extensionCtx.rebuild();
     await validatorCtx.rebuild();
     if (proCtx) await proCtx.rebuild();
+    if (proWebviewCtx) await proWebviewCtx.rebuild();
     await extensionCtx.dispose();
     await validatorCtx.dispose();
     if (proCtx) await proCtx.dispose();
+    if (proWebviewCtx) await proWebviewCtx.dispose();
   }
 }
 

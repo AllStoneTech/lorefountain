@@ -19,5 +19,5 @@
     "types": ["node"]
   },
   "include": ["src", "test", "pro/src"],
-  "exclude": ["node_modules", "dist", "out", ".vscode-test"]
+  "exclude": ["node_modules", "dist", "out", ".vscode-test", "pro/src/webview"]
 }
