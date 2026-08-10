@@ -224,7 +224,11 @@ async function activateProTier(context: vscode.ExtensionContext): Promise<void> 
  * double-registered: `activateProTier` only calls
  * {@link registerProPlaceholders} on the not-licensed branch).
  */
-const GATED_PRO_COMMANDS: readonly string[] = ['lorefountain.viewAsOfEpisode', 'lorefountain.showEntityGraph'];
+const GATED_PRO_COMMANDS: readonly string[] = [
+  'lorefountain.viewAsOfEpisode',
+  'lorefountain.showEntityGraph',
+  'lorefountain.exportStoryBible',
+];
 
 /**
  * Register a plain explanatory placeholder instead of leaving the
