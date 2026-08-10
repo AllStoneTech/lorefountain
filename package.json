@@ -158,6 +158,11 @@
         "category": "LoreFountain"
       },
       {
+        "command": "lorefountain.installDemo",
+        "title": "Install Demo World...",
+        "category": "LoreFountain"
+      },
+      {
         "command": "lorefountain.migrateExistingLore",
         "title": "Migrate Existing Lore",
         "category": "LoreFountain"
@@ -449,6 +454,17 @@
             },
             "completionEvents": [
               "onView:lorefountain.worldView"
+            ]
+          },
+          {
+            "id": "installDemo",
+            "title": "Explore a Full Demo World",
+            "description": "Want to see LoreFountain used at real scale instead of a tiny sample? Download a finished demo project — dozens of entities, a full season of scripts — and open it in a new window.\n[Install a Demo](command:lorefountain.installDemo)",
+            "media": {
+              "markdown": "resources/walkthrough/install-demo.md"
+            },
+            "completionEvents": [
+              "onCommand:lorefountain.installDemo"
             ]
           }
         ]

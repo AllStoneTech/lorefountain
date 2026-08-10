@@ -6,6 +6,22 @@ revisit.
 
 ---
 
+## ADR-0031 — Install Demo: fetch a full demo world from GitHub on demand, don't bundle it
+
+**Date:** 2026-07-31 · **Status:** Accepted
+
+Demos were previously only reachable by whatever shipped in the `.vsix` — and `demos/**` had just been excluded from packaging entirely (fixing a leak: 232 files / 2.16MB → 31 / 702KB), which meant a fresh install had no way to reach them at all. the project owner's proposal: an "Install Demo" button that fetches demos on demand from GitHub instead. Scoped with three quick questions before building, all pointing at the same shape: keep `demos/` in the main repo (rather than splitting it into its own repo) and fetch it live via the GitHub API; trigger via both a Command Palette command and a walkthrough step; always download to a brand-new folder and open it in a new window, never touching whatever's currently open.
+
+1. **`demos/` stays in `AllStoneTech/lorefountain`, fetched from `main` at install time** (`src/demos/demoCatalog.ts`) — this also settles the standing open question of whether `demos/` belongs in the main repo at all: yes, and now it's load-bearing (the install command's actual source), not just sample content sitting in the tree. The tradeoff, accepted deliberately: a user always gets whatever's on `main` right now, not whatever shipped with their installed extension version — fine for demo content that isn't expected to break compatibility with older extension versions.
+2. **GitHub Contents API for directory listing, plain `download_url` GETs for file bytes** (`src/demos/demoDownloader.ts`) — not the Git Trees/Blobs API, and not a whole-repo tarball/zip download. A demo is a few dozen files; one API call per subdirectory (rate-limited, but a single install only needs a handful) plus one unauthenticated GET per file (served from `raw.githubusercontent.com`, a different limit entirely) is simple, needs zero new dependencies, and stays two small, independently-testable functions. `fetchImpl` is threaded through as a parameter rather than imported at module scope specifically so the unit suite can stub it — this project's tests never make live network calls.
+3. **Download to a staging folder next to the chosen target, `fs.rename` into place only on full success** (`src/commands/installDemo.ts`) — same-directory rename is always atomic and same-volume (critical on Windows, where `fs.rename` fails across drives), so a failed or cancelled download can never leave a half-written folder sitting at the exact name/location the user picked. On any failure the staging folder is removed and the error is surfaced; nothing partial is left for the user to find later.
+4. **Always a brand-new folder, always a new window** (`{ forceNewWindow: true }` on `vscode.openFolder`) — same non-destructive posture as the existing `tryLoreFountain` sample-workspace command, and the option explicitly preferred over installing into the currently-open workspace, which risked colliding with real project content already there.
+5. **Surfaced both ways**: `lorefountain.installDemo` in the Command Palette, and a 5th step ("Explore a Full Demo World") appended to the existing Getting Started walkthrough, `resources/walkthrough/install-demo.md` — for a brand-new user who hasn't found the Command Palette yet.
+6. **5 new unit tests** (`demoDownloader.test.ts`) covering recursive directory flattening, a failed directory-listing request, a missing `download_url`, writing nested files to a temp directory, and a failed file download — 391 total. Clean `tsc --noEmit` and `eslint`.
+7. **Can't actually work yet — `AllStoneTech/lorefountain` is currently a private repo** (confirmed via `gh repo view` while attempting to live-verify this feature: unauthenticated `api.github.com`/`raw.githubusercontent.com` requests against a private repo both return a plain `404`, indistinguishable from "path doesn't exist"). This isn't a bug in `demoDownloader.ts` — every unit-tested code path is correct — it's a real precondition the whole feature depends on that isn't true yet. Deliberately shipped anyway rather than blocked on: the repo going public was already a tracked blocker (`docs/TODO.md`'s history-scrub item) before this feature existed, and that same event now unblocks this too. Revisit and actually run the command against the live repo once that scrub happens and `lorefountain` flips to public — see `docs/TODO.md`.
+
+---
+
 ## ADR-0030 — Story Overview restructured: short universal frontmatter fields + one flexible body
 
 **Date:** 2026-07-30 · **Status:** Accepted

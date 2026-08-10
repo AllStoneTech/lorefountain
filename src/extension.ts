@@ -29,6 +29,7 @@ import * as vscode from 'vscode';
 import { registerEntityCreationCommands } from './commands/createEntity';
 import { registerCreateScriptCommand } from './commands/createScript';
 import { registerExportTranscriptCommand } from './commands/exportTranscript';
+import { registerInstallDemoCommand } from './commands/installDemo';
 import { registerLicensingCommands } from './commands/licensing';
 import { registerMigrateExistingLoreCommand } from './commands/migrateExistingLore';
 import { registerNoteCommands } from './commands/notes';
@@ -91,6 +92,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   registerExportTranscriptCommand(context);
   registerStructuredSearchCommand(context, outputChannel, pickTargetWorkspaceFolder, findStoreForFolder);
   registerTryLoreFountainCommand(context);
+  registerInstallDemoCommand(context);
   registerMigrateExistingLoreCommand(context, pickTargetWorkspaceFolder);
   registerLicensingCommands(context);
   registerHelpCommands(context);
