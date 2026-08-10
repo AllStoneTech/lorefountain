@@ -164,7 +164,7 @@
       },
       {
         "command": "lorefountain.viewAsOfEpisode",
-        "title": "View As of Episode",
+        "title": "View As of Episode (Pro)",
         "category": "LoreFountain"
       },
       {
@@ -202,7 +202,7 @@
       },
       {
         "command": "lorefountain.showContinuityViewHelp",
-        "title": "Continuity View: How to Use This View",
+        "title": "Continuity View (Pro): How to Use This View",
         "category": "LoreFountain",
         "icon": "$(question)"
       }
@@ -271,7 +271,7 @@
         },
         {
           "id": "lorefountain.continuityView",
-          "name": "Continuity"
+          "name": "Continuity (Pro)"
         }
       ]
     },
