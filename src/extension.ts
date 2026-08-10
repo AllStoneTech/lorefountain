@@ -47,6 +47,7 @@ import type { IndexStore } from './index/store';
 import { getLicenseStatus } from './licensing/licenseState';
 import { createFountainHoverProvider } from './providers/hoverProvider';
 import { createWikilinkCompletionProvider } from './providers/completionProvider';
+import { registerHelpCommands } from './providers/helpPanel';
 import { ScriptsTreeProvider } from './providers/scriptsTreeProvider';
 import { openSettingsPanel } from './providers/settingsPanel';
 import { createStoryCardEditorProvider, STORY_CARD_VIEW_TYPE } from './providers/storyCardEditorProvider';
@@ -92,6 +93,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   registerTryLoreFountainCommand(context);
   registerMigrateExistingLoreCommand(context, pickTargetWorkspaceFolder);
   registerLicensingCommands(context);
+  registerHelpCommands(context);
 
   context.subscriptions.push(
     vscode.window.registerCustomEditorProvider(

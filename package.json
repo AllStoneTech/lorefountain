@@ -60,6 +60,11 @@
         "path": "./resources/fountain-cues.code-snippets"
       }
     ],
+    "configurationDefaults": {
+      "[fountain]": {
+        "editor.wordWrap": "on"
+      }
+    },
     "commands": [
       {
         "command": "lorefountain.reindexWorkspace",
@@ -182,6 +187,24 @@
         "title": "Settings",
         "category": "LoreFountain",
         "icon": "$(gear)"
+      },
+      {
+        "command": "lorefountain.showWorldViewHelp",
+        "title": "World View: How to Use This View",
+        "category": "LoreFountain",
+        "icon": "$(question)"
+      },
+      {
+        "command": "lorefountain.showScriptsViewHelp",
+        "title": "Scripts View: How to Use This View",
+        "category": "LoreFountain",
+        "icon": "$(question)"
+      },
+      {
+        "command": "lorefountain.showContinuityViewHelp",
+        "title": "Continuity View: How to Use This View",
+        "category": "LoreFountain",
+        "icon": "$(question)"
       }
     ],
     "customEditors": [
@@ -283,6 +306,21 @@
           "command": "lorefountain.newScript",
           "when": "view == lorefountain.scriptsView",
           "group": "navigation"
+        },
+        {
+          "command": "lorefountain.showWorldViewHelp",
+          "when": "view == lorefountain.worldView",
+          "group": "navigation@9"
+        },
+        {
+          "command": "lorefountain.showScriptsViewHelp",
+          "when": "view == lorefountain.scriptsView",
+          "group": "navigation@9"
+        },
+        {
+          "command": "lorefountain.showContinuityViewHelp",
+          "when": "view == lorefountain.continuityView",
+          "group": "navigation@9"
         }
       ],
       "editor/title": [
@@ -417,12 +455,14 @@
   },
   "dependencies": {
     "fountain-js": "^1.2.4",
+    "markdown-it": "^15.0.0",
     "sql.js": "^1.14.1",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/markdown-it": "^14.1.2",
     "@types/node": "^22.0.0",
     "@types/sql.js": "^1.4.11",
     "@types/vscode": "^1.125.0",
