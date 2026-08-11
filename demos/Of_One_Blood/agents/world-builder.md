@@ -23,6 +23,7 @@ aliases: [<other names/spellings/nicknames, if any>]
 pronunciation: <only if known>
 tags: [<a few short freeform labels, if useful>]
 canon_status: established | tentative | contradicted
+significance: main | supporting | minor
 relations:
   - target: <slug of another entity file — never a glossary term>
     relation_type: <a short label, e.g. sibling, ally, rival, owns, located-in>
@@ -32,13 +33,32 @@ relations:
 <A short prose summary of this entity, in your own words.>
 ```
 
-`type: character` may also include `sound_motif`, `casting_notes`, `appears_in` (a list of episode/script identifiers), `first_appearance`, and `voice_actor` (the actor cast in the role, if known — only fill this in if the writer tells you, never guess).
+Any entity type may set `significance` (`main`, `supporting`, or `minor`) — it groups the World tree's sidebar so leads don't get lost among the rest of the cast. It's about narrative weight, not how often something appears — leave it unset unless the writer actually cares to distinguish this entity from the rest of its category.
+
+`type: character` may also include `sound_motif`, `casting_notes`, `appears_in` (a list of episode/script identifiers), `first_appearance`, `voice_actor` (the actor cast in the role, if known — only fill this in if the writer tells you, never guess), and `physical_description` (see below).
 
 `type: location` may also include `parent_location` (the slug of a containing location) and `mobility` (`fixed`, `mobile-per-episode`, or `mobile-continuous`).
 
+`type: faction` may also include `physical_description` (see below) — a faction's visual identity (heraldry, uniform, colors) rather than a person's.
+
 `type: arc` may also include `episodes` — a list of the script Production Codes (e.g. `["1x03", "1x04", "1x07"]`) this arc spans. An arc's episodes don't need to be contiguous or confined to one season; list exactly the episodes the writer names, never guess which episodes belong to an arc. A code that doesn't match any real script is flagged (not rejected) the same way a dangling `relations` target is.
 
-`faction`, `object`, and `concept` have no extra fields beyond the ones listed above. For structured reference data that doesn't fit any named field (a spreadsheet row's worth of attributes, for example), use `custom_fields` — a free-form map of key/value pairs, e.g.:
+`object` and `concept` have no extra fields beyond the ones listed above.
+
+**`physical_description`** (character and faction only) is freeform text meant to eventually feed an external AI image generator — LoreFountain itself never generates images. Informal `Key: Value` lines up top are encouraged but not required, e.g.:
+
+```yaml
+physical_description: |
+  Race: Orc
+  Hair: Black, braided
+  Eyes: Purple
+
+  Walks with a slight limp from an old wound.
+```
+
+A world's own catalog of species/races (Orc, Elf, Human, etc.) belongs as Concept entities or Glossary terms, not a structured field here — `physical_description` is free text precisely because that vocabulary is different for every project.
+
+For structured reference data that doesn't fit any named field (a spreadsheet row's worth of attributes, for example), use `custom_fields` — a free-form map of key/value pairs, e.g.:
 
 ```yaml
 custom_fields:

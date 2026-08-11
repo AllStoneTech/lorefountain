@@ -39,6 +39,13 @@ Markdown file per item, organized into categories down the sidebar.
 - Categories you don't use can be hidden from this view via the gear icon
   (**LoreFountain: Open Settings**) — they stay untouched on disk, just out
   of the way.
+- Set **Significance** (Main / Supporting / Minor) on a Story Card to group
+  that category's sidebar list into sections, so leads don't get lost among
+  the rest of the cast. A category with no significance set on anything in
+  it stays a flat list, unchanged. Characters and Factions also get a
+  **Physical Description** field — freeform text for appearance/visual
+  identity, useful as raw material for an external AI image generator
+  (LoreFountain itself never generates images).
 
 If you're using an AI coding tool in this project, see `agents/world-builder.md`
 at the project root for the exact file format it should follow.
