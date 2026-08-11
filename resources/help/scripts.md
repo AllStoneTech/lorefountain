@@ -28,7 +28,20 @@ files there beyond the script itself.
 - A sound-cue convention — lines starting `SFX:`, `MUSIC:`, or `AMB:` — is
   parsed automatically into a `<script-name>.cues.json` sidecar next to each
   script. That file is derived data, regenerated on every save; never hand-edit
-  it.
+  it. `MUSIC:` cues can carry two independent, optional modifiers: a **Role**
+  (`BED`, `STING`, `BRIDGE`, `SOURCE BED` — what kind of musical moment it is)
+  and a **Timing** (`IN`, `OUT` — a fade). Either, both, or neither may
+  appear, e.g. `MUSIC: BED IN - low, patient, unresolved`.
+- A second convention for camera/pre-production — `SHOT:`, `POSE:`,
+  `LIGHT:`, and `DURATION:` — works the same way: `SHOT:` starts a new shot
+  (freeform framing, e.g. `WIDE`, `CLOSE-UP on SANGO`), and the other three
+  set fields on whichever shot is currently open. Shots number sequentially
+  within each scene, resetting at every scene heading.
+- Both conventions are free to write in any project. Turning them into a
+  working export — a cue sheet, a shot list, or a full BBC-style radio
+  script — is LoreFountain Pro; see each export's own help panel (Command
+  Palette, or the `...` menu next to its icon in this editor's title bar)
+  for what it produces.
 - Hover any recognized character/location/glossary mention in a script to
   preview its Story Card. The editor toolbar's **Export Transcript** button
   exports a script's dialogue/action text on its own.
@@ -47,7 +60,12 @@ files there beyond the script itself.
 - **Snippets** — type the prefix and press Tab/Enter:
   - `sfx` → `SFX: description`
   - `amb` → `AMB: description`
-  - `mus` → `MUSIC: BED|STING|BRIDGE|SOURCE BED|IN|OUT description`
+  - `mus` → `MUSIC: BED|STING|BRIDGE|SOURCE BED|IN|OUT description` (pick a Role
+    and/or Timing keyword from the dropdown, or none at all)
+  - `shot` → `SHOT: description`
+  - `pose` → `POSE: description`
+  - `light` → `LIGHT: description`
+  - `dur` → `DURATION: description`
 - **Auto-closing/surrounding pairs** for `[[` `]]`, `(` `)`, and `"` — select
   text and type `[[` to wrap it, same for parentheticals and quotes.
 - **`[[Entity Name]]` explicit links** — use this when a mention wouldn't

@@ -1,8 +1,14 @@
 /**
- * Per-view "info" buttons: a `$(question)` icon in the World, Scripts, and
- * Continuity view title bars that opens a bundled Markdown doc
- * (`resources/help/*.md`) explaining how that section is meant to be used
- * and populated.
+ * "How to use this" help: a `$(question)` item that opens a bundled Markdown
+ * doc (`resources/help/*.md`) explaining a feature. The World, Scripts, and
+ * Continuity views each get one in their title bar's `navigation` group;
+ * the five Pro export/graph features (which aren't views, so have no title
+ * bar of their own) each get one in whichever menu their own command
+ * already lives in, in a non-`navigation` overflow group rather than a
+ * sixth/seventh toolbar icon (`package.json`'s `contributes.menus`).
+ *
+ * `HELP_TOPICS` is the only place a new topic needs registering — this file
+ * loops it generically, nothing hardcodes a count.
  *
  * Rendered in a dedicated webview panel (`helpHtml.ts`) rather than VS
  * Code's built-in Markdown preview (`markdown.showPreview`), specifically so
@@ -32,6 +38,11 @@ const HELP_TOPICS: readonly HelpTopic[] = [
   { command: 'lorefountain.showWorldViewHelp', docFile: 'world.md', title: 'Help: World View' },
   { command: 'lorefountain.showScriptsViewHelp', docFile: 'scripts.md', title: 'Help: Scripts View' },
   { command: 'lorefountain.showContinuityViewHelp', docFile: 'continuity.md', title: 'Help: Continuity View' },
+  { command: 'lorefountain.showEntityGraphHelp', docFile: 'entityGraph.md', title: 'Help: Entity Graph' },
+  { command: 'lorefountain.showStoryBibleHelp', docFile: 'storyBible.md', title: 'Help: Story-Bible Export' },
+  { command: 'lorefountain.showBBCRadioScriptHelp', docFile: 'bbcRadioScript.md', title: 'Help: BBC Radio Drama Export' },
+  { command: 'lorefountain.showCueSheetHelp', docFile: 'cueSheet.md', title: 'Help: SFX/Cue-Sheet Export' },
+  { command: 'lorefountain.showShotListHelp', docFile: 'shotList.md', title: 'Help: Shot List Export' },
 ];
 
 /** The view type these panels register under. */

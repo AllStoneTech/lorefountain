@@ -245,6 +245,36 @@
         "title": "Continuity View (Pro): How to Use This View",
         "category": "LoreFountain",
         "icon": "$(question)"
+      },
+      {
+        "command": "lorefountain.showEntityGraphHelp",
+        "title": "Entity Graph (Pro): How to Use This Feature",
+        "category": "LoreFountain",
+        "icon": "$(question)"
+      },
+      {
+        "command": "lorefountain.showStoryBibleHelp",
+        "title": "Story-Bible Export (Pro): How to Use This Feature",
+        "category": "LoreFountain",
+        "icon": "$(question)"
+      },
+      {
+        "command": "lorefountain.showBBCRadioScriptHelp",
+        "title": "BBC Radio Drama Export (Pro): How to Use This Feature",
+        "category": "LoreFountain",
+        "icon": "$(question)"
+      },
+      {
+        "command": "lorefountain.showCueSheetHelp",
+        "title": "SFX/Cue-Sheet Export (Pro): How to Use This Feature",
+        "category": "LoreFountain",
+        "icon": "$(question)"
+      },
+      {
+        "command": "lorefountain.showShotListHelp",
+        "title": "Shot List Export (Pro): How to Use This Feature",
+        "category": "LoreFountain",
+        "icon": "$(question)"
       }
     ],
     "customEditors": [
@@ -348,6 +378,16 @@
           "group": "9_lorefountain"
         },
         {
+          "command": "lorefountain.showEntityGraphHelp",
+          "when": "view == lorefountain.worldView",
+          "group": "9_lorefountain"
+        },
+        {
+          "command": "lorefountain.showStoryBibleHelp",
+          "when": "view == lorefountain.worldView",
+          "group": "9_lorefountain"
+        },
+        {
           "command": "lorefountain.checkAgentFileUpdates",
           "when": "view == lorefountain.worldView",
           "group": "9_lorefountain"
@@ -398,6 +438,21 @@
           "command": "lorefountain.exportShotList",
           "when": "editorLangId == fountain",
           "group": "navigation"
+        },
+        {
+          "command": "lorefountain.showBBCRadioScriptHelp",
+          "when": "editorLangId == fountain",
+          "group": "9_lorefountain"
+        },
+        {
+          "command": "lorefountain.showCueSheetHelp",
+          "when": "editorLangId == fountain",
+          "group": "9_lorefountain"
+        },
+        {
+          "command": "lorefountain.showShotListHelp",
+          "when": "editorLangId == fountain",
+          "group": "9_lorefountain"
         }
       ],
       "view/item/context": [

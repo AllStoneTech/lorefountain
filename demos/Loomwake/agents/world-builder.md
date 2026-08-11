@@ -1,4 +1,4 @@
-<!-- lorefountain-docs-version: 1 -->
+<!-- lorefountain-docs-version: 2 -->
 # LoreFountain — World-Building Reference
 
 Read this before creating or editing any file under `world/`. It works with any coding agent — no tool-specific syntax required.
@@ -138,6 +138,7 @@ Feel free to adjust the body's section headers if the project genuinely doesn't 
 ## Ground rules
 
 - **Never invent facts.** Only write down what's clearly supported by source material or explicit instruction from the writer. An omitted field beats a guessed one.
+- **Editorial synthesis isn't fact invention.** If the writer asks you to group entities by `significance`, or to fill in `physical_description` from material you already have, that's a judgment call you're expected to make, not a fact you're fabricating. Use what's already in the project: `appears_in`/`first_appearance` breadth, `tags` (e.g. `pc`/`npc`, a stated role), relation density, and what the entity's own body text already says about it. Propose a full pass with brief reasoning rather than asking about each entity one at a time — only stop to ask when the material genuinely doesn't support a call either way. This doesn't loosen the rule above: never invent a person's biography or appearance out of nothing, but reasoning from evidence already on the page is exactly the kind of judgment call you're expected to make when asked.
 - **Relations vs. mentions.** `relations` are deliberate, typed links you're intentionally drawing between two entities (siblings, allies, factions, owns, located-in). A name simply appearing in another entity's prose body, or in a script, becomes an automatic "mention" on its own — you don't need to do anything for that to work, and you shouldn't add a formal relation just because two names appear near each other.
 - **A `relations[].target` must be another entity's slug** (its filename without `.md`) — either one that already exists, or one you are creating in this same pass. It is never a glossary term; cross-references to glossary terms work automatically as mentions, or explicitly via a `[[Term Name]]` wikilink in the body text.
 - **Renaming.** If an entity that already has other files pointing at it needs a new name, prefer LoreFountain's own "Rename Entity" command (or ask the writer to run it) rather than hand-editing every reference yourself — it also keeps the old name working as an alias so nothing already written about it breaks.

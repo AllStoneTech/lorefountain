@@ -1,4 +1,4 @@
-<!-- lorefountain-docs-version: 1 -->
+<!-- lorefountain-docs-version: 2 -->
 # LoreFountain — Script-Writing Reference
 
 Read this before creating or editing any `.fountain` file under `scripts/`.
@@ -52,6 +52,8 @@ Examples: `SFX: metal groaning`, `MUSIC: STING - the reveal`, `MUSIC: BED IN - l
 
 Every script's cues are parsed automatically into a `<script-name>.cues.json` sidecar file next to it. Never hand-edit that sidecar — it's regenerated from the script on every save (or by `node agents/validate.js` — see below) and any manual edit will be silently overwritten.
 
+This convention is free to use in any project — extraction itself doesn't require a license. **Export Cue Sheet** (LoreFountain Pro), which turns these cues into a working session cue list, does.
+
 ## The shot-list convention
 
 A second, similar plain-English convention — for camera/pre-production breakdown rather than audio:
@@ -78,6 +80,10 @@ DURATION: ~3 seconds
 ```
 
 This convention is free to use in any project — extraction itself doesn't require a license. **Export Shot List** (LoreFountain Pro), which turns these annotations into a CSV/Markdown pre-production breakdown, does.
+
+## Adding cues and shots when asked
+
+If the writer asks you to add SFX/MUSIC/AMB cues or SHOT/POSE/LIGHT/DURATION annotations to a scene — whether one you're writing fresh or one that's already there — write them directly using the conventions above, in the right place in the action. Choose values that fit what the scene already establishes: a `MUSIC:` cue's Role/Timing should match the moment's dramatic shape (a scene closing softly reads as `MUSIC: OUT`, a reveal reads as `MUSIC: STING`, a scene meant to run tense under dialogue reads as `MUSIC: BED IN`), and a `SHOT:`'s framing should match what the action already describes. This is the same editorial judgment you already use writing the action lines themselves — don't wait to be told the exact keyword for every cue, and don't ask the writer to fill them in themselves unless the scene genuinely doesn't give you enough to go on.
 
 ## Questions about scenes, presence, or dialogue
 

@@ -1,6 +1,6 @@
 # {{WORLD_FOLDER}}/
 
-The story world — one Markdown file per entity: a character, location, faction, object, or concept. Each file is plain YAML frontmatter plus a short prose description; nothing here is proprietary, and it's readable in any text editor.
+The story world — one Markdown file per entity: a character, location, faction, object, concept, or arc. Each file is plain YAML frontmatter plus a short prose description; nothing here is proprietary, and it's readable in any text editor.
 
 In VS Code with the LoreFountain extension, these open as a form (a "Story Card") instead of raw text, and any mention of an entity's name elsewhere — in another entity's description or in a script — is linked automatically.
 
