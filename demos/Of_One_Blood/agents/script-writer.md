@@ -51,6 +51,33 @@ Examples: `SFX: metal groaning`, `MUSIC: STING - the reveal`, `MUSIC: BED IN - l
 
 Every script's cues are parsed automatically into a `<script-name>.cues.json` sidecar file next to it. Never hand-edit that sidecar — it's regenerated from the script on every save (or by `node agents/validate.js` — see below) and any manual edit will be silently overwritten.
 
+## The shot-list convention
+
+A second, similar plain-English convention — for camera/pre-production breakdown rather than audio:
+
+| Prefix | Meaning |
+|---|---|
+| `SHOT:` | Starts a new shot — freeform framing/angle/subject description (e.g. `WIDE`, `CLOSE-UP on SANGO`, `OTS`). Deliberately not a fixed vocabulary; shot types combine too freely for a clean enum. |
+| `POSE:` | Character pose/action for the currently-open shot. Character names here get the same automatic linking as any other action-line text. |
+| `LIGHT:` | Lighting description for the currently-open shot — write it prose/prompt-shaped, since it's meant to double as raw material for an external AI image generator later, not just a note to the crew. |
+| `DURATION:` | A duration estimate for the currently-open shot, e.g. `4s`, `~5 seconds`. |
+
+Shots are numbered sequentially within each scene (resetting at every scene heading) — `SHOT:` opens a new shot record; `POSE:`/`LIGHT:`/`DURATION:` set fields on whichever shot is currently open, last value wins if repeated. One of these lines with no `SHOT:` open yet is simply inert, not an error.
+
+Example:
+```
+SHOT: WIDE, establishing
+LIGHT: Cold blue rim light, deep shadow
+DURATION: 4s
+
+SHOT: CLOSE-UP on SANGO
+POSE: SANGO grips the console, jaw tight
+LIGHT: Warm key from below, motivated by the console glow
+DURATION: ~3 seconds
+```
+
+This convention is free to use in any project — extraction itself doesn't require a license. **Export Shot List** (LoreFountain Pro), which turns these annotations into a CSV/Markdown pre-production breakdown, does.
+
 ## Questions about scenes, presence, or dialogue
 
 If the writer asks something like "which scenes have both X and Y in them" or "every line that mentions the reactor core," tell them to run LoreFountain's "Structured Search" command rather than trying to answer by grepping the scripts yourself — it uses the same scene/mention data the extension already tracks, and will be more reliable than a manual read-through. Likewise, if they want a dialogue-only transcript of a script (cues and action lines stripped, for accessibility or show notes), point them at "Export Transcript" instead of writing one by hand. Both only run inside VS Code — you can't invoke them yourself if you're working through file edits alone.
