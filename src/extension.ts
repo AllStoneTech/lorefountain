@@ -228,6 +228,7 @@ const GATED_PRO_COMMANDS: readonly string[] = [
   'lorefountain.viewAsOfEpisode',
   'lorefountain.showEntityGraph',
   'lorefountain.exportStoryBible',
+  'lorefountain.exportBBCRadioScript',
 ];
 
 /**

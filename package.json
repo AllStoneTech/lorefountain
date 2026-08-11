@@ -185,6 +185,12 @@
         "icon": "$(export)"
       },
       {
+        "command": "lorefountain.exportBBCRadioScript",
+        "title": "Export BBC Radio Script (Pro)",
+        "category": "LoreFountain",
+        "icon": "$(radio-tower)"
+      },
+      {
         "command": "lorefountain.enterLicenseKey",
         "title": "Enter License Key",
         "category": "LoreFountain"
@@ -353,6 +359,11 @@
       "editor/title": [
         {
           "command": "lorefountain.exportTranscript",
+          "when": "editorLangId == fountain",
+          "group": "navigation"
+        },
+        {
+          "command": "lorefountain.exportBBCRadioScript",
           "when": "editorLangId == fountain",
           "group": "navigation"
         }
