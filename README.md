@@ -3,8 +3,8 @@
 A Fountain-native worldbuilding layer for VS Code (and VS Code forks: Cursor,
 Windsurf, Antigravity). LoreFountain links character cues and scene headings in
 `.fountain` scripts to structured, plain-Markdown **entity** files — characters,
-locations, factions, objects, and concepts — with typed relationships, hover
-previews, autocomplete, and backlinks.
+locations, factions, objects, concepts, and arcs — with typed relationships,
+hover previews, autocomplete, and backlinks.
 
 > Working title, open to revision.
 
@@ -19,11 +19,20 @@ previews, autocomplete, and backlinks.
 
 ## Status
 
-Early scaffold. Building the **free tier** first — entity creation via a Story
-Card form, Fountain-native linking (hover + autocomplete), backlinks, and the
-files-as-truth + SQLite/JSON1 index — toward a dogfooding milestone (migrating a
-real Series Bible). Paid-tier features (graph/timeline views, continuity
-management, casting, advanced exports) are deliberately out of scope for now.
+`v0.9.0`. The free tier is fully built: the entity model (character, location,
+faction, object, concept, arc) with typed relationships, significance
+grouping, and freeform physical descriptions; a glossary; a dual-ordered
+Timeline; a Story Card editor and Story Overview document; hover previews and
+autocomplete; Rename Entity with reference propagation; Structured Search;
+broken-reference detection; transcript export; a headless `validate.js` for
+CI/AI-agent use with no VS Code dependency; and project-level AI agent
+instructions (`AGENTS.md`/`agents/*.md`) with their own version tracking.
+
+**LoreFountain Pro** (paid tier) adds Continuity Management, an Entity Graph
+view, Story-Bible Export, BBC Radio Drama Export, SFX/Cue-Sheet Export, and
+Shot List Export — all shipped, though license validation is still a stub
+pending a real backend. See `CHANGELOG.md` for what shipped when, and
+`docs/DECISIONS.md` for the full rationale behind each of these.
 
 ## Development
 

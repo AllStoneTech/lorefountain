@@ -2,7 +2,7 @@
 
 Your `.fountain` scripts — 100% standard Fountain, fully portable to any other Fountain tool (Highland, Fade In, Final Draft import, etc.). Nothing LoreFountain-specific is required to make linking to the world work: any entity or glossary term's name appearing anywhere in a script (a character cue, an action line, dialogue) is recognized and linked automatically.
 
-A sound-cue convention (`SFX:`, `MUSIC:`, `AMB:`) is parsed automatically into a `<script-name>.cues.json` sidecar next to each script — derived data, regenerated on every save, never hand-edited.
+A sound-cue convention (`SFX:`, `MUSIC:`, `AMB:` — `MUSIC:` cues can carry an optional Role and/or Timing modifier) is parsed automatically into a `<script-name>.cues.json` sidecar next to each script — derived data, regenerated on every save, never hand-edited. A second convention (`SHOT:`, `POSE:`, `LIGHT:`, `DURATION:`) covers camera/pre-production breakdown the same way.
 
 ## One folder per script
 
