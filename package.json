@@ -191,6 +191,12 @@
         "icon": "$(radio-tower)"
       },
       {
+        "command": "lorefountain.exportCueSheet",
+        "title": "Export Cue Sheet (Pro)",
+        "category": "LoreFountain",
+        "icon": "$(checklist)"
+      },
+      {
         "command": "lorefountain.enterLicenseKey",
         "title": "Enter License Key",
         "category": "LoreFountain"
@@ -364,6 +370,11 @@
         },
         {
           "command": "lorefountain.exportBBCRadioScript",
+          "when": "editorLangId == fountain",
+          "group": "navigation"
+        },
+        {
+          "command": "lorefountain.exportCueSheet",
           "when": "editorLangId == fountain",
           "group": "navigation"
         }
