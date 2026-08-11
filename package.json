@@ -2,7 +2,7 @@
   "name": "lorefountain",
   "displayName": "LoreFountain",
   "description": "A Fountain-native worldbuilding layer for VS Code: link character cues and scene headings to structured entity files with typed relationships, hover previews, and backlinks.",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "publisher": "allstonetech",
   "author": "the project owner (All Stone Tech)",
   "license": "MIT",
