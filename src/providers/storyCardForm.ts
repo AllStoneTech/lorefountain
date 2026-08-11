@@ -7,7 +7,7 @@
  * underlying `TextDocument`.
  *
  * Scope, deliberately: the form covers every base field, the type-specific
- * fields for Character/Location/Arc, and the relationship picker (§4.5) — not
+ * fields for Character/Faction/Location/Arc, and the relationship picker (§4.5) — not
  * `tracked_fields`'s history-log entries or `custom_fields`. Both are
  * preserved on write (never dropped), just not editable here yet; per §6.1,
  * "nothing prevents a power user from opening the raw file" for those.
@@ -24,6 +24,7 @@ import {
   type EntityType,
   type Mobility,
   type Relation,
+  type Significance,
 } from '../model/entity';
 
 /** One relation row in the form's relationship picker. */
@@ -42,10 +43,12 @@ export interface EntityFormState {
   pronunciation: string;
   tags: string;
   canonStatus: CanonStatus | '';
+  significance: Significance | '';
   body: string;
   relations: RelationFormState[];
   soundMotif: string;
   castingNotes: string;
+  physicalDescription: string;
   parentLocation: string;
   mobility: Mobility | '';
   episodes: string[];
@@ -67,10 +70,12 @@ export function entityToFormState(entity: Entity): EntityFormState {
     pronunciation: fm.pronunciation ?? '',
     tags: joinList(fm.tags),
     canonStatus: fm.canon_status ?? '',
+    significance: fm.significance ?? '',
     body: entity.body,
     relations: (fm.relations ?? []).map(relationToFormState),
     soundMotif: fm.type === 'character' ? fm.sound_motif ?? '' : '',
     castingNotes: fm.type === 'character' ? fm.casting_notes ?? '' : '',
+    physicalDescription: fm.type === 'character' || fm.type === 'faction' ? fm.physical_description ?? '' : '',
     parentLocation: fm.type === 'location' ? fm.parent_location ?? '' : '',
     mobility: fm.type === 'location' ? fm.mobility ?? '' : '',
     episodes: fm.type === 'arc' ? fm.episodes ?? [] : [],
@@ -105,12 +110,16 @@ export function applyFormStateToEntity(entity: Entity, formState: EntityFormStat
     pronunciation: undefinedIfBlank(formState.pronunciation),
     tags: undefinedIfEmpty(splitList(formState.tags)),
     canon_status: formState.canonStatus || undefined,
+    significance: formState.significance || undefined,
     relations: relations.length > 0 ? relations : undefined,
   };
 
   if (formState.type === 'character') {
     merged.sound_motif = undefinedIfBlank(formState.soundMotif);
     merged.casting_notes = undefinedIfBlank(formState.castingNotes);
+    merged.physical_description = undefinedIfBlank(formState.physicalDescription);
+  } else if (formState.type === 'faction') {
+    merged.physical_description = undefinedIfBlank(formState.physicalDescription);
   } else if (formState.type === 'location') {
     merged.parent_location = undefinedIfBlank(formState.parentLocation);
     merged.mobility = formState.mobility || undefined;

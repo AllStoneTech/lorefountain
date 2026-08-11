@@ -16,11 +16,12 @@ import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { getWorkspaceFolders } from '../config/workspaceConfig';
-import type { EntityType } from '../model/entity';
-import type { IndexStore } from '../index/store';
+import type { EntityType, Significance } from '../model/entity';
+import type { EntityRecord, IndexStore } from '../index/store';
 import { titleizeSlug } from '../model/slug';
 import { STORY_CARD_VIEW_TYPE } from './storyCardEditorProvider';
 import { STORY_OVERVIEW_VIEW_TYPE } from './storyOverviewEditorProvider';
+import { groupEntitiesBySignificance } from './worldTreeGrouping';
 
 /** Exported for reuse by the settings panel, which offers the same categories as show/hide checkboxes. */
 export type Category = EntityType | 'glossary' | 'timeline' | 'notes';
@@ -63,15 +64,22 @@ const CATEGORY_ICONS: Record<Category, string> = {
   notes: 'edit',
 };
 
-/** One node in the World tree: a workspace folder, the single Story Overview, a category, an entity, a glossary term, a Timeline event, or a scratch note. */
+/** One node in the World tree: a workspace folder, the single Story Overview, a category, a significance group within a category, an entity, a glossary term, a Timeline event, or a scratch note. */
 export type WorldTreeNode =
   | { kind: 'folder'; folder: vscode.WorkspaceFolder }
   | { kind: 'storyOverview'; folder: vscode.WorkspaceFolder; filePath: string }
   | { kind: 'category'; folder: vscode.WorkspaceFolder; category: Category }
+  | { kind: 'significanceGroup'; folder: vscode.WorkspaceFolder; significance: Significance | 'unset'; label: string; entities: readonly EntityRecord[] }
   | { kind: 'entity'; folder: vscode.WorkspaceFolder; name: string; filePath: string }
   | { kind: 'glossaryTerm'; folder: vscode.WorkspaceFolder; term: string; filePath: string }
   | { kind: 'timelineEvent'; folder: vscode.WorkspaceFolder; name: string; filePath: string }
   | { kind: 'note'; folder: vscode.WorkspaceFolder; title: string; filePath: string };
+
+const SIGNIFICANCE_ICONS: Partial<Record<Significance | 'unset', string>> = {
+  main: 'star-full',
+  supporting: 'star-half',
+  minor: 'star-empty',
+};
 
 /**
  * TreeDataProvider backing the World sidebar view. Call {@link refresh} to
@@ -118,6 +126,13 @@ export class WorldTreeProvider implements vscode.TreeDataProvider<WorldTreeNode>
         item.iconPath = new vscode.ThemeIcon(CATEGORY_ICONS[node.category]);
         return item;
       }
+      case 'significanceGroup': {
+        const item = new vscode.TreeItem(`${node.label} (${node.entities.length})`, vscode.TreeItemCollapsibleState.Collapsed);
+        item.contextValue = `lorefountain.significanceGroup.${node.significance}`;
+        const icon = SIGNIFICANCE_ICONS[node.significance];
+        if (icon) item.iconPath = new vscode.ThemeIcon(icon);
+        return item;
+      }
       case 'entity': {
         const item = new vscode.TreeItem(node.name, vscode.TreeItemCollapsibleState.None);
         item.contextValue = 'lorefountain.entity';
@@ -161,6 +176,9 @@ export class WorldTreeProvider implements vscode.TreeDataProvider<WorldTreeNode>
     if (node.kind === 'category') {
       return node.category === 'notes' ? this.notesFor(node.folder) : this.itemsFor(node);
     }
+    if (node.kind === 'significanceGroup') {
+      return node.entities.map((entity) => ({ kind: 'entity', folder: node.folder, name: entity.name, filePath: entity.filePath }));
+    }
     return [];
   }
 
@@ -179,9 +197,19 @@ export class WorldTreeProvider implements vscode.TreeDataProvider<WorldTreeNode>
         .map((event) => ({ kind: 'timelineEvent', folder: node.folder, name: event.name, filePath: event.filePath }));
     }
     if (node.category === 'notes') return [];
-    return store
-      .listEntities({ type: node.category })
-      .map((entity) => ({ kind: 'entity', folder: node.folder, name: entity.name, filePath: entity.filePath }));
+
+    const entities = store.listEntities({ type: node.category });
+    const groups = groupEntitiesBySignificance(entities);
+    if (!groups) {
+      return entities.map((entity) => ({ kind: 'entity', folder: node.folder, name: entity.name, filePath: entity.filePath }));
+    }
+    return groups.map((group) => ({
+      kind: 'significanceGroup',
+      folder: node.folder,
+      significance: group.significance,
+      label: group.label,
+      entities: group.entities,
+    }));
   }
 
   /**

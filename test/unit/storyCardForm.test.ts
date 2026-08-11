@@ -24,10 +24,12 @@ function blankCharacterForm(overrides: Partial<EntityFormState> = {}): EntityFor
     pronunciation: '',
     tags: '',
     canonStatus: '',
+    significance: '',
     body: 'Body text.',
     relations: [],
     soundMotif: '',
     castingNotes: '',
+    physicalDescription: '',
     parentLocation: '',
     mobility: '',
     episodes: [],
@@ -38,7 +40,7 @@ function blankCharacterForm(overrides: Partial<EntityFormState> = {}): EntityFor
 describe('entityToFormState', () => {
   it('flattens the base fields', () => {
     const form = entityToFormState(
-      entity({ aliases: ['Shango', 'Xango'], pronunciation: 'SHAHN-go', tags: ['orisha', 'pantheon'], canon_status: 'established' }),
+      entity({ aliases: ['Shango', 'Xango'], pronunciation: 'SHAHN-go', tags: ['orisha', 'pantheon'], canon_status: 'established', significance: 'main' }),
     );
     expect(form.name).toBe('Sango');
     expect(form.type).toBe('character');
@@ -46,6 +48,7 @@ describe('entityToFormState', () => {
     expect(form.pronunciation).toBe('SHAHN-go');
     expect(form.tags).toBe('orisha, pantheon');
     expect(form.canonStatus).toBe('established');
+    expect(form.significance).toBe('main');
     expect(form.body).toBe('Body text.');
   });
 
@@ -55,6 +58,7 @@ describe('entityToFormState', () => {
     expect(form.pronunciation).toBe('');
     expect(form.tags).toBe('');
     expect(form.canonStatus).toBe('');
+    expect(form.significance).toBe('');
     expect(form.relations).toEqual([]);
   });
 
@@ -71,11 +75,28 @@ describe('entityToFormState', () => {
   });
 
   it('surfaces character-specific fields only for a character', () => {
-    const form = entityToFormState(entity({ sound_motif: 'thunder', casting_notes: 'booming voice' }));
+    const form = entityToFormState(
+      entity({ sound_motif: 'thunder', casting_notes: 'booming voice', physical_description: 'Race: Orisha' }),
+    );
     expect(form.soundMotif).toBe('thunder');
     expect(form.castingNotes).toBe('booming voice');
+    expect(form.physicalDescription).toBe('Race: Orisha');
     expect(form.parentLocation).toBe('');
     expect(form.mobility).toBe('');
+  });
+
+  it('surfaces physical_description for a faction, but not soundMotif/castingNotes', () => {
+    const form = entityToFormState(
+      entity({ name: 'The Orisha Pantheon', type: 'faction', physical_description: 'Colors: Red and white' }),
+    );
+    expect(form.physicalDescription).toBe('Colors: Red and white');
+    expect(form.soundMotif).toBe('');
+    expect(form.castingNotes).toBe('');
+  });
+
+  it('defaults physicalDescription to empty for a type that does not carry it', () => {
+    const form = entityToFormState(entity({ name: 'The Ark', type: 'location' }));
+    expect(form.physicalDescription).toBe('');
   });
 
   it('surfaces location-specific fields only for a location', () => {
@@ -105,12 +126,21 @@ describe('applyFormStateToEntity', () => {
   it('applies edited base fields', () => {
     const updated = applyFormStateToEntity(
       entity(),
-      blankCharacterForm({ pronunciation: 'SHAHN-go', aliases: 'Shango, Xango', tags: 'orisha, pantheon', canonStatus: 'established' }),
+      blankCharacterForm({ pronunciation: 'SHAHN-go', aliases: 'Shango, Xango', tags: 'orisha, pantheon', canonStatus: 'established', significance: 'main' }),
     );
     expect(updated.frontmatter.pronunciation).toBe('SHAHN-go');
     expect(updated.frontmatter.aliases).toEqual(['Shango', 'Xango']);
     expect(updated.frontmatter.tags).toEqual(['orisha', 'pantheon']);
     expect(updated.frontmatter.canon_status).toBe('established');
+    expect(updated.frontmatter.significance).toBe('main');
+  });
+
+  it('clears significance when the form value is unset', () => {
+    const updated = applyFormStateToEntity(
+      entity({ significance: 'main' }),
+      blankCharacterForm({ significance: '' }),
+    );
+    expect(updated.frontmatter.significance).toBeUndefined();
   });
 
   it('clears a field when the form value is blank', () => {
@@ -134,12 +164,23 @@ describe('applyFormStateToEntity', () => {
   it('applies character-specific fields', () => {
     const updated = applyFormStateToEntity(
       entity(),
-      blankCharacterForm({ soundMotif: 'thunder', castingNotes: 'booming voice' }),
+      blankCharacterForm({ soundMotif: 'thunder', castingNotes: 'booming voice', physicalDescription: 'Race: Orisha' }),
     );
     expect(updated.frontmatter.type).toBe('character');
     if (updated.frontmatter.type !== 'character') return;
     expect(updated.frontmatter.sound_motif).toBe('thunder');
     expect(updated.frontmatter.casting_notes).toBe('booming voice');
+    expect(updated.frontmatter.physical_description).toBe('Race: Orisha');
+  });
+
+  it('applies physical_description when the type is faction', () => {
+    const updated = applyFormStateToEntity(
+      entity({ name: 'The Orisha Pantheon', type: 'faction' }, ''),
+      blankCharacterForm({ type: 'faction', physicalDescription: 'Colors: Red and white' }),
+    );
+    expect(updated.frontmatter.type).toBe('faction');
+    if (updated.frontmatter.type !== 'faction') return;
+    expect(updated.frontmatter.physical_description).toBe('Colors: Red and white');
   });
 
   it('applies location-specific fields when the type is location', () => {
@@ -224,6 +265,17 @@ describe('applyFormStateToEntity', () => {
       relations: [{ target: 'esu', relation_type: 'ally', attitude: 'wary' }],
       sound_motif: 'thunder',
     });
+    const form = entityToFormState(original);
+    const roundTripped = applyFormStateToEntity(original, form);
+    expect(roundTripped.frontmatter).toEqual(original.frontmatter);
+    expect(roundTripped.body).toBe(original.body);
+  });
+
+  it('round-trips a faction through entityToFormState and back unchanged', () => {
+    const original = entity(
+      { name: 'The Orisha Pantheon', type: 'faction', significance: 'supporting', physical_description: 'Colors: Red and white' },
+      'The gathered orisha of the crossroads.',
+    );
     const form = entityToFormState(original);
     const roundTripped = applyFormStateToEntity(original, form);
     expect(roundTripped.frontmatter).toEqual(original.frontmatter);

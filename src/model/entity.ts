@@ -37,6 +37,10 @@ export type EntityType = z.infer<typeof entityTypeSchema>;
 export const canonStatusSchema = z.enum(['established', 'tentative', 'contradicted']);
 export type CanonStatus = z.infer<typeof canonStatusSchema>;
 
+/** Narrative weight of an entity, for grouping the World tree — orthogonal to appearance frequency (e.g. a "recurring" character can still be minor). */
+export const significanceSchema = z.enum(['main', 'supporting', 'minor']);
+export type Significance = z.infer<typeof significanceSchema>;
+
 /** Location mobility flag (Spec §4.4). */
 export const mobilitySchema = z.enum(['fixed', 'mobile-per-episode', 'mobile-continuous']);
 export type Mobility = z.infer<typeof mobilitySchema>;
@@ -73,6 +77,7 @@ const baseEntityFields = {
   pronunciation: z.string().optional(),
   tags: z.array(z.string()).optional(),
   canon_status: canonStatusSchema.optional(),
+  significance: significanceSchema.optional(),
   schema_version: z.number().int().default(CURRENT_SCHEMA_VERSION),
   tracked_fields: z.record(z.string(), z.array(trackedFieldEntrySchema)).optional(),
   relations: z.array(relationSchema).optional(),
@@ -90,6 +95,8 @@ const characterFrontmatterSchema = z
     first_appearance: z.string().optional(),
     /** The actor voicing this character, if cast — free-tier data; doubling-conflict detection (LoreFountain Pro, Spec §17/§22) is what actually does something with it. */
     voice_actor: z.string().optional(),
+    /** Freeform physical appearance — informal `Key: Value` lines encouraged but not enforced, meant to eventually feed an external AI image generator (LoreFountain never generates images itself). */
+    physical_description: z.string().optional(),
   })
   .catchall(z.unknown());
 
@@ -103,9 +110,14 @@ const locationFrontmatterSchema = z
   })
   .catchall(z.unknown());
 
-/** Faction: base fields only — no bespoke schema fields (Spec §4). */
+/** Faction-specific fields (Spec §4). */
 const factionFrontmatterSchema = z
-  .object({ ...baseEntityFields, type: z.literal('faction') })
+  .object({
+    ...baseEntityFields,
+    type: z.literal('faction'),
+    /** Freeform visual identity — heraldry, uniform, colors, etc. Same convention as Character's field: informal `Key: Value` lines encouraged but not enforced. */
+    physical_description: z.string().optional(),
+  })
   .catchall(z.unknown());
 
 /** Object: base fields only — no bespoke schema fields (Spec §4). */
@@ -153,14 +165,19 @@ export type EntityFrontmatter = z.infer<typeof entityFrontmatterSchema>;
 /**
  * Known type-specific field names, keyed by the type they belong to (Spec §4.3,
  * §4.4). Used only to detect and warn about a field placed on the wrong type —
- * `faction`/`object`/`concept` have no bespoke fields, so they never appear as
- * the *source* of a misplaced-field warning, but can still be the type a field
+ * `object`/`concept` have no bespoke fields, so they never appear as the
+ * *source* of a misplaced-field warning, but can still be the type a field
  * was wrongly placed *on*.
+ *
+ * `physical_description` is shared between `character` and `faction`, so a
+ * value misplaced on a third type (e.g. `location`) produces two warnings
+ * instead of one — both individually accurate, not worth de-duplicating for
+ * a two-entry overlap.
  */
 const TYPE_SPECIFIC_FIELDS: Record<EntityType, readonly string[]> = {
-  character: ['sound_motif', 'casting_notes', 'appears_in', 'first_appearance', 'voice_actor'],
+  character: ['sound_motif', 'casting_notes', 'appears_in', 'first_appearance', 'voice_actor', 'physical_description'],
   location: ['parent_location', 'mobility'],
-  faction: [],
+  faction: ['physical_description'],
   object: [],
   concept: [],
   arc: ['episodes'],
@@ -182,9 +199,14 @@ export interface EntityWarning extends ValidationIssue {
  */
 function detectMisplacedFields(raw: Record<string, unknown>, ownType: EntityType): EntityWarning[] {
   const warnings: EntityWarning[] = [];
+  const ownFields = new Set(TYPE_SPECIFIC_FIELDS[ownType]);
   for (const otherType of ENTITY_TYPES) {
     if (otherType === ownType) continue;
     for (const field of TYPE_SPECIFIC_FIELDS[otherType]) {
+      // A field shared between ownType and otherType (e.g. physical_description
+      // on both character and faction) is correctly placed on ownType — only
+      // fields ownType doesn't itself declare count as misplaced.
+      if (ownFields.has(field)) continue;
       if (Object.prototype.hasOwnProperty.call(raw, field)) {
         warnings.push({
           code: 'misplaced-field',

@@ -69,6 +69,38 @@ describe('parseEntityFile — happy path', () => {
     }
   });
 
+  it('parses significance on any entity type', () => {
+    const result = parseEntityFile(file(['name: Sango', 'type: character', 'significance: main']), {
+      id: 'sango',
+      filePath: '/world/sango.md',
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.entity.frontmatter.significance).toBe('main');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('rejects an invalid significance value', () => {
+    const result = parseEntityFile(file(['name: Sango', 'type: character', 'significance: protagonist']), {
+      id: 'sango',
+      filePath: '/world/sango.md',
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.issues?.some((i) => i.path === 'significance')).toBe(true);
+  });
+
+  it('parses physical_description on a character', () => {
+    const result = parseEntityFile(
+      file(['name: Sango', 'type: character', 'physical_description: "Race: Orc / Hair: Black / Eyes: Purple"']),
+      { id: 'sango', filePath: '/world/sango.md' },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    if (result.entity.frontmatter.type !== 'character') return;
+    expect(result.entity.frontmatter.physical_description).toBe('Race: Orc / Hair: Black / Eyes: Purple');
+  });
+
   it('preserves unknown top-level keys on round-trip (files-as-truth)', () => {
     const result = parseEntityFile(
       file(['name: Hera', 'type: character', 'experimental_field: keep-me']),
@@ -186,14 +218,41 @@ describe('parseEntityFile — misplaced type-specific fields (warnings, not erro
     expect(result.warnings[0]).toMatchObject({ code: 'misplaced-field', path: 'voice_actor' });
   });
 
-  it('reports no warnings for faction/object/concept, which have no bespoke fields', () => {
-    const result = parseEntityFile(file(['name: The Orisha Pantheon', 'type: faction']), {
-      id: 'pantheon',
-      filePath: '/world/pantheon.md',
+  it('reports no warnings for object/concept, which have no bespoke fields', () => {
+    const result = parseEntityFile(file(['name: The Calabash of Ase', 'type: object']), {
+      id: 'calabash',
+      filePath: '/world/calabash.md',
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.warnings).toEqual([]);
+  });
+
+  it('accepts physical_description on a faction with no warnings', () => {
+    const result = parseEntityFile(
+      file(['name: The Orisha Pantheon', 'type: faction', 'physical_description: "Colors: Red and white"']),
+      { id: 'pantheon', filePath: '/world/pantheon.md' },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    if (result.entity.frontmatter.type !== 'faction') return;
+    expect(result.entity.frontmatter.physical_description).toBe('Colors: Red and white');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('flags physical_description as misplaced on both character and faction when found on a third type', () => {
+    const result = parseEntityFile(
+      file(['name: The Ark', 'type: location', 'physical_description: "Rusted hull, green lights"']),
+      { id: 'the-ark', filePath: '/world/the-ark.md' },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // physical_description belongs to both character and faction, so it produces two warnings —
+    // both individually accurate, not worth de-duplicating for a two-entry overlap.
+    expect(result.warnings).toHaveLength(2);
+    expect(result.warnings.every((w) => w.path === 'physical_description')).toBe(true);
+    expect(result.warnings.some((w) => w.message.includes('character-specific'))).toBe(true);
+    expect(result.warnings.some((w) => w.message.includes('faction-specific'))).toBe(true);
   });
 
   it('flags episodes as misplaced on a non-arc entity', () => {
@@ -247,11 +306,33 @@ describe('serializeEntity', () => {
         aliases: ['Eshu', 'Elegba'],
         pronunciation: 'EH-shoo',
         canon_status: 'established',
+        significance: 'main',
         tags: ['orisha', 'trickster'],
+        physical_description: 'Race: Orisha\nHair: Black, braided\nEyes: Red\n\nWalks with a limp — one leg in this world, one in the next.',
       }),
     };
     const serialized = serializeEntity(entity);
     const reparsed = parseEntityFile(serialized, { id: 'esu', filePath: '/world/esu.md' });
+    expect(reparsed.ok).toBe(true);
+    if (!reparsed.ok) return;
+    expect(reparsed.entity.frontmatter).toEqual(entity.frontmatter);
+    expect(reparsed.entity.body).toBe(entity.body);
+  });
+
+  it('round-trips a faction entity with a physical_description', () => {
+    const entity: Entity = {
+      id: 'pantheon',
+      filePath: '/world/pantheon.md',
+      body: 'The gathered orisha of the crossroads.',
+      frontmatter: entityFrontmatterSchema.parse({
+        name: 'The Orisha Pantheon',
+        type: 'faction',
+        significance: 'supporting',
+        physical_description: 'Colors: Red and white\nEmblem: A crossroads within a circle',
+      }),
+    };
+    const serialized = serializeEntity(entity);
+    const reparsed = parseEntityFile(serialized, { id: 'pantheon', filePath: '/world/pantheon.md' });
     expect(reparsed.ok).toBe(true);
     if (!reparsed.ok) return;
     expect(reparsed.entity.frontmatter).toEqual(entity.frontmatter);

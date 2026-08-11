@@ -124,12 +124,27 @@ export function buildStoryCardHtml(cspSource: string, nonce: string): string {
     <option value="contradicted">Contradicted</option>
   </select>
 
+  <label for="significance">Significance</label>
+  <select id="significance">
+    <option value="">(unset)</option>
+    <option value="main">Main</option>
+    <option value="supporting">Supporting</option>
+    <option value="minor">Minor</option>
+  </select>
+  <p class="hint">Groups this entity in the World tree, alongside others of the same type. Leave unset if it doesn't matter.</p>
+
   <fieldset id="characterFields">
     <legend>Character</legend>
     <label for="soundMotif">Sound motif</label>
     <input type="text" id="soundMotif" />
     <label for="castingNotes">Casting notes</label>
     <input type="text" id="castingNotes" />
+  </fieldset>
+
+  <fieldset id="physicalDescriptionFields">
+    <legend>Physical Description</legend>
+    <textarea id="physicalDescription"></textarea>
+    <p class="hint">Freeform — write whatever's useful. A short <code>Key: Value</code> block up top (Race, Hair, Eyes, Build, etc.) followed by descriptive prose works well, and can later feed an AI image generator. Nothing here is enforced by schema.</p>
   </fieldset>
 
   <fieldset id="locationFields">
@@ -247,10 +262,12 @@ export function buildStoryCardHtml(cspSource: string, nonce: string): string {
           pronunciation: el('pronunciation').value,
           tags: el('tags').value,
           canonStatus: el('canonStatus').value,
+          significance: el('significance').value,
           body: el('body').value,
           relations: state.relations,
           soundMotif: el('soundMotif').value,
           castingNotes: el('castingNotes').value,
+          physicalDescription: el('physicalDescription').value,
           parentLocation: el('parentLocation').value,
           mobility: el('mobility').value,
           episodes: state.episodes,
@@ -286,6 +303,7 @@ export function buildStoryCardHtml(cspSource: string, nonce: string): string {
 
       function updateTypeVisibility(type) {
         el('characterFields').classList.toggle('hidden', type !== 'character');
+        el('physicalDescriptionFields').classList.toggle('hidden', type !== 'character' && type !== 'faction');
         el('locationFields').classList.toggle('hidden', type !== 'location');
         el('arcFields').classList.toggle('hidden', type !== 'arc');
       }
@@ -309,9 +327,11 @@ export function buildStoryCardHtml(cspSource: string, nonce: string): string {
         el('pronunciation').value = formState.pronunciation;
         el('tags').value = formState.tags;
         el('canonStatus').value = formState.canonStatus;
+        el('significance').value = formState.significance;
         el('body').value = formState.body;
         el('soundMotif').value = formState.soundMotif;
         el('castingNotes').value = formState.castingNotes;
+        el('physicalDescription').value = formState.physicalDescription;
         populateParentLocationOptions(formState.parentLocation);
         el('mobility').value = formState.mobility;
         renderRelations(formState.relations);
@@ -328,11 +348,11 @@ export function buildStoryCardHtml(cspSource: string, nonce: string): string {
 
       let state = {
         id: '', name: '', type: 'character', aliases: '', pronunciation: '', tags: '',
-        canonStatus: '', body: '', relations: [], soundMotif: '', castingNotes: '',
-        parentLocation: '', mobility: '', episodes: [],
+        canonStatus: '', significance: '', body: '', relations: [], soundMotif: '', castingNotes: '',
+        physicalDescription: '', parentLocation: '', mobility: '', episodes: [],
       };
 
-      for (const id of ['name', 'aliases', 'pronunciation', 'tags', 'body', 'soundMotif', 'castingNotes']) {
+      for (const id of ['name', 'aliases', 'pronunciation', 'tags', 'body', 'soundMotif', 'castingNotes', 'physicalDescription']) {
         el(id).addEventListener('change', postEdit);
       }
       el('type').addEventListener('change', () => {
@@ -340,6 +360,7 @@ export function buildStoryCardHtml(cspSource: string, nonce: string): string {
         postEdit();
       });
       el('canonStatus').addEventListener('change', postEdit);
+      el('significance').addEventListener('change', postEdit);
       el('parentLocation').addEventListener('change', postEdit);
       el('mobility').addEventListener('change', postEdit);
       el('addRelation').addEventListener('click', () => {
