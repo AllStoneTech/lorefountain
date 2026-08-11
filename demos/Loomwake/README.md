@@ -1,3 +1,4 @@
+<!-- lorefountain-docs-version: 1 -->
 # Loomwake
 
 This project uses **[LoreFountain](https://github.com/AllStoneTech/lorefountain)** — a worldbuilding methodology for Fountain-format writing. At its core, it's just plain Markdown files (with YAML frontmatter) and standard Fountain scripts, checked by a small validator — no proprietary format, nothing locked to one tool. The [LoreFountain VS Code extension](https://github.com/AllStoneTech/lorefountain) is the richest way to use it, but every file here is readable and editable in any text editor, and an AI coding agent can work in this project with no VS Code involved at all.

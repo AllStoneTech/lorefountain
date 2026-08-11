@@ -1,3 +1,4 @@
+<!-- lorefountain-docs-version: 1 -->
 # world/notes/
 
 A low-stakes scratch space — but in this project, treat it as the GM's actual prep pile, not throwaway filler. Free-form Markdown, no required frontmatter, no schema, nothing validated. This is where a half-formed idea goes ("what if the Choir already knows about the second signal") before it's ready to become a real entity or timeline event.

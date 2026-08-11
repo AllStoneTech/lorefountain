@@ -29,8 +29,9 @@
  * Because these files are never touched again once scaffolded, they can
  * silently drift from the current templates as LoreFountain evolves — see
  * `agentFileVersions.ts` for the version-marker mechanism that detects this
- * and the `lorefountain.checkAgentFileUpdates` command that lets a writer
- * review and apply updates per file. `AGENT_FILE_VERSIONS` below is the
+ * and the `lorefountain.checkFileUpdates` command ("Check for LoreFountain
+ * File Updates") that lets a writer review and apply updates per file, this
+ * category and READMEs both. `AGENT_FILE_VERSIONS` below is the
  * single source of truth for both which files get scaffolded and their
  * current content version.
  */

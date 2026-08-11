@@ -1,9 +1,11 @@
 /**
  * Detects drift between a workspace's scaffolded `AGENTS.md`/`agents/*`
  * files and the versions currently bundled with this extension. Pure —
- * no `vscode` import — so `lorefountain.checkAgentFileUpdates`
- * (`src/commands/checkAgentFileUpdates.ts`) stays a thin wrapper around
- * this and the rest is unit-testable without an extension host.
+ * no `vscode` import — so `lorefountain.checkFileUpdates`
+ * (`src/commands/checkFileUpdates.ts`, "Check for LoreFountain File
+ * Updates") stays a thin wrapper around this (and `readmeVersions.ts`'s
+ * README counterpart) and the rest is unit-testable without an extension
+ * host.
  *
  * Each scaffolded file's version lives as a marker on its own first line:
  * `<!-- lorefountain-docs-version: N -->` for Markdown, or

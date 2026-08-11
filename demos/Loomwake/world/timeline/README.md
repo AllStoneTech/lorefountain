@@ -1,3 +1,4 @@
+<!-- lorefountain-docs-version: 1 -->
 # world/timeline/
 
 In-world events — one file per event, separate from the entities that take part in them. Each event can carry two independent positions: where it's presented to the table (which session depicts it) and where it falls in the world's own internal chronology.

@@ -1,3 +1,4 @@
+<!-- lorefountain-docs-version: 1 -->
 # scripts/
 
 Season 01, one `.fountain` file per session — 100% standard Fountain, portable to any other Fountain tool. Any entity or glossary term's name appearing anywhere in a script is recognized and linked automatically.

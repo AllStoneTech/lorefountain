@@ -8,6 +8,24 @@ real license-backend validation).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-08-11
+
+### Changed
+
+- Renamed **"Check for Agent File Updates"** to **"Check for LoreFountain
+  File Updates"** and folded README drift-checking into it — it previously
+  only checked `AGENTS.md`/`agents/*`; the scaffolded human-facing READMEs
+  (`resources/readmes/*` → `README.md`/`world/README.md`/etc.) had zero
+  staleness detection of any kind until now. Both categories share one
+  report, one review flow, and one command.
+
+### Added
+
+- A future **"Check for LoreFountain Updates"** (extension self-update, not
+  just in-project file drift) is now tracked in `docs/TODO.md` — blocked on
+  this repo actually going public, since there's nowhere to check a release
+  against yet.
+
 ## [0.9.0] - 2026-08-11
 
 ### Added

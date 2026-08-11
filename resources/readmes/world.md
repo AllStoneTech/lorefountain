@@ -1,3 +1,4 @@
+<!-- lorefountain-docs-version: 1 -->
 # {{WORLD_FOLDER}}/
 
 The story world — one Markdown file per entity: a character, location, faction, object, concept, or arc. Each file is plain YAML frontmatter plus a short prose description; nothing here is proprietary, and it's readable in any text editor.

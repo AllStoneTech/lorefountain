@@ -1,3 +1,4 @@
+<!-- lorefountain-docs-version: 1 -->
 # {{IMPORTS_FOLDER}}/
 
 Your own existing source material — an old story bible, outlines, character sheets, spreadsheets, anything that predates LoreFountain or lives outside it. This is realistically a living folder: put new or revised material here anytime, not just at the start.

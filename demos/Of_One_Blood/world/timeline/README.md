@@ -1,3 +1,4 @@
+<!-- lorefountain-docs-version: 1 -->
 # world/timeline/
 
 In-world events — one file per event, separate from the character/location/faction/object/concept/arc entities that take part in them. Each event can carry two independent positions: where it's presented to the audience (which episode depicts it) and where it falls in the story's own internal chronology, since those two orders don't always match.

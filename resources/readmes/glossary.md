@@ -1,3 +1,4 @@
+<!-- lorefountain-docs-version: 1 -->
 # {{WORLD_FOLDER}}/glossary/
 
 Invented terminology and setting-specific vocabulary — a word or phrase the world uses, not a full character/location/faction/object/concept. Each file just needs a term and a short definition; there's no relationship or timeline data here, deliberately lighter-weight than an entity.

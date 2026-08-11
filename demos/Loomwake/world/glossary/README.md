@@ -1,3 +1,4 @@
+<!-- lorefountain-docs-version: 1 -->
 # world/glossary/
 
 Homebrew terminology and setting-specific vocabulary — a word or phrase the world uses, not a full character/location/faction/object/concept. Each file just needs a term and a short definition.
