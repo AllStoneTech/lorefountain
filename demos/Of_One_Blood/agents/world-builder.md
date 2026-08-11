@@ -7,6 +7,7 @@ Read this before creating or editing any file under `world/`. It works with any 
 
 ## Where things go
 
+- `world/OVERVIEW.md` is the project's single Story Overview — see "Story Overview format" below. There's only ever one of these per project, unlike every other item in this list.
 - Characters, locations, factions, objects, concepts, and arcs go directly in `world/` — one file per entity.
 - Terminology/glossary entries go in `world/glossary/`.
 - Half-formed ideas that aren't ready to be a real entity yet go in `world/notes/` — free-form Markdown, no frontmatter, no schema, never validated. If the writer describes something too vague to schema-fy ("what if the ship has a hidden deck"), put it here rather than forcing it into an entity file with guessed fields. Promote it to a real entity later, once there's enough to say.
@@ -98,6 +99,41 @@ tags: [<a few short freeform labels, if useful>]
 ```
 
 Every field except `name` is optional — never guess a `chronological_order`, `production_code`, or `participants` entry the writer hasn't actually told you. An event with only a name is a valid, useful placeholder to backfill later, same as any other entity.
+
+## Story Overview format
+
+`world/OVERVIEW.md` has a small YAML frontmatter block with four optional, genuinely universal fields — `title`, `pitch` (a one- or two-sentence logline), `tone`, `genre` — followed by plain-prose Markdown, same as an entity file's split. Only the frontmatter fields are schema-validated; the body below is free-form and nothing there is checked:
+
+```markdown
+---
+title: <Project Name>
+pitch: <one or two sentences>
+tone: <e.g. wry, elegiac, pulpy>
+genre: <e.g. speculative drama>
+---
+
+## Premise
+
+<One or two sentences: what is this story fundamentally about?>
+
+## Setting
+
+<Where and when does this take place?>
+
+## Key Characters
+
+<A short list of the core cast and their one-line roles.>
+
+## Synopsis
+
+<A few paragraphs covering the overall arc.>
+
+## Themes
+
+<What is this story actually about, underneath the plot?>
+```
+
+Feel free to adjust the body's section headers if the project genuinely doesn't fit them (a game world might want "Factions" instead of "Key Characters," for instance) — only the four frontmatter fields above are ever validated; the body is a reference document for humans and AI agents, not a fixed format. Leave a frontmatter field out entirely rather than writing it blank if the writer hasn't told you its value — never guess a pitch, tone, or genre.
 
 ## Ground rules
 
