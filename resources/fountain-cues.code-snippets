@@ -13,5 +13,25 @@
     "prefix": "mus",
     "body": "MUSIC: ${1|BED,STING,BRIDGE,SOURCE BED,IN,OUT|} ${2:description}",
     "description": "Insert a music cue (Spec §15.1) — role (BED/STING/BRIDGE/SOURCE BED) and timing (IN/OUT) are independent and both optional; pick one here, then type a second keyword by hand for the rare combined case (e.g. accept BED, then type ' IN ' before the description) — extracted into the script's cue sidecar."
+  },
+  "Shot": {
+    "prefix": "shot",
+    "body": "SHOT: ${1:description}",
+    "description": "Insert a new camera shot — starts a shot record for Shot List Export (Pro). Freeform framing/angle description, e.g. WIDE, CLOSE-UP on CHARACTER, OTS."
+  },
+  "Shot Pose": {
+    "prefix": "pose",
+    "body": "POSE: ${1:description}",
+    "description": "Insert a character pose/action line for the current shot (Shot List Export, Pro). Character names mentioned here are auto-linked like any other action-line text."
+  },
+  "Shot Lighting": {
+    "prefix": "light",
+    "body": "LIGHT: ${1:description}",
+    "description": "Insert a lighting description for the current shot (Shot List Export, Pro)."
+  },
+  "Shot Duration": {
+    "prefix": "dur",
+    "body": "DURATION: ${1:description}",
+    "description": "Insert a duration estimate for the current shot (Shot List Export, Pro), e.g. '4s', '~5 seconds'."
   }
 }

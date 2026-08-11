@@ -230,6 +230,7 @@ const GATED_PRO_COMMANDS: readonly string[] = [
   'lorefountain.exportStoryBible',
   'lorefountain.exportBBCRadioScript',
   'lorefountain.exportCueSheet',
+  'lorefountain.exportShotList',
 ];
 
 /**

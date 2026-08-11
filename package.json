@@ -197,6 +197,12 @@
         "icon": "$(checklist)"
       },
       {
+        "command": "lorefountain.exportShotList",
+        "title": "Export Shot List (Pro)",
+        "category": "LoreFountain",
+        "icon": "$(device-camera)"
+      },
+      {
         "command": "lorefountain.enterLicenseKey",
         "title": "Enter License Key",
         "category": "LoreFountain"
@@ -375,6 +381,11 @@
         },
         {
           "command": "lorefountain.exportCueSheet",
+          "when": "editorLangId == fountain",
+          "group": "navigation"
+        },
+        {
+          "command": "lorefountain.exportShotList",
           "when": "editorLangId == fountain",
           "group": "navigation"
         }

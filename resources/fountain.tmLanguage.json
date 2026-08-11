@@ -17,6 +17,7 @@
     { "include": "#parenthetical" },
     { "include": "#title-page" },
     { "include": "#cue-prefix" },
+    { "include": "#shot-prefix" },
     { "include": "#emphasis" }
   ],
   "repository": {
@@ -82,6 +83,13 @@
       "captures": {
         "1": { "name": "support.function.cue-prefix.lorefountain" },
         "2": { "name": "keyword.other.cue-modifier.lorefountain" }
+      }
+    },
+    "shot-prefix": {
+      "match": "^\\s*((?:SHOT|POSE|LIGHT|DURATION):)",
+      "name": "support.function.shot-prefix.lorefountain",
+      "captures": {
+        "1": { "name": "support.function.shot-prefix.lorefountain" }
       }
     },
     "emphasis": {
