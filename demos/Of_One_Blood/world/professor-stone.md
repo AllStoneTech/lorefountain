@@ -4,9 +4,16 @@ type: character
 aliases: []
 tags: [expedition, scholar]
 canon_status: established
+significance: supporting
 first_appearance: "1x11"
 appears_in: ["1x11", "1x12", "1x13", "1x14"]
 casting_notes: English, decades into a scholarly obsession few of his peers take seriously — his conviction should read as earned, not eccentric.
+physical_description: |
+  Race: English
+  Build: Aging, decades of fieldwork in his posture more than his years
+  Notable: Never without the chart and prophecy-parchment given to him twenty-five years earlier by a dying camel-driver — visibly worn from handling
+
+  His conviction should read on sight as earned, not eccentric — a lifetime's evidence, not a hunch.
 relations:
   - target: reuel-briggs
     relation_type: colleague-of

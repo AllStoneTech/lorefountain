@@ -4,10 +4,19 @@ type: character
 aliases: [Commodore Sten]
 tags: [npc, human, verge-compact]
 canon_status: established
+significance: supporting
 first_appearance: "1x03"
 appears_in: ["1x03", "1x05"]
 voice_actor: GM
 casting_notes: The closest thing to an honest authority figure at the Loom — genuinely trying to keep the peace, genuinely out-resourced to actually do it.
+physical_description: |
+  Race: Human
+  Build: Tired but upright — carrying more responsibility than three ships can actually back up
+  Hair: Grey, pulled back tight
+  Eyes: Dark, weary
+  Notable: Compact peacekeeper uniform, a little worn at the cuffs; no ceremonial polish to spare
+
+  Looks like someone doing the job properly on a budget that was never meant to cover it.
 relations:
   - target: verge-compact
     relation_type: commands

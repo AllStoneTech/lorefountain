@@ -4,8 +4,12 @@ type: character
 aliases: []
 tags: [boston]
 canon_status: established
+significance: minor
 first_appearance: "1x03"
 appears_in: ["1x03", "1x06"]
+physical_description: |
+  Race: White, Boston social circle
+  Notable: Patient, unhurried by Charlie's early dismissiveness — plays the long game without seeming to
 relations:
   - target: charlie-vance
     relation_type: courted-by

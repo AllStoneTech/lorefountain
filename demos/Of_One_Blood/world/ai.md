@@ -4,8 +4,15 @@ type: character
 aliases: []
 tags: [telassar, priesthood]
 canon_status: established
+significance: supporting
 first_appearance: "1x14"
 appears_in: ["1x14", "1x15", "1x16", "1x17", "1x18", "1x19", "1x24"]
+physical_description: |
+  Race: Telassar priesthood — the office has passed father to son for six thousand years
+  Build: Aged, a commanding presence built on the weight of unbroken office rather than physical size
+  Eyes: Calm, watchful — has followed Reuel's life from a distance since boyhood
+
+  The mesmeric power under that calm is real; the sentence he ultimately pronounces on Aubrey Livingston is not ceremonial.
 relations:
   - target: queen-candace
     relation_type: advisor-to

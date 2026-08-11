@@ -5,6 +5,7 @@ aliases: [Ashvane]
 pronunciation: "Auger: AW-ger (like the tool, not \"augur\" the omen); Ashvane: ASH-vayn"
 tags: [npc, vhel, tessera-concern, shapeshifter]
 canon_status: established
+significance: supporting
 first_appearance: "1x02"
 appears_in: ["1x02", "1x03", "1x05"]
 voice_actor: GM
@@ -14,6 +15,14 @@ casting_notes: >-
   performance should hint at the relation below before the table reaches
   that session; the reveal should land as a real turn, not a twist the
   audience saw coming.
+physical_description: |
+  Race: Presents as human (the "Ashvane" shape); true species Vhel, concealed even from Tessera
+  Build: Medium height, deliberately unremarkable and approachable — corporate-casual, easy to trust
+  Hair: Sandy brown, kept short and professional
+  Eyes: Grey, tired around the edges in a way that reads as overwork, not disguise
+  Notable: Tessera fixer credentials on a lanyard, never far from reach
+
+  The human shape is a disguise, not truly Auger's own face — nothing in the performance should hint at that until it's meant to.
 custom_fields:
   role: fixer / translator
 relations:

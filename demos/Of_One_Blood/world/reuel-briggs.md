@@ -5,6 +5,7 @@ aliases: [King Ergamenes, Ergamenes]
 pronunciation: ROO-el
 tags: [protagonist, physician, mesmerist, passing]
 canon_status: established
+significance: main
 first_appearance: "1x01"
 appears_in: ["1x01", "1x02", "1x03", "1x04", "1x05", "1x06", "1x07", "1x08", "1x09", "1x10", "1x11", "1x12", "1x13", "1x14", "1x15", "1x16", "1x17", "1x18", "1x19", "1x20", "1x23", "1x24"]
 casting_notes: >-
@@ -12,6 +13,14 @@ casting_notes: >-
   classmates guess Italian, Japanese, anything but the truth. He himself
   has always half-suspected it and hidden it deliberately. Nothing about
   his casting should telegraph the Telassar reveal before it lands.
+physical_description: |
+  Race: Of unstated ancestry — classmates guess Italian, Japanese, anything but the truth; later revealed as the last heir of the Telassar royal line
+  Build: Tall, spare, restless energy held under careful control
+  Hair: Very dark, worn short
+  Eyes: Dark, unusually intense — noted by classmates as almost hypnotic
+  Notable: A lotus-lily birthmark carried since childhood, concealed the same way he conceals everything else about himself
+
+  In Telassar, later dressed in the gold and lotus-purple regalia of King Ergamenes.
 relations:
   - target: dianthe-lusk
     relation_type: half-sibling

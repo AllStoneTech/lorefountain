@@ -4,9 +4,18 @@ type: character
 aliases: []
 tags: [antagonist, physician]
 canon_status: established
+significance: main
 first_appearance: "1x01"
 appears_in: ["1x01", "1x02", "1x03", "1x04", "1x05", "1x06", "1x07", "1x08", "1x09", "1x20", "1x22", "1x23", "1x24"]
 casting_notes: Handsome, Southern, and entirely convincing as Reuel's closest friend for most of the story — the menace has to build from real charm and real generosity, not announce itself. He does not know his own parentage until the very end, if ever he learns it at all.
+physical_description: |
+  Race: Raised and presents as the Livingstons' legitimate white heir; his true parentage is unknown to him until the very end, if ever
+  Build: Athletic, entirely at ease in Boston society
+  Hair: Fair, well-kept
+  Eyes: Warm, easy to read as sincere — which is exactly what makes him dangerous
+  Notable: Carries the same lotus-lily birthmark as Reuel and Dianthe, with no idea what it actually means
+
+  Handsome and Southern-charming enough that the menace has to build from real generosity, never announce itself outright.
 relations:
   - target: reuel-briggs
     relation_type: half-sibling

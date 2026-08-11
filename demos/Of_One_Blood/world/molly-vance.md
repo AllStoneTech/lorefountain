@@ -4,8 +4,15 @@ type: character
 aliases: []
 tags: [victim]
 canon_status: established
+significance: supporting
 first_appearance: "1x03"
 appears_in: ["1x03", "1x06", "1x07", "1x08", "1x09"]
+physical_description: |
+  Race: White, Boston's moneyed set
+  Build: Comfortable, at ease as hostess of the Vance Estate
+  Notable: Nothing about her outward life suggests the danger she's actually engaged to
+
+  Ordinary and unremarkable by design — the tragedy shouldn't be visible coming.
 relations:
   - target: aubrey-livingston
     relation_type: fiance-of

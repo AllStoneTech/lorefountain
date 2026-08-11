@@ -4,9 +4,13 @@ type: character
 aliases: [Abdallah]
 tags: [telassar, guide]
 canon_status: contradicted
+significance: minor
 first_appearance: "1x10"
 appears_in: ["1x10", "1x12", "1x15", "1x18", "1x19", "1x24"]
 casting_notes: Presents as an ordinary hired camel-driver for most of the expedition — the reveal that he's been a Telassar Council member reporting on the party the entire time should land as a genuine turn.
+physical_description: |
+  Race: Presents as an ordinary hired camel-driver; true role a Telassar Council member
+  Notable: Deliberately unremarkable — the entire point is that no one on the expedition suspects him until the reveal
 relations:
   - target: telassar
     relation_type: serves

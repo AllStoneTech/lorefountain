@@ -4,6 +4,7 @@ type: character
 aliases: []
 tags: [pc, operative, loose-thread-crew]
 canon_status: established
+significance: main
 first_appearance: "1x01"
 appears_in: ["1x01", "1x02", "1x03", "1x04", "1x05"]
 voice_actor: Jordan
@@ -13,6 +14,13 @@ casting_notes: >-
   them. Jordan is in on this from session one; the rest of the table isn't.
   Nothing about Rell's outward behavior should read as anything other than
   human until the player chooses to reveal it in play.
+physical_description: |
+  Race: Presents as human; true species Vhel, self-known and deliberately concealed
+  Build: Average height, deliberately unremarkable — built to not be the person anyone remembers
+  Hair: Dark, kept short and practical
+  Eyes: Brown — a carefully maintained part of the human seeming, no tells
+
+  This description is what the table sees. It should never visibly slip.
 custom_fields:
   role: operative
   species: human (believed)

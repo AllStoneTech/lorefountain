@@ -4,9 +4,16 @@ type: character
 aliases: [Candace]
 tags: [telassar, royalty]
 canon_status: established
+significance: supporting
 first_appearance: "1x16"
 appears_in: ["1x16", "1x17", "1x24"]
 casting_notes: Written to resemble Dianthe closely enough that Reuel says so himself — deliberate, not a coincidence to cast around.
+physical_description: |
+  Race: Telassar, ancient African royal line (regent)
+  Build: Regal bearing, striking resemblance to Dianthe Lusk — deliberate, and remarked on by Reuel himself
+  Notable: Wears the lotus-lily ring of Telassar's queenship, placed on Reuel's hand herself at their betrothal
+
+  The resemblance to Dianthe should read as unmistakable on sight, not a subtle echo.
 relations:
   - target: reuel-briggs
     relation_type: spouse

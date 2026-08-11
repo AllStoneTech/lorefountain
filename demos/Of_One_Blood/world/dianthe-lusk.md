@@ -4,9 +4,18 @@ type: character
 aliases: [Felice Adams, Mrs. Briggs, Mrs. Livingston]
 tags: [singer, jubilee-singers, tragic]
 canon_status: established
+significance: main
 first_appearance: "1x02"
 appears_in: ["1x02", "1x03", "1x04", "1x05", "1x06", "1x07", "1x08", "1x09", "1x17", "1x20", "1x21", "1x22", "1x23"]
 casting_notes: Sings soprano solo at the Tremont Temple concert as a member of a Fisk-affiliated jubilee troupe; read by Boston society as white before and after the wreck erases her memory of who she is.
+physical_description: |
+  Race: Read by Boston society as white, both before and after the wreck
+  Build: Slight, an elegant stage bearing carried over from years touring as a soloist
+  Hair: Dark, worn in the fashion of a concert soloist
+  Eyes: Large, striking — noted later as strongly resembling Queen Candace's
+  Notable: The same lotus-lily birthmark shared by her half-siblings, unremarked and hidden by her clothing until the truth comes out
+
+  Presents in Boston as "Felice Adams" during her recovery — same face, adopted name, no memory yet of the one it replaced.
 tracked_fields:
   status:
     - order: 1

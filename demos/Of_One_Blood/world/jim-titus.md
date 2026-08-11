@@ -4,9 +4,16 @@ type: character
 aliases: []
 tags: [agent, tragic]
 canon_status: established
+significance: supporting
 first_appearance: "1x08"
 appears_in: ["1x08", "1x10", "1x11", "1x13", "1x18", "1x19"]
 casting_notes: Plays the obsequious, "old régime" servant for the whole expedition — Reuel and Charlie's growing unease around him should read as paranoia right up until it isn't.
+physical_description: |
+  Race: Black, formerly enslaved, raised as Aubrey's foster brother
+  Build: Deferential bearing, practiced at not being noticed
+  Eyes: Watchful; guilt only ever surfaces in unguarded moments
+
+  Plays the obsequious "old régime" servant convincingly enough that Reuel and Charlie's growing unease reads as their own paranoia — right up until it isn't.
 relations:
   - target: aubrey-livingston
     relation_type: foster-sibling-of

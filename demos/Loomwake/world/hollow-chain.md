@@ -4,6 +4,13 @@ type: faction
 aliases: [the Chain]
 tags: [pirates, smugglers]
 canon_status: established
+significance: main
+physical_description: |
+  Colors: None unified — deliberately mismatched
+  Emblem: A broken chain link, worn as a tattoo or stitched patch rather than a proper insignia
+  Uniform: Whatever gear survived the last job; no two Chain crew look like they serve the same outfit
+
+  That's the point — a Hollow Chain ship is built to be mistaken for anything but a Hollow Chain ship, right up until it isn't.
 custom_fields:
   goal: Loot whatever's loose before the Concern locks the site down for good
   resources: Fast ships, no legal standing, no loyalty past the next payday

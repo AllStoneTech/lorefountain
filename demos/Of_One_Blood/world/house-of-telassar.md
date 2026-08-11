@@ -4,6 +4,13 @@ type: faction
 aliases: [the royal line, the old line]
 tags: [telassar, royalty, prophecy]
 canon_status: established
+significance: main
+physical_description: |
+  Colors: Gold and deep lotus-purple, worn only by the direct line and its household
+  Emblem: A lotus lily — the same mark every true descendant of the line carries as a birthmark
+  Regalia: Ceremonial dress reserved for coronations and the queen's betrothal rites; otherwise the line's members live and dress unremarkably among Telassar's people
+
+  The line's return was foretold long before anyone in the hidden city knew it still lived — every true heir simply carries the proof under their own skin.
 relations:
   - target: telassar
     relation_type: seated-in

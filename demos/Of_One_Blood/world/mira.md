@@ -4,9 +4,15 @@ type: character
 aliases: []
 tags: [backstory, telassar-royal-line]
 canon_status: established
+significance: supporting
 first_appearance: "1x06"
 appears_in: ["1x06", "1x09", "1x11", "1x19", "1x20", "1x21"]
 casting_notes: Never appears alive on screen in the present-day timeline — known only through Aunt Hannah's account, Aubrey's own half-understood childhood memory of her, and her recurring ghost, which visits both Dianthe and Reuel across an ocean.
+physical_description: |
+  Race: Enslaved; last unknowing daughter of the Telassar royal line
+  Notable: The same lotus-lily birthmark passed to all three of her children
+
+  Known only secondhand — through Hannah's account, Aubrey's half-understood childhood memory, and a recurring ghost that appears as a sorrowful, spectral figure rather than a living presence.
 relations:
   - target: reuel-briggs
     relation_type: parent-of

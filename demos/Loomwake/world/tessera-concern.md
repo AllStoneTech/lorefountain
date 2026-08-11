@@ -4,6 +4,13 @@ type: faction
 aliases: [the Concern]
 tags: [corporate]
 canon_status: established
+significance: main
+physical_description: |
+  Colors: Corporate steel-grey and gold
+  Emblem: A faceted tessera mark — overlapping four-sided tiles, suggesting a claim staked in pieces
+  Uniform: Crisp field-executive suits for officers; branded, faceted-grey security armor for on-site muscle
+
+  Every surface Tessera touches at the Loom gets the mark within a day — stenciled on crates, projected over checkpoints. It reads less like a logo and more like a flag being planted.
 custom_fields:
   goal: Exclusive salvage/licensing rights to the Cael Loom's technology
   resources: Deep capital, a fast legal claim, private security, no combat fleet worth the name

@@ -4,8 +4,13 @@ type: character
 aliases: [Mr. Vance]
 tags: [boston]
 canon_status: established
+significance: minor
 first_appearance: "1x06"
 appears_in: ["1x06", "1x24"]
+physical_description: |
+  Race: White, Boston
+  Build: Wealthy, comfortable bearing
+  Notable: Generous to a fault — funds Dianthe's recovery without ever learning who she really is
 relations:
   - target: molly-vance
     relation_type: parent-of
