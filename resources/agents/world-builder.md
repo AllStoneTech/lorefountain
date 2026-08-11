@@ -1,3 +1,4 @@
+<!-- lorefountain-docs-version: 1 -->
 # LoreFountain — World-Building Reference
 
 Read this before creating or editing any file under `world/`. It works with any coding agent — no tool-specific syntax required.

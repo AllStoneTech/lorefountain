@@ -25,19 +25,35 @@
  * Never overwrites a file that already exists: a writer's own edits (or an
  * unrelated `AGENTS.md` from some other tool's convention) are never
  * clobbered, matching `configFile.ts`'s `writeDefaultConfigIfAbsent`.
+ *
+ * Because these files are never touched again once scaffolded, they can
+ * silently drift from the current templates as LoreFountain evolves — see
+ * `agentFileVersions.ts` for the version-marker mechanism that detects this
+ * and the `lorefountain.checkAgentFileUpdates` command that lets a writer
+ * review and apply updates per file. `AGENT_FILE_VERSIONS` below is the
+ * single source of truth for both which files get scaffolded and their
+ * current content version.
  */
 
 import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
 
-/** Relative paths of every bundled template, identical between `resources/` and the scaffolded workspace. */
-const TEMPLATE_RELATIVE_PATHS: readonly string[] = [
-  'AGENTS.md',
-  path.join('agents', 'world-builder.md'),
-  path.join('agents', 'script-writer.md'),
-  path.join('agents', 'initiator.md'),
-  path.join('agents', 'validate.js'),
-];
+/**
+ * Relative paths of every bundled template (identical between `resources/`
+ * and the scaffolded workspace), each mapped to its current content
+ * version. Bump only the specific file's number when that file's guidance
+ * changes — these are independent per file, not a single bundle-wide
+ * counter, so an edit to one template doesn't flag the others as stale too.
+ * All five start at `1`, the baseline as of introducing this tracking; that
+ * baseline is not a reconstruction of each file's real edit history.
+ */
+export const AGENT_FILE_VERSIONS: Record<string, number> = {
+  'AGENTS.md': 1,
+  [path.join('agents', 'world-builder.md')]: 1,
+  [path.join('agents', 'script-writer.md')]: 1,
+  [path.join('agents', 'initiator.md')]: 1,
+  [path.join('agents', 'validate.js')]: 1,
+};
 
 /**
  * Copy the bundled `AGENTS.md` + `agents/*` templates into a workspace root
@@ -53,7 +69,7 @@ export async function scaffoldAgentFilesIfAbsent(
 ): Promise<string[]> {
   const written: string[] = [];
 
-  for (const relativePath of TEMPLATE_RELATIVE_PATHS) {
+  for (const relativePath of Object.keys(AGENT_FILE_VERSIONS)) {
     const targetPath = path.join(workspaceRoot, relativePath);
     if (await pathExists(targetPath)) continue;
 

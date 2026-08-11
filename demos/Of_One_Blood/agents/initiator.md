@@ -1,3 +1,4 @@
+<!-- lorefountain-docs-version: 1 -->
 # LoreFountain — Migrating from `imports/`
 
 You are helping a writer bring existing story-bible material from `imports/` into `world/`. This is safe to run more than once: the first time a project has existing material, and again anytime the writer has added or revised something in `imports/` since the last pass. It works with any coding agent (Cursor, Copilot, Gemini, or otherwise) — no tool-specific syntax.

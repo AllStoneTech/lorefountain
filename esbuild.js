@@ -94,6 +94,13 @@ async function main() {
     sourcemap: false,
     sourcesContent: false,
     logLevel: 'info',
+    // `banner` text is injected after minification, not parsed as source, so
+    // this survives --production builds where an ordinary source comment
+    // would be stripped. Keep this number in sync with
+    // AGENT_FILE_VERSIONS['agents/validate.js'] in src/config/agentFiles.ts —
+    // the one deliberate place this version number is duplicated, since
+    // this plain Node build script can't import that TS constant directly.
+    banner: { js: '// lorefountain-docs-version: 1' },
     plugins: [
       {
         name: 'log-cli-build',

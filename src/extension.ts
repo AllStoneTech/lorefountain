@@ -26,6 +26,7 @@
 import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
+import { registerCheckAgentFileUpdatesCommand } from './commands/checkAgentFileUpdates';
 import { registerEntityCreationCommands } from './commands/createEntity';
 import { registerCreateScriptCommand } from './commands/createScript';
 import { registerExportTranscriptCommand } from './commands/exportTranscript';
@@ -94,6 +95,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   registerTryLoreFountainCommand(context);
   registerInstallDemoCommand(context);
   registerMigrateExistingLoreCommand(context, pickTargetWorkspaceFolder);
+  registerCheckAgentFileUpdatesCommand(context, outputChannel, pickTargetWorkspaceFolder);
   registerLicensingCommands(context);
   registerHelpCommands(context);
 

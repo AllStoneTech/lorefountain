@@ -163,6 +163,11 @@
         "category": "LoreFountain"
       },
       {
+        "command": "lorefountain.checkAgentFileUpdates",
+        "title": "Check for Agent File Updates",
+        "category": "LoreFountain"
+      },
+      {
         "command": "lorefountain.migrateExistingLore",
         "title": "Migrate Existing Lore",
         "category": "LoreFountain"
@@ -339,6 +344,11 @@
         },
         {
           "command": "lorefountain.exportStoryBible",
+          "when": "view == lorefountain.worldView",
+          "group": "9_lorefountain"
+        },
+        {
+          "command": "lorefountain.checkAgentFileUpdates",
           "when": "view == lorefountain.worldView",
           "group": "9_lorefountain"
         },

@@ -1,3 +1,4 @@
+<!-- lorefountain-docs-version: 1 -->
 # LoreFountain — Script-Writing Reference
 
 Read this before creating or editing any `.fountain` file under `scripts/`.

@@ -1,3 +1,4 @@
+<!-- lorefountain-docs-version: 1 -->
 # AGENTS.md
 
 This project uses [LoreFountain](https://github.com/AllStoneTech/lorefountain) — Fountain scripts linked to a structured, persistent world. If you're an AI coding agent working in this project, start here before making any changes.
