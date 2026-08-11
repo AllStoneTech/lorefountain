@@ -1,11 +1,48 @@
 # Changelog
 
 All notable changes to LoreFountain are documented here. This project follows
-[Semantic Versioning](https://semver.org/).
+[Semantic Versioning](https://semver.org/) — pre-1.0 releases (`0.x.y`) make
+no API/schema stability guarantees. `1.0.0` is reserved for the actual
+public launch, which `docs/TODO.md` already gates on (repo history scrub,
+real license-backend validation).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-08-11
+
+This is the first entry tracked under real version numbers — it summarizes
+current functionality rather than reconstructing a step-by-step history.
+Nothing has been tagged or published before this. See `docs/DECISIONS.md`
+for the full decision log behind everything below (ADR-0001 through
+ADR-0031).
+
 ### Added
-- Initial project scaffold: extension manifest, esbuild bundling, TypeScript +
-  ESLint configuration, MIT license, VS Code debug configuration, and a
-  placeholder activation with a `LoreFountain: Rebuild Index` command stub.
+
+- **Free tier**: Fountain scripts linked to a structured, persistent world —
+  entity files (character, location, faction, object, concept, arc) with
+  typed relationships, canon status, and significance grouping (Main /
+  Supporting / Minor); a glossary; a dual-ordered Timeline (narrative order
+  and in-universe chronology); hover previews and wikilink completion;
+  automatic entity-mention linking; a Story Card editor (including a
+  freeform Physical Description field for characters and factions); a
+  structured Story Overview document; Rename Entity with reference
+  propagation; Structured Search; broken-reference detection; transcript
+  export; a headless `validate.js` for CI/AI-agent use with no VS Code
+  dependency; project-level `AGENTS.md` + `agents/*.md` AI-agent
+  instructions, now with per-file version tracking and a "Check for Agent
+  File Updates" command to keep them current as the templates evolve.
+- **LoreFountain Pro**: Continuity Management (Canon Status Report,
+  Presence Dashboard, Continuity Flags, Doubling-Conflict Detection,
+  Continuity Overview), Timeline/As-of-Episode viewing, an Entity Graph
+  view, Story-Bible Export (Markdown/Word), BBC Radio Drama Export,
+  SFX/Cue-Sheet Export, and Shot List Export.
+- Client-side license-key entry and caching, gating the Pro module load.
+
+### Known limitations
+
+- License validation (`validateLicense()`) always succeeds regardless of
+  the key entered — the real backend check is stubbed pending
+  AllStoneTech.com's licensing endpoint. See `docs/TODO.md`.
+- This repo's commit history still contains the removed product-spec
+  documents in old blobs; a history rewrite is required before the repo
+  can be made public. See `docs/TODO.md`.

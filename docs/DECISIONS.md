@@ -6,6 +6,20 @@ revisit.
 
 ---
 
+## ADR-0032 — Real semver for the extension, starting at 0.8.0; changelog starts fresh, not backfilled
+
+**Date:** 2026-08-11 · **Status:** Accepted
+
+`package.json`'s `version` had sat at the esbuild-scaffold default `0.0.1` through all 31 prior ADRs — the entire free tier and all six shipped LoreFountain Pro features. That surfaced while building version tracking for the scaffolded `agents/*.md` files (the fix for Orun's stale docs, see the World View significance/Physical Description work): those files now have their own per-file version counter, which made the extension's own frozen version look wrong by comparison. the project owner: "We're going to need real version numbers when we make this public."
+
+1. **Standard semver, `0.x.y` while pre-public, `1.0.0` reserved for the actual launch.** `0.x` already carries the conventional meaning "no API/schema stability guarantees yet," which is accurate today — nothing has been tagged or published. `1.0.0` is deliberately not claimed now; it's reserved for the real public release, which `docs/TODO.md` already gates behind two blocking items (the product-spec history scrub, real `validateLicense()` backend) that exist independently of this decision.
+2. **Jumped straight to `0.8.0` rather than starting at `0.1.0`.** the project owner's explicit call, not a reconstruction of exact history: `0.0.1` badly understated how much is actually built and working (full free tier + all six Pro features + this session's World View and doc-version-tracking work), and continuing to imply "barely started" would be misleading once this becomes a real, tracked number. Going forward: bump minor per shipped feature, patch for fixes, exactly as semver prescribes from here.
+3. **`CHANGELOG.md` starts fresh at `0.8.0` rather than backfilling a per-ADR entry for everything already shipped.** the project owner's explicit call. The `[0.8.0]` entry summarizes current functionality at a high level instead — full rationale for every decision behind it stays in this file (`docs/DECISIONS.md`), which the changelog entry points to rather than duplicates. Reduces ongoing maintenance burden (this file already has one confirmed duplicate ADR number, 0028, from manual upkeep drifting) and avoids committing to changelog accuracy for history that was never tracked as it happened.
+4. **The extension's version and the `AGENT_FILE_VERSIONS` doc-tracking counters (added the same session) are deliberately independent** — bumping one never bumps the other. They answer different questions (is this build of the extension newer, vs. is this specific scaffolded reference doc current) and change on different schedules; conflating them would make either signal less precise for no real benefit.
+5. `package.json` and `package-lock.json` (both the root and self-referencing `packages[""]` entries) updated together so `npm install` doesn't immediately want to rewrite the lockfile. No code changes — this ADR, the version bump, and the changelog rewrite are the entire scope.
+
+---
+
 ## ADR-0031 — Install Demo: fetch a full demo world from GitHub on demand, don't bundle it
 
 **Date:** 2026-07-31 · **Status:** Accepted
