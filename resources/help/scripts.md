@@ -47,7 +47,7 @@ files there beyond the script itself.
 - **Snippets** — type the prefix and press Tab/Enter:
   - `sfx` → `SFX: description`
   - `amb` → `AMB: description`
-  - `mus` → `MUSIC: IN|OUT|STING|UNDER description`
+  - `mus` → `MUSIC: BED|STING|BRIDGE|SOURCE BED|IN|OUT description`
 - **Auto-closing/surrounding pairs** for `[[` `]]`, `(` `)`, and `"` — select
   text and type `[[` to wrap it, same for parentheticals and quotes.
 - **`[[Entity Name]]` explicit links** — use this when a mention wouldn't

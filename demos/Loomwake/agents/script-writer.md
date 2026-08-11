@@ -44,10 +44,10 @@ Audio cues are ordinary action-line prose using a fixed prefix — type the pref
 | Prefix | Meaning | Modifiers |
 |---|---|---|
 | `SFX:` | Sound effect | — |
-| `MUSIC:` | Music cue | `IN`, `OUT`, `STING`, `UNDER` |
+| `MUSIC:` | Music cue | Role: `BED`, `STING`, `BRIDGE`, `SOURCE BED` — Timing: `IN`, `OUT` (both independent and optional; either, both, or neither may appear) |
 | `AMB:` | Ambience/room-tone bed | — |
 
-Examples: `SFX: metal groaning UNDER`, `MUSIC: STING - the reveal`.
+Examples: `SFX: metal groaning`, `MUSIC: STING - the reveal`, `MUSIC: BED IN - low, patient, unresolved`.
 
 Every script's cues are parsed automatically into a `<script-name>.cues.json` sidecar file next to it. Never hand-edit that sidecar — it's regenerated from the script on every save (or by `node agents/validate.js` — see below) and any manual edit will be silently overwritten.
 

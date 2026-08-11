@@ -11,7 +11,7 @@
   },
   "Music Cue": {
     "prefix": "mus",
-    "body": "MUSIC: ${1|IN,OUT,STING,UNDER|} ${2:description}",
-    "description": "Insert a music cue (Spec §15.1) — extracted into the script's cue sidecar."
+    "body": "MUSIC: ${1|BED,STING,BRIDGE,SOURCE BED,IN,OUT|} ${2:description}",
+    "description": "Insert a music cue (Spec §15.1) — role (BED/STING/BRIDGE/SOURCE BED) and timing (IN/OUT) are independent and both optional; pick one here, then type a second keyword by hand for the rare combined case (e.g. accept BED, then type ' IN ' before the description) — extracted into the script's cue sidecar."
   }
 }
