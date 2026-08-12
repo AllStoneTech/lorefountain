@@ -2,7 +2,7 @@
   "name": "lorefountain",
   "displayName": "LoreFountain",
   "description": "A Fountain-native worldbuilding layer for VS Code: link character cues and scene headings to structured entity files with typed relationships, hover previews, and backlinks.",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "publisher": "allstonetech",
   "author": "the project owner (All Stone Tech)",
   "license": "MIT",
@@ -583,6 +583,8 @@
   "scripts": {
     "vscode:prepublish": "npm run build -- --production",
     "build": "node esbuild.js",
+    "build:obfuscate-balanced": "node esbuild.js --production --obfuscate=balanced",
+    "build:obfuscate-off": "node esbuild.js --production --obfuscate=off",
     "watch": "node esbuild.js --watch",
     "typecheck": "tsc --noEmit && npm run typecheck:pro-webview",
     "typecheck:pro-webview": "node -e \"const fs=require('fs');if(fs.existsSync('pro/src/webview/tsconfig.json')){require('child_process').execSync('tsc --noEmit -p pro/src/webview/tsconfig.json',{stdio:'inherit'})}\"",
@@ -609,6 +611,7 @@
     "@vscode/vsce": "^3.9.2",
     "esbuild": "^0.28.1",
     "eslint": "^10.7.0",
+    "javascript-obfuscator": "^5.5.0",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.65.0",
     "vitest": "^4.1.10"

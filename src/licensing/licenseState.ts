@@ -7,11 +7,9 @@
  * with periodic re-validation, not on every file operation" per the spec.
  *
  * An offline grace period covers `validateLicense` genuinely failing to
- * reach the network: the last known-good cached result stays trusted for
- * {@link OFFLINE_GRACE_DAYS} before falling back to unlicensed. This branch
- * can't be exercised today since `validateLicense` is a stub that never
- * throws (see `validateLicense.ts`) — it's here so the real endpoint drops
- * in without needing this file to change.
+ * reach the network (including the endpoint being down or not yet
+ * deployed): the last known-good cached result stays trusted for
+ * {@link OFFLINE_GRACE_DAYS} before falling back to unlicensed.
  *
  * The date-math decisions ({@link isCacheFresh}, {@link isWithinGrace}) are
  * pulled out as pure functions specifically so they're unit-testable
@@ -25,6 +23,7 @@ import { validateLicense, type LicenseInvalidReason } from './validateLicense';
 
 const SECRET_KEY = 'lorefountain.licenseKey';
 const CACHE_KEY_PREFIX = 'lorefountain.licenseCache.';
+const DEVICE_ID_KEY = 'lorefountain.deviceId';
 
 /** How long a locally-stored key remains untrusted-without-a-real-network-check before it's treated as offline-expired (Section 3/6 of the plan's placeholder defaults — not settled numbers). */
 const OFFLINE_GRACE_DAYS = 30;
@@ -65,6 +64,24 @@ function hashKey(key: string): string {
 }
 
 /**
+ * Get this install's stable device identifier, generating and persisting
+ * one on first use. Sent to the license endpoint so it can enforce each
+ * tier's per-key activation cap — not a credential, so plain `globalState`
+ * (not `secrets`) is the right store.
+ *
+ * @param context - The extension context (for `globalState`).
+ * @returns A random UUID, stable for the lifetime of this install.
+ */
+export async function getOrCreateDeviceId(context: vscode.ExtensionContext): Promise<string> {
+  const existing = context.globalState.get<string>(DEVICE_ID_KEY);
+  if (existing) return existing;
+
+  const deviceId = crypto.randomUUID();
+  await context.globalState.update(DEVICE_ID_KEY, deviceId);
+  return deviceId;
+}
+
+/**
  * Resolve current license status for whatever key is stored, re-validating
  * when the cache is stale. Returns `undefined` when no key is stored at
  * all — "unlicensed," not an error.
@@ -94,7 +111,8 @@ export async function getLicenseStatus(context: vscode.ExtensionContext): Promis
     }
 
     try {
-      const result = await validateLicense(key);
+      const deviceId = await getOrCreateDeviceId(context);
+      const result = await validateLicense(key, deviceId);
       const toCache: CachedLicense = {
         valid: result.valid,
         tier: result.tier,

@@ -30,14 +30,85 @@
 //    same reasoning as pro.js's own conditional build.
 //
 // Run with `--watch` for incremental rebuilds during development, or
-// `--production` for minified release bundles.
+// `--production` for minified, then javascript-obfuscator-hardened release
+// bundles. Obfuscation runs on extension.js, pro.js, and
+// entityGraphClient.js only — never on resources/agents/validate.js, which
+// is meant to stay plain and readable in users' own projects (see above).
+//
+// Obfuscation strength is picked with `--obfuscate=<level>` (default
+// `max`):
+//   max      — string-array encoding + hex identifiers + control-flow
+//              flattening + dead code injection. Hardest to reverse, but
+//              ~3.5x the .vsix size of unobfuscated and adds real per-call
+//              runtime overhead (extension activation, webview load).
+//   balanced — string-array encoding + hex identifiers only. ~1.5x the
+//              .vsix size, no runtime overhead, still defeats a casual
+//              beautify-and-read.
+//   off      — skip obfuscation; bundles are still minified under
+//              --production.
+// See the `npm run build:obfuscate-*` scripts in package.json for the
+// one-line ways to switch.
 
 const esbuild = require('esbuild');
+const JavaScriptObfuscator = require('javascript-obfuscator');
 const fs = require('fs');
 const path = require('path');
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
+
+const obfuscateArg = process.argv.find((arg) => arg.startsWith('--obfuscate='));
+const obfuscationLevel = obfuscateArg ? obfuscateArg.slice('--obfuscate='.length) : 'max';
+if (!['max', 'balanced', 'off'].includes(obfuscationLevel)) {
+  console.error(`[obfuscator] unknown --obfuscate level "${obfuscationLevel}" — expected max, balanced, or off`);
+  process.exit(1);
+}
+
+// `renameProperties` and `renameGlobals` are left off in both profiles:
+// this is CommonJS output whose module.exports (activate/deactivate) VS
+// Code calls by name, and the pro webview bundle's IIFE may expose globals
+// the extension host depends on — renaming either would break the
+// extension at runtime. `selfDefending` is left off too: its
+// tamper-detection wrapper breaks if VS Code, a bundler, or a future
+// obfuscation pass ever reformats the file, and it makes stack traces from
+// user bug reports useless.
+const OBFUSCATION_PROFILES = {
+  balanced: {
+    compact: true,
+    controlFlowFlattening: false,
+    deadCodeInjection: false,
+    identifierNamesGenerator: 'hexadecimal',
+    renameGlobals: false,
+    renameProperties: false,
+    selfDefending: false,
+    stringArray: true,
+    stringArrayEncoding: ['base64'],
+    stringArrayThreshold: 0.75,
+    splitStrings: false,
+    numbersToExpressions: false,
+    simplify: true,
+    sourceMap: false,
+  },
+  max: {
+    compact: true,
+    controlFlowFlattening: true,
+    controlFlowFlatteningThreshold: 0.75,
+    deadCodeInjection: true,
+    deadCodeInjectionThreshold: 0.4,
+    identifierNamesGenerator: 'hexadecimal',
+    renameGlobals: false,
+    renameProperties: false,
+    selfDefending: false,
+    stringArray: true,
+    stringArrayEncoding: ['base64'],
+    stringArrayThreshold: 0.75,
+    splitStrings: true,
+    splitStringsChunkLength: 10,
+    numbersToExpressions: true,
+    simplify: true,
+    sourceMap: false,
+  },
+};
 
 function copySqlWasm() {
   const src = path.join(__dirname, 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
@@ -45,6 +116,25 @@ function copySqlWasm() {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(src, dest);
   console.log('[esbuild] copied sql-wasm.wasm -> dist/');
+}
+
+// Runs javascript-obfuscator over an already-bundled/minified output file,
+// in place, at the strength selected by `--obfuscate=` (see file header).
+// Only called for --production builds, and only on the bundles that ship
+// inside the .vsix (extension.js, pro.js, entityGraphClient.js) — NOT
+// resources/agents/validate.js, which is deliberately scaffolded into
+// users' own projects as a plain, human/AI-readable script (see the file
+// header above) and must stay that way.
+function obfuscateBundle(outfile, label) {
+  if (obfuscationLevel === 'off') {
+    console.log(`[obfuscator] skipped ${outfile} (--obfuscate=off)`);
+    return;
+  }
+  const filePath = path.join(__dirname, outfile);
+  const source = fs.readFileSync(filePath, 'utf8');
+  const result = JavaScriptObfuscator.obfuscate(source, OBFUSCATION_PROFILES[obfuscationLevel]);
+  fs.writeFileSync(filePath, result.getObfuscatedCode());
+  console.log(`[obfuscator] obfuscated ${outfile} at "${obfuscationLevel}"${label ? ` (${label})` : ''}`);
 }
 
 async function main() {
@@ -76,6 +166,7 @@ async function main() {
           });
           build.onEnd(() => {
             copySqlWasm();
+            if (production) obfuscateBundle('dist/extension.js', 'extension');
             console.log('[esbuild] build finished');
           });
         },
@@ -139,6 +230,7 @@ async function main() {
                 console.log('[esbuild:pro] build started');
               });
               build.onEnd(() => {
+                if (production) obfuscateBundle('dist/pro.js', 'pro');
                 console.log('[esbuild:pro] build finished');
               });
             },
@@ -172,6 +264,7 @@ async function main() {
                 console.log('[esbuild:pro-webview] build started');
               });
               build.onEnd(() => {
+                if (production) obfuscateBundle('dist/entityGraphClient.js', 'pro-webview');
                 console.log('[esbuild:pro-webview] build finished');
               });
             },

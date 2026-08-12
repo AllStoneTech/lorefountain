@@ -8,6 +8,28 @@ real license-backend validation).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-08-11
+
+### Changed
+
+- **License validation is real, not a stub.** `validateLicense()` now calls
+  the actual `POST /api/license/validate` endpoint (AllStoneTech.com),
+  sending a stable per-install device id so the backend can enforce each
+  license tier's activation cap. A non-2xx response or an unexpected
+  response shape is treated as "endpoint unreachable," falling back to the
+  existing offline-grace window rather than locking a user out. **Not yet
+  deployed** — the endpoint code exists but hasn't been pushed/deployed on
+  the AllStoneTech.com side yet, and no license tier is seeded, so real
+  validation will fail until that lands; see `docs/TODO.md`.
+- **Public-launch promo window added** (`licensing/promoConfig.ts`): every
+  user gets Pro unlocked with no license key until a single, clearly-labeled
+  date constant — bypasses the license check entirely while active, no
+  network call made. Placeholder end date set 30 days out; update before
+  the repo actually goes public.
+- Repo history scrubbed of the product spec files that used to block making
+  `lorefountain` public — see ADR-0033. The repo itself is still private;
+  that's a separate, still-pending step.
+
 ## [0.10.0] - 2026-08-11
 
 ### Changed

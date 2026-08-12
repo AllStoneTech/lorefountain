@@ -47,6 +47,7 @@ import { relocateCueSidecar } from './cues/sidecar';
 import { WorkspaceIndex } from './index/workspaceIndex';
 import type { IndexStore } from './index/store';
 import { getLicenseStatus } from './licensing/licenseState';
+import { isPromoActive } from './licensing/promoConfig';
 import { createFountainHoverProvider } from './providers/hoverProvider';
 import { createWikilinkCompletionProvider } from './providers/completionProvider';
 import { registerHelpCommands } from './providers/helpPanel';
@@ -172,9 +173,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
  * Decide whether the pro tier actually activates, and register it (or an
  * explanatory placeholder) accordingly. Two independent gates, both must
  * pass: the `pro/` submodule must be bundled at all (unchanged from
- * ADR-0024), and — new as of ADR-0026/this licensing work — a valid license
- * key must be on file (per {@link getLicenseStatus}, currently backed by a
- * stub that always says valid, see `licensing/validateLicense.ts`).
+ * ADR-0024), and either the public-launch promo is still active
+ * ({@link isPromoActive}, ADR-0033/`licensing/promoConfig.ts`) or a valid
+ * license key is on file (per {@link getLicenseStatus}, backed by a real
+ * call to the AllStoneTech.com endpoint — see `licensing/validateLicense.ts`).
  *
  * @param context - The extension context to register disposables against.
  */
@@ -185,6 +187,18 @@ async function activateProTier(context: vscode.ExtensionContext): Promise<void> 
     // — nothing to click through to fix, so no command attached.
     registerProPlaceholders(context, {
       message: 'LoreFountain Pro required — Continuity Management is a paid-tier feature.',
+    });
+    return;
+  }
+
+  if (isPromoActive()) {
+    // Public-launch promo: skip the license check entirely rather than call
+    // an endpoint whose answer wouldn't change the outcome anyway.
+    proModule.activate({
+      extensionContext: context,
+      outputChannel,
+      getStoreForFolder: findStoreForFolder,
+      onIndexChanged: indexChangeEmitter.event,
     });
     return;
   }

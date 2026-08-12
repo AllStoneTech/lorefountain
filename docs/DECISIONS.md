@@ -6,6 +6,53 @@ revisit.
 
 ---
 
+## ADR-0035 — Production builds are obfuscated, not just minified; strength is a one-flag switch
+
+**Date:** 2026-08-12 · **Status:** Accepted
+
+the project owner asked whether `vsce package` obfuscates the shipped code — it only minified. Minification (esbuild's `minify: true`) collapses whitespace and mangles local variable names, but property names, string literals, and overall control flow survive; running the output through a beautifier gets back fairly readable code. For `dist/pro.js` (the paid-tier logic) and `dist/entityGraphClient.js` (the paid-tier webview client), that's a lower bar than intended.
+
+1. **`javascript-obfuscator` runs as a post-processing pass in `esbuild.js`**, after esbuild's own bundle+minify, on the three bundles that ship in the `.vsix`: `dist/extension.js`, `dist/pro.js`, `dist/entityGraphClient.js`. It deliberately does **not** touch `resources/agents/validate.js` — that file is scaffolded into users' own projects specifically to be a plain, human/AI-readable validator script (see ADR-0021), and obfuscating it would defeat its purpose.
+2. **Strength is selected with `--obfuscate=<max|balanced|off>`**, defaulting to `max` (so `npm run package` / `vscode:prepublish` ship at `max` with no extra flag). `npm run build:obfuscate-balanced` and `npm run build:obfuscate-off` are the one-line ways to switch, per the project owner wanting this "easily flippable." Two profiles, not a continuum of individual flags, to keep the choice legible:
+   - **`balanced`** — string-array encoding (base64) + hexadecimal identifier renaming only.
+   - **`max`** — adds control-flow flattening and dead-code injection on top.
+3. **Both profiles leave `renameProperties`, `renameGlobals`, and `selfDefending` off.** The bundles are CommonJS with `module.exports.activate`/`deactivate` that VS Code calls by name, and the webview IIFE may expose globals the extension host depends on — renaming either risks a silent runtime break that would only surface as "the extension doesn't activate" in production, with no local repro. `selfDefending` (tamper-detection wrapper) was rejected because it turns any future reformatting of the bundle into a self-inflicted break, and it makes stack traces from user bug reports unreadable — a bad trade against a bar (defeating manual reverse-engineering) obfuscation is already meeting without it.
+4. **Measured `.vsix` sizes drove the default choice**, not a guess: minify-only 1.0 MB, `balanced` 1.54 MB (1.5x), `max` 3.64 MB (3.6x). All three are well inside Marketplace practical limits, so size wasn't the deciding factor — `max`'s real cost is runtime overhead from control-flow flattening on every function in `extension.js` (loaded at activation) and `entityGraphClient.js` (loaded on webview open). the project owner chose `max` as the starting point anyway, on the strength of the flip mechanism in point 2 making it a non-decision to walk back later if activation-time complaints surface.
+5. **Verified the `max`-obfuscated `dist/extension.js` still loads correctly** — `node -e "require('./dist/extension.js')"` runs the obfuscated bundle through to the point of `require('vscode')` (which fails outside an extension host, as expected — same failure point as the unobfuscated bundle). Not verified inside an actual Extension Development Host this session; worth an F5 smoke test, especially of Pro features and the Entity Graph webview, before the next release ships.
+6. **Not yet reflected in `CHANGELOG.md`** — this is a build-tooling change with no user-visible behavior difference, so it wasn't added as a changelog entry; flagging here in case that judgment call is wrong.
+
+---
+
+## ADR-0034 — Real license validation wired up, plus a self-expiring public-launch promo override
+
+**Date:** 2026-08-11 · **Status:** Accepted
+
+Same session as ADR-0033. While the history scrub removed the last blocker to going public, `validateLicense()` was still the "always valid" stub from ADR-0026 — a public repo would have published exactly how to bypass paid-tier gating, and the project owner separately wanted pro features to stay unlocked for everyone for a period after public launch, without leaving that behavior indistinguishable from "we never finished the real backend."
+
+1. **`validateLicense()` now calls the real endpoint** (`POST https://allstonetech.com/api/license/validate`, discovered already built in the sibling `AllStoneTech.com` repo per its own licensing plan) with `{licenseKey, product: 'lorefountain-pro', deviceId}`, validating the response against a Zod schema mirroring that route's documented contract exactly. Non-2xx and shape-mismatched responses both throw — deliberately indistinguishable from a network failure to the caller, so `licenseState.ts`'s existing offline-grace logic (built in ADR-0026 specifically for this day) engages without any changes to that file's control flow.
+2. **New `getOrCreateDeviceId`** in `licenseState.ts` — a random UUID generated once and persisted in `globalState` (not `secrets`; it's an install identifier, not a credential), sent with every validation call so the backend's per-tier activation cap has something to key on.
+3. **The endpoint is not actually deployed yet.** Confirmed live via a direct `POST` against production (got the real Next.js 404 page, not a route-not-found from an undeployed domain) — and confirmed in the `AllStoneTech.com` repo's own `git status` that every licensing file (the route, the Supabase migration, the admin API) is still untracked, never committed or pushed. No `license_tiers` row exists for `lorefountain-pro` either. Wiring the extension to call it now is still correct and safe — the "unreachable endpoint" path was always the intended behavior for exactly this situation, exercised for real for the first time now (previously only reachable by contrivance, per the pre-existing doc comment on `isWithinGrace`). Deploying that repo's side is out of scope for this session — see `docs/TODO.md`.
+4. **`licensing/promoConfig.ts`: one exported date constant, `PRO_PROMO_UNTIL`, plus a pure `isPromoActive(now)`.** `activateProTier` in `extension.ts` checks this before ever calling `getLicenseStatus` — during the promo, Pro activates unconditionally and no network call is made at all, rather than calling an endpoint whose answer can't change the outcome. Deliberately a single, heavily-commented file rather than a flag buried in gating logic: the project owner flagged wanting an easy way to extend the promo, and "change one exported constant, ship a release" is as low-friction as this gets without adding a remote-config dependency this project has otherwise avoided. Placeholder value: 30 days from 2026-08-11 (the actual public-launch date wasn't set yet this session) — **must be updated** once that date is confirmed, ideally in the same change that flips repo visibility.
+5. **Version bumped to `0.11.0`** per the ADR-0032 convention (minor per shipped feature) — real license validation and the promo mechanism are both genuinely new behavior, not a fix.
+6. **13 new/changed unit tests** (`validateLicense.test.ts` rewritten for the real fetch-based implementation — request shape, valid/invalid responses, non-2xx and malformed-shape throwing; `licenseState.test.ts` gains `getOrCreateDeviceId` coverage against a hand-written `globalState` stub; new `promoConfig.test.ts` covers the date-boundary logic) — 524 total, all passing, clean `tsc --noEmit` and `eslint`. `extension.ts`'s promo short-circuit itself is `vscode`-facing glue, unverified live this session (same fresh-EDH-window tooling gap as prior ADRs) — worth a manual pass before relying on it.
+
+---
+
+## ADR-0033 — History scrub: product spec removed from every commit, backup tag left outside `main`'s ancestry
+
+**Date:** 2026-08-11 · **Status:** Accepted
+
+`docs/TODO.md` had carried this as a blocking pre-public-launch item since ADR-0024 (spec files removed from the working tree, but every prior commit's blobs still had them). the project owner asked to actually run it as part of a broader push to get the licensing flow production-ready.
+
+1. **`git filter-repo`, run against a fresh `--mirror` clone, never in-place** — filter-repo's own guidance; rewriting a mirror clone and only then force-pushing the result keeps the working repo's untouched state available as a fallback for the entire operation, not just via a tag.
+2. **Paths removed:** `docs/LoreFountain_Spec.docx`, `docs/LoreFountain_Spec.md`, `docs/archive/` (whole directory — confirmed nothing else was ever in it). Verified post-rewrite with `git log --all -- <paths>` on the new history returning zero commits, across all 48 commits (count unchanged — rewriting, not squashing).
+3. **A backup tag, `pre-history-scrub-2026-08-11`, was pushed to `origin` pointing at the original tip (`daf0264`) *before* the rewrite, then deliberately excluded from the force-push** that replaced `main`. `git filter-repo` rewrites tags along with everything else in whatever clone it's run against — pushing it back would have silently replaced the backup with a copy of the very history it's meant to be a fallback for. Sitting outside `main`'s ancestry, it won't be pulled into a future public clone (`git clone` only follows reachable history from default refs) — real backup, not a second leak.
+4. **Force-pushed only `refs/heads/main`** (`git push --force <url> refs/heads/main:refs/heads/main`), not `--mirror` or `--tags`, specifically so nothing else on `origin` — namely the backup tag from point 3 — got overwritten as a side effect.
+5. **Repo visibility itself was deliberately left untouched.** This ADR closes the history half of the public-launch blocker; going public is a separate, explicit action still pending — see `docs/TODO.md`.
+6. **Not yet reflected in a fresh clone check** — verification here was `git log --all` against the rewritten `origin/main` and the local working copy after `git fetch && git reset --hard origin/main`, not a truly independent third clone. Low risk (filter-repo's rewrite is deterministic and the object count/commit count matched expectations), but worth an independent clone-and-grep before the repo actually flips public, not just before.
+
+---
+
 ## ADR-0032 — Real semver for the extension, starting at 0.8.0; changelog starts fresh, not backfilled
 
 **Date:** 2026-08-11 · **Status:** Accepted

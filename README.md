@@ -19,7 +19,7 @@ hover previews, autocomplete, and backlinks.
 
 ## Status
 
-`v0.9.0`. The free tier is fully built: the entity model (character, location,
+`v0.11.0`. The free tier is fully built: the entity model (character, location,
 faction, object, concept, arc) with typed relationships, significance
 grouping, and freeform physical descriptions; a glossary; a dual-ordered
 Timeline; a Story Card editor and Story Overview document; hover previews and
@@ -30,9 +30,11 @@ instructions (`AGENTS.md`/`agents/*.md`) with their own version tracking.
 
 **LoreFountain Pro** (paid tier) adds Continuity Management, an Entity Graph
 view, Story-Bible Export, BBC Radio Drama Export, SFX/Cue-Sheet Export, and
-Shot List Export — all shipped, though license validation is still a stub
-pending a real backend. See `CHANGELOG.md` for what shipped when, and
-`docs/DECISIONS.md` for the full rationale behind each of these.
+Shot List Export — all shipped. License validation now calls a real backend
+endpoint, though that endpoint isn't deployed yet; a time-boxed public-launch
+promo keeps Pro unlocked for everyone in the meantime (see `docs/TODO.md`).
+See `CHANGELOG.md` for what shipped when, and `docs/DECISIONS.md` for the
+full rationale behind each of these.
 
 ## Development
 
@@ -46,6 +48,14 @@ npm run typecheck  # tsc --noEmit
 npm run lint       # eslint
 npm run test:unit  # vitest (pure-logic tests)
 ```
+
+`npm run package` (and `vsce`'s `vscode:prepublish` hook) builds with `--production`,
+which minifies and then runs `javascript-obfuscator` over `dist/extension.js`,
+`dist/pro.js`, and `dist/entityGraphClient.js`. Obfuscation strength defaults to
+`max`; switch it with `npm run build:obfuscate-balanced` (lighter, smaller
+`.vsix`, no runtime overhead) or `npm run build:obfuscate-off` (minify only). See
+the header of `esbuild.js` and `docs/DECISIONS.md` (ADR-0035) for the full
+rationale and size/performance trade-offs.
 
 Press <kbd>F5</kbd> in VS Code to launch the **Run Extension** configuration in an
 Extension Development Host. The `watch` task's problem matcher is self-contained

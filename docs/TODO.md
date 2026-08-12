@@ -4,26 +4,21 @@ Things that need to happen but don't yet, tracked here so they survive between s
 
 ## Before `lorefountain` goes public (blocking)
 
-**Scrub the product spec's history out of this repo before flipping visibility to public.** The files themselves were removed from the working tree on 2026-07-26 (ADR-0024) and now live in the private `AllStoneTech/lorefountain-business` repo instead — but removing a file only stops *future* commits from containing it. This repo's past commits still have every one of these in their original blobs, retrievable via `git log`/`git show` on old revisions even after deletion. A history rewrite (`git filter-repo` or BFG Repo-Cleaner) removing these exact paths from every commit, followed by a force-push to `origin/main`, is required before this repo is ever made public — not before.
+**~~Scrub the product spec's history out of this repo~~ — done 2026-08-11.** See ADR-0033. `docs/LoreFountain_Spec.docx`/`.md` and the whole `docs/archive/` directory are gone from every commit on `main`, verified via `git log --all -- <paths>` returning nothing. A backup tag, `pre-history-scrub-2026-08-11`, points at the original unfiltered tip (`daf0264`) on `origin` in case anything needs recovering — not part of `main`'s ancestry, so it won't leak into a future public clone.
 
-Exact paths to remove from history:
-- `docs/LoreFountain_Spec.docx`
-- `docs/LoreFountain_Spec.md`
-- `docs/archive/LoreWeaver_Spec_v0.2.docx`
-- `docs/archive/LoreWeaver_Spec_v0.3.docx`
-- `docs/archive/Loreweave_Spec_v0.1.docx`
+**Still blocking: the repo itself is still private.** The scrub only removed a *prerequisite* for going public — visibility hasn't been flipped yet. That's a separate, deliberate action (GitHub repo settings), not automatic from the scrub.
 
-(`docs/archive/` can likely just be removed as a whole directory — nothing else was ever in it.)
-
-This is a force-push, hard-to-reverse operation against a shared remote — confirm explicitly before running it, even though it's already been agreed to be necessary.
-
-**This is also what's blocking "Install Demo" from working at all.** `lorefountain.installDemo` (ADR-0031, `src/commands/installDemo.ts`) fetches `demos/` from `AllStoneTech/lorefountain` via unauthenticated GitHub API calls, which return a plain `404` against a private repo — confirmed via `gh repo view` on 2026-07-31. The feature is fully built and unit-tested, just dormant until this repo actually goes public.
+**This is also what's blocking "Install Demo" from working at all.** `lorefountain.installDemo` (ADR-0031, `src/commands/installDemo.ts`) fetches `demos/` from `AllStoneTech/lorefountain` via unauthenticated GitHub API calls, which return a plain `404` against a private repo — confirmed via `gh repo view` on 2026-07-31, reconfirmed 2026-08-11. The feature is fully built and unit-tested, just dormant until this repo actually goes public.
 
 ## Before `lorefountain` goes public, or ships to any real customer (blocking)
 
-**Replace the stubbed `validateLicense()` with a real check.** `src/licensing/validateLicense.ts` currently always resolves `{ valid: true }` regardless of the key given — added 2026-07-28 specifically so the rest of the client-side license flow (`src/licensing/licenseState.ts`'s caching/grace-period logic, the `enterLicenseKey`/`showLicenseStatus`/`clearLicenseKey` commands, gating the pro module load in `extension.ts`) could be built and tested locally while the real backend is being built separately (see `lorefountain-business/licensing/IMPLEMENTATION_PLAN.md`, being implemented against the AllStoneTech.com project).
+**~~Replace the stubbed `validateLicense()` with a real check~~ — code done 2026-08-11, backend deployment still outstanding.** See ADR-0034. `src/licensing/validateLicense.ts` now calls the real `POST /api/license/validate` endpoint with Zod-validated responses; `licenseState.ts` generates and sends a per-install device id. **Not usable yet** — three things still need to happen on the `AllStoneTech.com` side before a real key can actually validate:
 
-Right now, anyone who runs "Enter License Key" with literally any text unlocks the full paid tier — this is fine for local development, not fine for anything ships-to-a-customer. Swap `validateLicense`'s body for a real `fetch` call to the AllStoneTech.com endpoint once it exists; per that function's own doc comment, nothing else in `licenseState.ts` should need to change, since it's already written against that endpoint's documented contract.
+1. Commit and deploy the licensing code that's currently sitting untracked in that repo (`src/app/api/license/`, `src/lib/license/`, `src/app/admin/licenses/`, `src/app/api/admin/licenses/`, `supabase/migrations/20260728000000_licensing.sql`) — confirmed via `git status` in that repo on 2026-08-11 that none of it has ever been committed or pushed.
+2. Apply that migration against production Supabase.
+3. Seed a `license_tiers` row for product `lorefountain-pro` with a real Gumroad `processor_product_id` — needs an actual Gumroad listing to exist first, which is the project owner's call to make, not something to fabricate.
+
+Also added this session: a public-launch promo window (`licensing/promoConfig.ts`) that unlocks Pro for everyone regardless of license status until a single date constant — bypasses the real check entirely while active, so the three items above aren't blocking for the promo period itself, only for real enforcement afterward. **`PRO_PROMO_UNTIL` is currently a 30-day placeholder from 2026-08-11 — must be updated to the actual public-launch date once that's set.**
 
 ## Blocked on `lorefountain` going public
 
