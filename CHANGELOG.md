@@ -3,10 +3,31 @@
 All notable changes to LoreFountain are documented here. This project follows
 [Semantic Versioning](https://semver.org/) — pre-1.0 releases (`0.x.y`) make
 no API/schema stability guarantees. `1.0.0` is reserved for the actual
-public launch, which `docs/TODO.md` already gates on (repo history scrub,
-real license-backend validation).
+public launch; see `docs/TODO.md` for what's still outstanding before then.
 
 ## [Unreleased]
+
+## [0.12.0] - 2026-08-12
+
+### Added
+
+- **Opt-in, anonymous feature-usage telemetry.** Off by default
+  (`lorefountain.telemetry.enabled`), and gated by VS Code's own global
+  telemetry switch regardless of this setting. Covers every command (free
+  and Pro alike, via a `registerTrackedCommand` wrapper used at every
+  registration site) plus coarse "used at least once this session" flags
+  for hover/completion. Never includes file names, entity names, workspace
+  paths, or file contents — see the new "Telemetry & Feedback" README
+  section for the full disclosure. `LoreFountain: Show Telemetry Queue`
+  shows exactly what's queued to send; `LoreFountain: Disable Telemetry`
+  turns it off and clears the queue.
+- **"Send Feedback" command**, opening a small webview form (bug/feature
+  suggestion/general thoughts, plus an optional reply email) — explicit and
+  user-initiated, independent of the telemetry opt-in.
+- Both features' network calls target dedicated `AllStoneTech.com` endpoints
+  (`POST /api/telemetry/ingest`, `POST /api/feedback/submit`); until that
+  backend is live, telemetry queues events locally and feedback surfaces a
+  clear retry error rather than failing silently.
 
 ## [0.11.0] - 2026-08-11
 
@@ -17,18 +38,13 @@ real license-backend validation).
   sending a stable per-install device id so the backend can enforce each
   license tier's activation cap. A non-2xx response or an unexpected
   response shape is treated as "endpoint unreachable," falling back to the
-  existing offline-grace window rather than locking a user out. **Not yet
-  deployed** — the endpoint code exists but hasn't been pushed/deployed on
-  the AllStoneTech.com side yet, and no license tier is seeded, so real
-  validation will fail until that lands; see `docs/TODO.md`.
+  existing offline-grace window rather than locking a user out.
 - **Public-launch promo window added** (`licensing/promoConfig.ts`): every
   user gets Pro unlocked with no license key until a single, clearly-labeled
   date constant — bypasses the license check entirely while active, no
-  network call made. Placeholder end date set 30 days out; update before
-  the repo actually goes public.
+  network call made.
 - Repo history scrubbed of the product spec files that used to block making
-  `lorefountain` public — see ADR-0033. The repo itself is still private;
-  that's a separate, still-pending step.
+  `lorefountain` public — see ADR-0033.
 
 ## [0.10.0] - 2026-08-11
 

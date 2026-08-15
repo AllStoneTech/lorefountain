@@ -96,6 +96,7 @@ export class WorldTreeProvider implements vscode.TreeDataProvider<WorldTreeNode>
     this.changeEmitter.fire(node);
   }
 
+  /** Render a single {@link WorldTreeNode} into the `vscode.TreeItem` VS Code actually draws. */
   getTreeItem(node: WorldTreeNode): vscode.TreeItem {
     switch (node.kind) {
       case 'folder': {
@@ -164,6 +165,12 @@ export class WorldTreeProvider implements vscode.TreeDataProvider<WorldTreeNode>
     }
   }
 
+  /**
+   * Resolve the children of `node` (or the tree's roots when `node` is
+   * omitted). Root shape depends on workspace layout: a single-folder
+   * workspace skips straight to that folder's category nodes, a
+   * multi-folder workspace shows one folder node per workspace folder first.
+   */
   async getChildren(node?: WorldTreeNode): Promise<WorldTreeNode[]> {
     const folders = vscode.workspace.workspaceFolders ?? [];
 

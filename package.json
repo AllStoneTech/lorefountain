@@ -2,9 +2,9 @@
   "name": "lorefountain",
   "displayName": "LoreFountain",
   "description": "A Fountain-native worldbuilding layer for VS Code: link character cues and scene headings to structured entity files with typed relationships, hover previews, and backlinks.",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "publisher": "allstonetech",
-  "author": "the project owner (All Stone Tech)",
+  "author": "All Stone Tech",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -14,6 +14,7 @@
     "url": "https://github.com/AllStoneTech/lorefountain/issues"
   },
   "homepage": "https://github.com/AllStoneTech/lorefountain#readme",
+  "icon": "resources/icon.png",
   "engines": {
     "vscode": "^1.125.0"
   },
@@ -275,6 +276,21 @@
         "title": "Shot List Export (Pro): How to Use This Feature",
         "category": "LoreFountain",
         "icon": "$(question)"
+      },
+      {
+        "command": "lorefountain.sendFeedback",
+        "title": "Send Feedback",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.showTelemetryQueue",
+        "title": "Show Telemetry Queue",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.clearTelemetryOptIn",
+        "title": "Disable Telemetry",
+        "category": "LoreFountain"
       }
     ],
     "customEditors": [
@@ -311,6 +327,11 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "Offer entity/glossary name autocomplete after typing `[[` in scripts and world Markdown files (Spec §6, §13.2)."
+        },
+        "lorefountain.telemetry.enabled": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Share anonymous feature-usage data (which commands and views you use, your license tier, extension version, and editor/OS) to help prioritize development. Off by default, and also gated by VS Code's own `#telemetry.telemetryLevel#` setting — never sent if that's off. Never includes file names, entity names, workspace paths, or file contents. Run `LoreFountain: Show Telemetry Queue` to see exactly what's queued to send, or `LoreFountain: Disable Telemetry` to turn this off and clear the queue."
         }
       }
     },
@@ -590,7 +611,9 @@
     "typecheck:pro-webview": "node -e \"const fs=require('fs');if(fs.existsSync('pro/src/webview/tsconfig.json')){require('child_process').execSync('tsc --noEmit -p pro/src/webview/tsconfig.json',{stdio:'inherit'})}\"",
     "lint": "eslint .",
     "test:unit": "vitest run",
-    "package": "vsce package"
+    "package": "vsce package",
+    "publish:vsce": "vsce publish",
+    "publish:ovsx": "ovsx publish"
   },
   "dependencies": {
     "cytoscape": "^3.34.0",
@@ -612,6 +635,7 @@
     "esbuild": "^0.28.1",
     "eslint": "^10.7.0",
     "javascript-obfuscator": "^5.5.0",
+    "ovsx": "^1.1.1",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.65.0",
     "vitest": "^4.1.10"
