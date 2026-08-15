@@ -22,6 +22,7 @@ import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { scaffoldAgentFilesIfAbsent } from '../config/agentFiles';
+import { registerTrackedCommand } from '../telemetry/trackedCommands';
 
 /**
  * Register the "Migrate Existing Lore" command.
@@ -34,7 +35,7 @@ export function registerMigrateExistingLoreCommand(
   pickTargetWorkspaceFolder: () => Promise<vscode.WorkspaceFolder | undefined>,
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('lorefountain.migrateExistingLore', () =>
+    registerTrackedCommand(context, 'lorefountain.migrateExistingLore', () =>
       void migrateExistingLoreCommand(context, pickTargetWorkspaceFolder),
     ),
   );

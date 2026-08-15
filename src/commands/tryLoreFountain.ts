@@ -19,6 +19,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { writeDefaultConfigIfAbsent } from '../config/configFile';
 import { resolveWorkspaceFolders } from '../config/folders';
+import { registerTrackedCommand } from '../telemetry/trackedCommands';
 
 const SAMPLE_ENTITIES: ReadonlyArray<{ fileName: string; content: string }> = [
   {
@@ -108,7 +109,7 @@ That's it. Almost there.
  */
 export function registerTryLoreFountainCommand(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('lorefountain.tryLoreFountain', () => void tryLoreFountainCommand()),
+    registerTrackedCommand(context, 'lorefountain.tryLoreFountain', () => void tryLoreFountainCommand()),
   );
 }
 

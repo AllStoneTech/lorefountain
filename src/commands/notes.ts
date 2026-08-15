@@ -18,6 +18,7 @@ import { createEntity, writeEntity } from '../entities/service';
 import { slugify, titleizeSlug } from '../model/slug';
 import { STORY_CARD_VIEW_TYPE } from '../providers/storyCardEditorProvider';
 import type { WorldTreeNode } from '../providers/worldTreeProvider';
+import { registerTrackedCommand } from '../telemetry/trackedCommands';
 
 /**
  * Register the "New Note" and "Promote Note to Entity" commands.
@@ -30,8 +31,8 @@ export function registerNoteCommands(
   pickTargetWorkspaceFolder: () => Promise<vscode.WorkspaceFolder | undefined>,
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('lorefountain.newNote', () => void newNoteCommand(pickTargetWorkspaceFolder)),
-    vscode.commands.registerCommand('lorefountain.promoteNoteToEntity', (node?: WorldTreeNode) =>
+    registerTrackedCommand(context, 'lorefountain.newNote', () => void newNoteCommand(pickTargetWorkspaceFolder)),
+    registerTrackedCommand(context, 'lorefountain.promoteNoteToEntity', (node?: WorldTreeNode) =>
       void promoteNoteToEntityCommand(node, pickTargetWorkspaceFolder),
     ),
   );

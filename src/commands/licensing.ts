@@ -15,6 +15,7 @@
 
 import * as vscode from 'vscode';
 import { clearLicenseKey, getLicenseStatus, storeLicenseKey } from '../licensing/licenseState';
+import { registerTrackedCommand } from '../telemetry/trackedCommands';
 
 /**
  * Register the `lorefountain.enterLicenseKey`, `lorefountain.showLicenseStatus`,
@@ -24,9 +25,9 @@ import { clearLicenseKey, getLicenseStatus, storeLicenseKey } from '../licensing
  */
 export function registerLicensingCommands(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('lorefountain.enterLicenseKey', () => void enterLicenseKeyCommand(context)),
-    vscode.commands.registerCommand('lorefountain.showLicenseStatus', () => void showLicenseStatusCommand(context)),
-    vscode.commands.registerCommand('lorefountain.clearLicenseKey', () => void clearLicenseKeyCommand(context)),
+    registerTrackedCommand(context, 'lorefountain.enterLicenseKey', () => void enterLicenseKeyCommand(context)),
+    registerTrackedCommand(context, 'lorefountain.showLicenseStatus', () => void showLicenseStatusCommand(context)),
+    registerTrackedCommand(context, 'lorefountain.clearLicenseKey', () => void clearLicenseKeyCommand(context)),
   );
 }
 

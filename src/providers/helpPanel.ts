@@ -25,6 +25,7 @@
 import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
+import { registerTrackedCommand } from '../telemetry/trackedCommands';
 import { buildHelpHtml } from './helpHtml';
 
 /** One help topic: the command that opens it, its bundled doc, and the webview panel's title. */
@@ -61,7 +62,7 @@ export function registerHelpCommands(context: vscode.ExtensionContext): void {
 
   for (const topic of HELP_TOPICS) {
     context.subscriptions.push(
-      vscode.commands.registerCommand(topic.command, () => void showHelpPanel(topic, helpResourcesPath)),
+      registerTrackedCommand(context, topic.command, () => void showHelpPanel(topic, helpResourcesPath)),
     );
   }
 }

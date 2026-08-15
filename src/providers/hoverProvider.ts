@@ -12,6 +12,7 @@ import * as vscode from 'vscode';
 import { buildMentionCandidates } from '../index/build';
 import { findMentionOccurrences } from '../index/mentions';
 import type { IndexStore, MentionEndpoint } from '../index/store';
+import { markFeatureUsedThisSession } from '../telemetry/events';
 import { renderEntityStoryCard, renderGlossaryStoryCard } from './storyCard';
 
 /**
@@ -26,6 +27,10 @@ export function createFountainHoverProvider(
 ): vscode.HoverProvider {
   return {
     provideHover(document, position) {
+      // Synchronous, zero-I/O — hover fires far too often to record a real
+      // event per call (see `telemetry/events.ts`'s `markFeatureUsedThisSession`).
+      markFeatureUsedThisSession('hover');
+
       const store = getStoreForDocument(document);
       if (!store) return undefined;
 

@@ -13,6 +13,7 @@ import { buildMentionCandidates, listFilesWithExtension } from '../index/build';
 import type { MentionCandidate } from '../index/mentions';
 import type { IndexStore } from '../index/store';
 import { extractScenePresence, findCoPresenceScenes, findMentionLines } from '../search/structuredSearch';
+import { registerTrackedCommand } from '../telemetry/trackedCommands';
 
 /**
  * Register the "Structured Search" command.
@@ -29,7 +30,7 @@ export function registerStructuredSearchCommand(
   getStoreForFolder: (folder: vscode.WorkspaceFolder) => IndexStore | undefined,
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('lorefountain.structuredSearch', () =>
+    registerTrackedCommand(context, 'lorefountain.structuredSearch', () =>
       void structuredSearchCommand(outputChannel, pickTargetWorkspaceFolder, getStoreForFolder),
     ),
   );

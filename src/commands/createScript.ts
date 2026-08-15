@@ -25,6 +25,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { getWorkspaceFolders } from '../config/workspaceConfig';
 import { slugify } from '../model/slug';
+import { registerTrackedCommand } from '../telemetry/trackedCommands';
 
 /**
  * Register the "New Script" command.
@@ -37,7 +38,7 @@ export function registerCreateScriptCommand(
   pickTargetWorkspaceFolder: () => Promise<vscode.WorkspaceFolder | undefined>,
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('lorefountain.newScript', () => void createScriptCommand(pickTargetWorkspaceFolder)),
+    registerTrackedCommand(context, 'lorefountain.newScript', () => void createScriptCommand(pickTargetWorkspaceFolder)),
   );
 }
 

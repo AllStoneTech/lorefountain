@@ -30,6 +30,7 @@ import { checkAgentFileVersions, type AgentFileVersionStatus } from '../config/a
 import { renderReadmeTemplate } from '../config/readmeFiles';
 import { checkReadmeVersions, type ReadmeVersionStatus } from '../config/readmeVersions';
 import { getWorkspaceFolders } from '../config/workspaceConfig';
+import { registerTrackedCommand } from '../telemetry/trackedCommands';
 
 /**
  * Register the "Check for LoreFountain File Updates" command.
@@ -44,7 +45,7 @@ export function registerCheckFileUpdatesCommand(
   pickTargetWorkspaceFolder: () => Promise<vscode.WorkspaceFolder | undefined>,
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('lorefountain.checkFileUpdates', () =>
+    registerTrackedCommand(context, 'lorefountain.checkFileUpdates', () =>
       void checkFileUpdatesCommand(context, outputChannel, pickTargetWorkspaceFolder),
     ),
   );

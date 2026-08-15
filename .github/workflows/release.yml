@@ -1,0 +1,60 @@
+name: Release
+
+# Builds a real .vsix and attaches it to a GitHub Release whenever a
+# version tag is pushed — the "push code, get a build" half of an
+# auto-publish pipeline (see docs/PUBLISHING.md). Does NOT publish to the
+# VS Code Marketplace or Open VSX on its own; those need VSCE_PAT/OVSX_PAT
+# repo secrets and are commented out below until that's set up.
+#
+# Uploads under a fixed filename (lorefountain.vsix, not
+# lorefountain-<version>.vsix) so https://github.com/AllStoneTech/lorefountain/releases/latest/download/lorefountain.vsix
+# always resolves to the newest build — but that URL is only reachable
+# once this repo itself is public (see docs/TODO.md); while private, this
+# workflow still produces the artifact, just not a publicly downloadable one.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write # to create the Release and upload the asset
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        # No submodules checkout on purpose: the pro/ submodule is a
+        # separate private repo this workflow's default token can't read.
+        # esbuild.js already handles pro/ being absent by skipping the
+        # paid-tier bundle, same as any local clone without submodule access.
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test:unit
+
+      - run: npm run package
+
+      - name: Rename to a stable filename
+        run: mv lorefountain-*.vsix lorefountain.vsix
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: lorefountain.vsix
+          generate_release_notes: true
+
+      # Once VSCE_PAT/OVSX_PAT secrets exist (see docs/PUBLISHING.md) and
+      # you're actually ready for a public marketplace listing, uncomment:
+      # - run: npx vsce publish --packagePath lorefountain.vsix
+      #   env:
+      #     VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      # - run: npx ovsx publish lorefountain.vsix
+      #   env:
+      #     OVSX_PAT: ${{ secrets.OVSX_PAT }}

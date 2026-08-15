@@ -19,7 +19,7 @@ hover previews, autocomplete, and backlinks.
 
 ## Status
 
-`v0.11.0`. The free tier is fully built: the entity model (character, location,
+`v0.12.0`. The free tier is fully built: the entity model (character, location,
 faction, object, concept, arc) with typed relationships, significance
 grouping, and freeform physical descriptions; a glossary; a dual-ordered
 Timeline; a Story Card editor and Story Overview document; hover previews and
@@ -35,6 +35,26 @@ endpoint, though that endpoint isn't deployed yet; a time-boxed public-launch
 promo keeps Pro unlocked for everyone in the meantime (see `docs/TODO.md`).
 See `CHANGELOG.md` for what shipped when, and `docs/DECISIONS.md` for the
 full rationale behind each of these.
+
+## Telemetry & Feedback
+
+LoreFountain can optionally share anonymous feature-usage data — which
+commands and views you use, your license tier, extension version, and
+editor/OS — to help prioritize development. **Off by default.** A one-time
+prompt asks on first activation; you can also toggle it any time via the
+`lorefountain.telemetry.enabled` setting, and it's always subject to VS
+Code's own global telemetry switch, which takes priority regardless of this
+setting.
+
+Never included, ever: file names, entity names, workspace paths, search
+queries, or file contents. Run **LoreFountain: Show Telemetry Queue** to see
+exactly what's queued to send, unredacted, before it goes anywhere. Run
+**LoreFountain: Disable Telemetry** to turn it off and clear the queue.
+
+**LoreFountain: Send Feedback** opens a small form for bugs, feature
+suggestions, or general thoughts — independent of the telemetry setting
+above, since it's something you choose to send each time, not background
+usage tracking.
 
 ## Development
 

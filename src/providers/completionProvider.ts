@@ -10,6 +10,7 @@
 import * as vscode from 'vscode';
 import { buildMentionCandidates } from '../index/build';
 import type { IndexStore } from '../index/store';
+import { markFeatureUsedThisSession } from '../telemetry/events';
 import { computeWikilinkContext } from './wikilink';
 
 /**
@@ -30,6 +31,11 @@ export function createWikilinkCompletionProvider(
       const linePrefix = document.lineAt(position).text.slice(0, position.character);
       const context = computeWikilinkContext(linePrefix);
       if (!context) return undefined;
+
+      // Synchronous, zero-I/O, and only reached once `[[` context is
+      // confirmed — not on every keystroke (see `telemetry/events.ts`'s
+      // `markFeatureUsedThisSession`).
+      markFeatureUsedThisSession('completion');
 
       const range = new vscode.Range(position.line, context.typedStartColumn, position.line, position.character);
       const items: vscode.CompletionItem[] = [];

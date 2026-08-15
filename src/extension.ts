@@ -46,8 +46,10 @@ import { getWorkspaceFolders } from './config/workspaceConfig';
 import { relocateCueSidecar } from './cues/sidecar';
 import { WorkspaceIndex } from './index/workspaceIndex';
 import type { IndexStore } from './index/store';
-import { getLicenseStatus } from './licensing/licenseState';
+import { getLicenseStatus, getOrCreateDeviceId } from './licensing/licenseState';
 import { isPromoActive } from './licensing/promoConfig';
+import { registerFeedbackCommand } from './commands/feedback';
+import { registerTelemetryCommands } from './commands/telemetryCommands';
 import { createFountainHoverProvider } from './providers/hoverProvider';
 import { createWikilinkCompletionProvider } from './providers/completionProvider';
 import { registerHelpCommands } from './providers/helpPanel';
@@ -57,9 +59,17 @@ import { createStoryCardEditorProvider, STORY_CARD_VIEW_TYPE } from './providers
 import { createStoryOverviewEditorProvider, STORY_OVERVIEW_VIEW_TYPE } from './providers/storyOverviewEditorProvider';
 import { WorldTreeProvider } from './providers/worldTreeProvider';
 import { checkGitSafety } from './safety/gitSafetyBanner';
+import { maybeShowTelemetryConsentPrompt } from './telemetry/consent';
+import { flushSessionUsageFlags } from './telemetry/events';
+import { sendQueuedTelemetry, TELEMETRY_SEND_INTERVAL_MS } from './telemetry/sendTelemetry';
+import { isTelemetryOptedIn } from './telemetry/telemetryConfig';
+import { setSessionTier } from './telemetry/telemetryState';
+import { registerTrackedCommand } from './telemetry/trackedCommands';
 
 let outputChannel: vscode.OutputChannel;
 let extensionContext: vscode.ExtensionContext;
+/** Set once during `activate()` (via `getOrCreateDeviceId`); read by `deactivate()`'s best-effort telemetry flush, which can't itself `await` an async lookup. */
+let cachedDeviceId: string | undefined;
 const indexes = new Map<string, WorkspaceIndex>();
 let hoverRegistration: vscode.Disposable | undefined;
 let completionRegistration: vscode.Disposable | undefined;
@@ -83,9 +93,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(outputChannel);
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('lorefountain.reindexWorkspace', () => void rebuildAllWorkspaceIndexes()),
-    vscode.commands.registerCommand('lorefountain.initializeWorkspace', () => void initializeWorkspace()),
-    vscode.commands.registerCommand('lorefountain.openSettings', () => void openSettings()),
+    registerTrackedCommand(context, 'lorefountain.reindexWorkspace', () => void rebuildAllWorkspaceIndexes()),
+    registerTrackedCommand(context, 'lorefountain.initializeWorkspace', () => void initializeWorkspace()),
+    registerTrackedCommand(context, 'lorefountain.openSettings', () => void openSettings()),
   );
   registerEntityCreationCommands(context, pickTargetWorkspaceFolder);
   registerCreateScriptCommand(context, pickTargetWorkspaceFolder);
@@ -99,6 +109,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   registerCheckFileUpdatesCommand(context, outputChannel, pickTargetWorkspaceFolder);
   registerLicensingCommands(context);
   registerHelpCommands(context);
+  registerFeedbackCommand(context);
+  registerTelemetryCommands(context, outputChannel);
 
   context.subscriptions.push(
     vscode.window.registerCustomEditorProvider(
@@ -167,6 +179,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(indexChangeEmitter);
 
   await activateProTier(context);
+
+  const deviceId = await getOrCreateDeviceId(context);
+  cachedDeviceId = deviceId; // for deactivate()'s best-effort flush, which can't itself await this lookup
+  void maybeShowTelemetryConsentPrompt(context);
+  void flushAndSendTelemetry(context, deviceId); // flush whatever survived the last session
+  const telemetryFlushInterval = setInterval(() => void flushAndSendTelemetry(context, deviceId), TELEMETRY_SEND_INTERVAL_MS);
+  context.subscriptions.push({ dispose: () => clearInterval(telemetryFlushInterval) });
+}
+
+/** Flush this session's hover/completion usage flags into the queue, then send everything queued — the two always happen together except in `deactivate()`, which can't await the flush. */
+async function flushAndSendTelemetry(context: vscode.ExtensionContext, deviceId: string): Promise<void> {
+  await flushSessionUsageFlags(context);
+  await sendQueuedTelemetry(context, deviceId, isTelemetryOptedIn);
 }
 
 /**
@@ -185,6 +210,7 @@ async function activateProTier(context: vscode.ExtensionContext): Promise<void> 
   if (!proModule) {
     // No submodule access to lorefountain-pro (or nothing built there yet)
     // — nothing to click through to fix, so no command attached.
+    setSessionTier('free');
     registerProPlaceholders(context, {
       message: 'LoreFountain Pro required — Continuity Management is a paid-tier feature.',
     });
@@ -194,6 +220,7 @@ async function activateProTier(context: vscode.ExtensionContext): Promise<void> 
   if (isPromoActive()) {
     // Public-launch promo: skip the license check entirely rather than call
     // an endpoint whose answer wouldn't change the outcome anyway.
+    setSessionTier('pro');
     proModule.activate({
       extensionContext: context,
       outputChannel,
@@ -217,6 +244,7 @@ async function activateProTier(context: vscode.ExtensionContext): Promise<void> 
   }
 
   if (licenseStatus?.valid) {
+    setSessionTier('pro');
     proModule.activate({
       extensionContext: context,
       outputChannel,
@@ -226,6 +254,7 @@ async function activateProTier(context: vscode.ExtensionContext): Promise<void> 
     return;
   }
 
+  setSessionTier('free');
   const message = licenseStatus
     ? `LoreFountain Pro: license not valid${licenseStatus.reason ? ` (${licenseStatus.reason})` : ''} — click to enter a new key.`
     : 'LoreFountain Pro: click to enter your license key and unlock Continuity Management.';
@@ -267,7 +296,7 @@ function registerProPlaceholders(context: vscode.ExtensionContext, options: { me
   );
   for (const command of GATED_PRO_COMMANDS) {
     context.subscriptions.push(
-      vscode.commands.registerCommand(command, () =>
+      registerTrackedCommand(context, command, () =>
         options.command
           ? void vscode.commands.executeCommand(options.command)
           : void vscode.window.showInformationMessage(options.message),
@@ -337,7 +366,11 @@ function loadProModule(): ProModule | undefined {
 /**
  * Called by VS Code when the extension is deactivated. Disposes every
  * per-folder index (closing its sql.js database and file watcher) and any
- * registered providers.
+ * registered providers, then makes one best-effort, fire-and-forget attempt
+ * to flush any queued telemetry — VS Code gives a deactivating extension
+ * only a short window, so this is never awaited and never guaranteed to
+ * finish; anything left over just sends on next activation instead (see
+ * `telemetry/sendTelemetry.ts`'s doc comment — nothing is lost either way).
  */
 export function deactivate(): void {
   for (const index of indexes.values()) {
@@ -346,6 +379,9 @@ export function deactivate(): void {
   indexes.clear();
   hoverRegistration?.dispose();
   completionRegistration?.dispose();
+  if (cachedDeviceId) {
+    void flushAndSendTelemetry(extensionContext, cachedDeviceId);
+  }
 }
 
 /** Resolve the {@link IndexStore} for a document's workspace folder, if it has one. */

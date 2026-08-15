@@ -13,6 +13,7 @@ import { getWorkspaceFolders } from '../config/workspaceConfig';
 import { buildTranscript, serializeTranscriptMarkdown } from '../export/transcript';
 import { parseFountain } from '../fountain/parse';
 import { listFilesWithExtension } from '../index/build';
+import { registerTrackedCommand } from '../telemetry/trackedCommands';
 
 /**
  * Register the "Export Transcript" command.
@@ -21,7 +22,7 @@ import { listFilesWithExtension } from '../index/build';
  */
 export function registerExportTranscriptCommand(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('lorefountain.exportTranscript', () => void exportTranscriptCommand()),
+    registerTrackedCommand(context, 'lorefountain.exportTranscript', () => void exportTranscriptCommand()),
   );
 }
 

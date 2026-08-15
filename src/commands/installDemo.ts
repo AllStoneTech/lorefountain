@@ -22,6 +22,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { DEMO_CATALOG, DEMO_REPO } from '../demos/demoCatalog';
 import { downloadDemoFiles, listDemoFiles } from '../demos/demoDownloader';
+import { registerTrackedCommand } from '../telemetry/trackedCommands';
 
 /**
  * Register the `lorefountain.installDemo` command.
@@ -30,7 +31,7 @@ import { downloadDemoFiles, listDemoFiles } from '../demos/demoDownloader';
  */
 export function registerInstallDemoCommand(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('lorefountain.installDemo', () => void installDemoCommand()),
+    registerTrackedCommand(context, 'lorefountain.installDemo', () => void installDemoCommand()),
   );
 }
 

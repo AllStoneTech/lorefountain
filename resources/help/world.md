@@ -47,5 +47,16 @@ Markdown file per item, organized into categories down the sidebar.
   identity, useful as raw material for an external AI image generator
   (LoreFountain itself never generates images).
 
+## Saving
+
+- **Story Cards and Story Overview** are just a form drawn over a plain
+  Markdown file — the usual dirty dot, undo/redo, and save behavior apply.
+  Save with **Ctrl+S** (or leave VS Code's autosave on) exactly as you would
+  for any other file.
+- **Settings** (the gear icon) is different: it isn't backed by a document,
+  so it has its own **Save** button inside the panel that writes to disk
+  immediately when clicked. There's no dirty dot, and Ctrl+S does nothing
+  there — use the panel's own Save button.
+
 If you're using an AI coding tool in this project, see `agents/world-builder.md`
 at the project root for the exact file format it should follow.

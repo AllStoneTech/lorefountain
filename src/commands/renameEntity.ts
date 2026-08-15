@@ -32,6 +32,7 @@ import { slugify } from '../model/slug';
 import { addAliasIfMissing, renameInText, renameRelationTargets } from '../refactor/renameEntity';
 import { STORY_CARD_VIEW_TYPE } from '../providers/storyCardEditorProvider';
 import type { WorldTreeNode } from '../providers/worldTreeProvider';
+import { registerTrackedCommand } from '../telemetry/trackedCommands';
 
 /**
  * Register the "Rename Entity" and "Show Broken References" commands.
@@ -46,10 +47,10 @@ export function registerReferenceCommands(
   getStoreForFolder: (folder: vscode.WorkspaceFolder) => IndexStore | undefined,
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('lorefountain.renameEntity', (node?: WorldTreeNode) =>
+    registerTrackedCommand(context, 'lorefountain.renameEntity', (node?: WorldTreeNode) =>
       void renameEntityCommand(node, outputChannel, getStoreForFolder),
     ),
-    vscode.commands.registerCommand('lorefountain.showBrokenReferences', () =>
+    registerTrackedCommand(context, 'lorefountain.showBrokenReferences', () =>
       void showBrokenReferencesCommand(outputChannel, getStoreForFolder),
     ),
   );

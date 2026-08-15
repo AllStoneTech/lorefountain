@@ -16,6 +16,7 @@ import { getWorkspaceFolders } from '../config/workspaceConfig';
 import { createEntity, createGlossaryTerm, createTimelineEvent } from '../entities/service';
 import type { EntityType } from '../model/entity';
 import { STORY_CARD_VIEW_TYPE } from '../providers/storyCardEditorProvider';
+import { registerTrackedCommand } from '../telemetry/trackedCommands';
 
 /** Exported for reuse by other commands that need the same type/label pairing (e.g. note promotion). */
 export const ENTITY_TYPE_COMMANDS: ReadonlyArray<{ commandId: string; type: EntityType; label: string }> = [
@@ -40,12 +41,12 @@ export function registerEntityCreationCommands(
 ): void {
   for (const { commandId, type, label } of ENTITY_TYPE_COMMANDS) {
     context.subscriptions.push(
-      vscode.commands.registerCommand(commandId, () => void createEntityCommand(type, label, pickTargetWorkspaceFolder)),
+      registerTrackedCommand(context, commandId, () => void createEntityCommand(type, label, pickTargetWorkspaceFolder)),
     );
   }
   context.subscriptions.push(
-    vscode.commands.registerCommand('lorefountain.newGlossaryTerm', () => void createGlossaryTermCommand(pickTargetWorkspaceFolder)),
-    vscode.commands.registerCommand('lorefountain.newEvent', () => void createTimelineEventCommand(pickTargetWorkspaceFolder)),
+    registerTrackedCommand(context, 'lorefountain.newGlossaryTerm', () => void createGlossaryTermCommand(pickTargetWorkspaceFolder)),
+    registerTrackedCommand(context, 'lorefountain.newEvent', () => void createTimelineEventCommand(pickTargetWorkspaceFolder)),
   );
 }
 
