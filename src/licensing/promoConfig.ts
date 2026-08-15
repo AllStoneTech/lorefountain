@@ -12,11 +12,10 @@
  */
 
 /**
- * Everyone gets Pro unlocked until this date. Placeholder default: 30 days
- * from 2026-08-11 (the day this was added), before an actual public-launch
- * date was set — update this once that date is confirmed.
+ * Everyone gets Pro unlocked until this date. Set to the confirmed
+ * public-launch promo end date, 2027-01-01.
  */
-export const PRO_PROMO_UNTIL = new Date('2026-09-10T00:00:00Z');
+export const PRO_PROMO_UNTIL = new Date('2027-01-01T00:00:00Z');
 
 /**
  * Whether the public-launch promo is still active.

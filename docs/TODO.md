@@ -20,7 +20,7 @@ Things that need to happen but don't yet, tracked here so they survive between s
 2. Apply that migration against production Supabase.
 3. Seed a `license_tiers` row for product `lorefountain-pro` with a real payment-processor product id — needs an actual paid listing to exist first, which is a product decision, not something to fabricate.
 
-Also added this session: a public-launch promo window (`licensing/promoConfig.ts`) that unlocks Pro for everyone regardless of license status until a single date constant — bypasses the real check entirely while active, so the three items above aren't blocking for the promo period itself, only for real enforcement afterward. **`PRO_PROMO_UNTIL` is currently a 30-day placeholder from 2026-08-11 — must be updated to the actual public-launch date once that's set.**
+A public-launch promo window (`licensing/promoConfig.ts`) unlocks Pro for everyone regardless of license status until `PRO_PROMO_UNTIL` (set to **2027-01-01**) — bypasses the real check entirely while active, so the three items above aren't blocking for the promo period itself, only for real enforcement after it ends.
 
 ## Before publishing to either extension marketplace
 
