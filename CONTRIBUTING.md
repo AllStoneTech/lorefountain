@@ -22,6 +22,14 @@ setup: `npm install`, then `npm run build`/`watch`/`typecheck`/`lint`/
 `test:unit`. Press <kbd>F5</kbd> in VS Code to launch an Extension Development
 Host and try your change against a real workspace.
 
+`npm run package` (and `vsce`'s `vscode:prepublish` hook) builds with
+`--production`, which minifies and then runs `javascript-obfuscator` over the
+shipped bundles. Obfuscation strength defaults to `max`; switch it with `npm
+run build:obfuscate-balanced` (lighter, smaller `.vsix`, no runtime overhead)
+or `npm run build:obfuscate-off` (minify only). See the header of `esbuild.js`
+and `docs/DECISIONS.md` (ADR-0035) for the full rationale and size/performance
+trade-offs.
+
 ## Before opening a pull request
 
 - **Run the checks locally first**: `npm run typecheck`, `npm run lint`, and
