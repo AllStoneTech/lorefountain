@@ -6,6 +6,19 @@ revisit.
 
 ---
 
+## ADR-0037 — First public release: version jumps straight to 1.0.0
+
+**Date:** 2026-08-23 · **Status:** Accepted
+
+The onboarding-buttons feature landed under the existing "minor per shipped feature" convention (ADR-0032), bumping to `0.13.0`. Before publishing to the VS Code Marketplace and Open VSX for the first time, the project owner called this the actual public launch and asked to bump straight to `1.0.0` instead.
+
+1. **`1.0.0` was always reserved for this moment** — CHANGELOG.md's own header has said so since ADR-0032 ("`1.0.0` is reserved for the actual public launch"). Publishing to both real marketplaces, with real users able to install it, is that moment, regardless of whether the source repo itself is public yet — the two are independent milestones (see ADR-0024/`docs/TODO.md`).
+2. **Verified before bumping, not assumed**: the actual production `.vsix` (obfuscated, exactly as it would ship) was built, installed into a real VS Code instance, and confirmed working — closing the "not live-tested" gap flagged repeatedly across prior ADRs (ADR-0035 among others) for the packaged artifact specifically. The bundled headless validator, run from inside the extracted `.vsix` itself, correctly parsed a full real demo project with no errors.
+3. **`package.json`/`package-lock.json` bumped together** via `npm version 1.0.0 --no-git-tag-version`, matching ADR-0032's own precedent for keeping the lockfile in sync rather than leaving `npm install` to rewrite it later.
+4. **License backend deployment is explicitly not a blocker for this release** — the public-launch promo (ADR-0034, `PRO_PROMO_UNTIL = 2027-01-01`) is the deliberate, already-tested mechanism covering that gap, not an oversight being shipped around.
+
+---
+
 ## ADR-0036 — Opt-in feature-usage telemetry and a "Send Feedback" command
 
 **Date:** 2026-08-12 · **Status:** Accepted

@@ -1,13 +1,13 @@
 # Changelog
 
 All notable changes to LoreFountain are documented here. This project follows
-[Semantic Versioning](https://semver.org/) — pre-1.0 releases (`0.x.y`) make
-no API/schema stability guarantees. `1.0.0` is reserved for the actual
-public launch; see `docs/TODO.md` for what's still outstanding before then.
+[Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [0.13.0] - 2026-08-23
+## [1.0.0] - 2026-08-23
+
+First public release, published to the VS Code Marketplace and Open VSX.
 
 ### Added
 
