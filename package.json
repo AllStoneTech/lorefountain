@@ -2,7 +2,7 @@
   "name": "lorefountain",
   "displayName": "LoreFountain",
   "description": "A Fountain-native worldbuilding layer for VS Code: link character cues and scene headings to structured entity files with typed relationships, hover previews, and backlinks.",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "publisher": "allstonetech",
   "author": "All Stone Tech",
   "license": "MIT",
@@ -366,6 +366,16 @@
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "lorefountain.worldView",
+        "contents": "Open a folder with a LoreFountain project to see it here.\n\n[Try LoreFountain (Sample Workspace)](command:lorefountain.tryLoreFountain)\n\n[Install a Demo World...](command:lorefountain.installDemo)"
+      },
+      {
+        "view": "lorefountain.scriptsView",
+        "contents": "Open a folder with a LoreFountain project to see it here.\n\n[Try LoreFountain (Sample Workspace)](command:lorefountain.tryLoreFountain)\n\n[Install a Demo World...](command:lorefountain.installDemo)"
+      }
+    ],
     "menus": {
       "view/title": [
         {

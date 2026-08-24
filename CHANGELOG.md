@@ -7,6 +7,17 @@ public launch; see `docs/TODO.md` for what's still outstanding before then.
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-08-23
+
+### Added
+
+- **Onboarding buttons in the World and Scripts sidebar views.** When no
+  LoreFountain project is found in the open folder (or before any project
+  content has been indexed), both views now show "Try LoreFountain (Sample
+  Workspace)" and "Install a Demo World..." buttons directly in the panel,
+  instead of leaving it blank until the commands are found via the Command
+  Palette.
+
 ## [0.12.0] - 2026-08-12
 
 ### Added
