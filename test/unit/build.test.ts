@@ -201,6 +201,7 @@ describe('buildIndexFromDisk', () => {
       danglingEpisodes: [],
       duplicateScriptOrders: [],
       duplicateProductionCodes: [],
+      danglingAssetManifestEntries: [],
     });
   });
 
@@ -467,7 +468,7 @@ describe('buildIndexFromDisk', () => {
         timeline: path.join(tmpRoot, 'world', 'timeline'),
         scripts: path.join(tmpRoot, 'scripts'),
       },
-      { 'kola-nuts-clatter': { file: 'assets/sfx/kola-nuts-clatter.wav' } },
+      { audio: { 'kola-nuts-clatter': { file: 'assets/sfx/kola-nuts-clatter.wav' } } },
     );
 
     expect(summary.warnings).toEqual([]);
@@ -484,6 +485,97 @@ describe('buildIndexFromDisk', () => {
     });
 
     expect(summary.warnings).toEqual([]);
+  });
+
+  it('flags a characters.json entry whose key matches no known character entity', async () => {
+    await writeFile(tmpRoot, 'world/lucien.md', characterMd('Lucien'));
+
+    const summary = await buildIndexFromDisk(
+      store,
+      {
+        world: path.join(tmpRoot, 'world'),
+        glossary: path.join(tmpRoot, 'world', 'glossary'),
+        timeline: path.join(tmpRoot, 'world', 'timeline'),
+        scripts: path.join(tmpRoot, 'scripts'),
+      },
+      {
+        characters: {
+          lucien: { versions: [{ version: 1, file: 'assets/characters/lucien-v1.png' }] },
+          'stale-name': { versions: [{ version: 1, file: 'assets/characters/stale.png' }] },
+        },
+      },
+    );
+
+    expect(summary.danglingAssetManifestEntries).toEqual([
+      { manifestFile: 'assets/manifests/characters.json', key: 'stale-name' },
+    ]);
+  });
+
+  it('does not flag a characters.json entry that matches a known character entity', async () => {
+    await writeFile(tmpRoot, 'world/lucien.md', characterMd('Lucien'));
+
+    const summary = await buildIndexFromDisk(
+      store,
+      {
+        world: path.join(tmpRoot, 'world'),
+        glossary: path.join(tmpRoot, 'world', 'glossary'),
+        timeline: path.join(tmpRoot, 'world', 'timeline'),
+        scripts: path.join(tmpRoot, 'scripts'),
+      },
+      { characters: { lucien: { versions: [{ version: 1, file: 'assets/characters/lucien-v1.png' }] } } },
+    );
+
+    expect(summary.danglingAssetManifestEntries).toEqual([]);
+  });
+
+  it('does not resolve a characters.json key against a same-named location entity (per-type checking)', async () => {
+    await writeFile(
+      tmpRoot,
+      'world/lucien.md',
+      ['---', 'name: Lucien', 'type: location', '---', '', 'Body.'].join('\n'),
+    );
+
+    const summary = await buildIndexFromDisk(
+      store,
+      {
+        world: path.join(tmpRoot, 'world'),
+        glossary: path.join(tmpRoot, 'world', 'glossary'),
+        timeline: path.join(tmpRoot, 'world', 'timeline'),
+        scripts: path.join(tmpRoot, 'scripts'),
+      },
+      { characters: { lucien: { versions: [{ version: 1, file: 'assets/characters/lucien-v1.png' }] } } },
+    );
+
+    expect(summary.danglingAssetManifestEntries).toEqual([
+      { manifestFile: 'assets/manifests/characters.json', key: 'lucien' },
+    ]);
+  });
+
+  it('flags dangling entries across locations.json, objects.json, and voice.json independently', async () => {
+    await writeFile(tmpRoot, 'world/office.md', ['---', 'name: Office', 'type: location', '---', ''].join('\n'));
+    await writeFile(tmpRoot, 'world/letter.md', ['---', 'name: The Letter', 'type: object', '---', ''].join('\n'));
+    await writeFile(tmpRoot, 'world/lucien.md', characterMd('Lucien'));
+
+    const summary = await buildIndexFromDisk(
+      store,
+      {
+        world: path.join(tmpRoot, 'world'),
+        glossary: path.join(tmpRoot, 'world', 'glossary'),
+        timeline: path.join(tmpRoot, 'world', 'timeline'),
+        scripts: path.join(tmpRoot, 'scripts'),
+      },
+      {
+        locations: { 'stale-location': { versions: [{ version: 1, file: 'x.png' }] } },
+        objects: { 'stale-object': { versions: [{ version: 1, file: 'x.png' }] } },
+        voice: { 'stale-voice': { versions: [{ version: 1, file: 'x.wav' }] } },
+      },
+    );
+
+    expect(summary.danglingAssetManifestEntries.sort((a, b) => a.key.localeCompare(b.key))).toEqual([
+      { manifestFile: 'assets/manifests/locations.json', key: 'stale-location' },
+      { manifestFile: 'assets/manifests/objects.json', key: 'stale-object' },
+      { manifestFile: 'assets/manifests/voice.json', key: 'stale-voice' },
+    ]);
   });
 
   it('does not index .fountain files as entities, and excludes notes/ scripts are unaffected by that exclusion', async () => {

@@ -28,6 +28,14 @@
  * subset of "what a full `Rebuild Index`/`validate.js` run checks" avoids two
  * different warning surfaces silently drifting apart.
  *
+ * The same full-candidate-list pass also checks every entity-keyed asset
+ * manifest (`characters.json`/`locations.json`/`objects.json`/`voice.json`,
+ * `assets/entityManifest.ts`) for keys that don't resolve to a known entity
+ * of the expected type — a "dangling manifest entry," reported at error
+ * severity like a dangling relation (a stale/typo'd key is always a broken
+ * reference, never a "not sourced yet" situation the unmapped-cue-tag
+ * warning above covers).
+ *
  * A full build never throws on a bad file: malformed YAML, schema violations,
  * and filesystem read errors are all collected and reported in the returned
  * summary so the index rebuild can skip/flag rather than crash (Spec §23).
@@ -73,6 +81,13 @@
 import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
 import { findUnmappedCueTags, type AudioManifest, type CueManifestWarning } from '../assets/audioManifest';
+import {
+  findDanglingManifestEntries,
+  type CharacterAssetManifest,
+  type DanglingManifestEntry,
+  type DressedAssetManifest,
+  type VoiceAssetManifest,
+} from '../assets/entityManifest';
 import { updateCueSidecar } from '../cues/sidecar';
 import type { ValidationIssue } from '../model/errors';
 import { parseEntityFile, type EntityWarning } from '../model/entity';
@@ -160,6 +175,24 @@ export interface IndexBuildSummary {
   danglingEpisodes: IndexBuildDanglingEpisode[];
   duplicateScriptOrders: IndexBuildDuplicateOrder[];
   duplicateProductionCodes: IndexBuildDuplicateProductionCode[];
+  /** Manifest keys (`characters.json`/`locations.json`/`objects.json`/`voice.json`) with no matching entity — see `assets/entityManifest.ts`. */
+  danglingAssetManifestEntries: DanglingManifestEntry[];
+}
+
+/**
+ * Every project asset manifest {@link buildIndexFromDisk} cross-checks
+ * against — already read and validated by the caller (same split as
+ * `lorefountain.config.json` vs. `resolveWorkspaceFolders`; see
+ * `assets/audioManifest.ts`/`assets/entityManifest.ts`'s readers). Every
+ * field defaults to empty when omitted, which simply means every tagged cue
+ * is unmapped and every entity-keyed manifest is empty (nothing to check).
+ */
+export interface ProjectAssetManifests {
+  audio?: AudioManifest;
+  characters?: CharacterAssetManifest;
+  locations?: DressedAssetManifest;
+  objects?: DressedAssetManifest;
+  voice?: VoiceAssetManifest;
 }
 
 /** The four kinds of file the index tracks. Notes (§13.4) are never indexed. */
@@ -185,22 +218,22 @@ export type ReindexFileResult =
  * Safe to call against a workspace where these folders don't exist yet — an
  * absent folder simply contributes zero files, not an error.
  *
- * `audioManifest` is the already-read, already-validated contents of
- * `assets/manifests/audio.json` (see `assets/audioManifest.ts` — reading and
- * validating it is the caller's job, same split as `lorefountain.config.json`
- * vs. `resolveWorkspaceFolders`). Defaults to empty, which simply means every
- * tagged cue is reported as unmapped.
+ * `assetManifests` is every asset manifest's already-read, already-validated
+ * contents (see {@link ProjectAssetManifests}) — reading and validating them
+ * is the caller's job, same split as `lorefountain.config.json` vs.
+ * `resolveWorkspaceFolders`.
  *
  * @param store - The index to populate.
  * @param folders - Absolute paths to the `world`, `glossary`, `timeline`, and `scripts` folders.
- * @param audioManifest - The project's parsed audio manifest, for the unmapped-cue-tag warning below.
+ * @param assetManifests - The project's parsed asset manifests, for the unmapped-cue-tag and dangling-manifest-entry checks below.
  * @returns Counts of what was indexed, plus any malformed files or warnings.
  */
 export async function buildIndexFromDisk(
   store: IndexStore,
   folders: { world: string; glossary: string; timeline: string; scripts: string },
-  audioManifest: AudioManifest = {},
+  assetManifests: ProjectAssetManifests = {},
 ): Promise<IndexBuildSummary> {
+  const audioManifest = assetManifests.audio ?? {};
   const summary: IndexBuildSummary = {
     entityCount: 0,
     glossaryCount: 0,
@@ -212,6 +245,7 @@ export async function buildIndexFromDisk(
     danglingEpisodes: [],
     duplicateScriptOrders: [],
     duplicateProductionCodes: [],
+    danglingAssetManifestEntries: [],
   };
 
   const entityFiles = (await listFilesWithExtension(folders.world, '.md', ENTITY_EXCLUDED_SUBDIRS)).filter(
@@ -281,12 +315,18 @@ export async function buildIndexFromDisk(
   // A single pass over the now-complete candidate list, after every file has
   // been upserted — see the module doc comment on why this differs from the
   // per-file recompute an incremental `reindexFile` call does on its own.
-  const { danglingRelations, danglingEpisodes, duplicateScriptOrders, duplicateProductionCodes } =
-    recomputeMentionsAndFindIssues(store, scriptTexts, folders.scripts);
+  const {
+    danglingRelations,
+    danglingEpisodes,
+    duplicateScriptOrders,
+    duplicateProductionCodes,
+    danglingAssetManifestEntries,
+  } = recomputeMentionsAndFindIssues(store, scriptTexts, folders.scripts, assetManifests);
   summary.danglingRelations = danglingRelations;
   summary.danglingEpisodes = danglingEpisodes;
   summary.duplicateScriptOrders = duplicateScriptOrders;
   summary.duplicateProductionCodes = duplicateProductionCodes;
+  summary.danglingAssetManifestEntries = danglingAssetManifestEntries;
 
   return summary;
 }
@@ -464,19 +504,22 @@ interface CrossFileIssues {
   danglingEpisodes: IndexBuildDanglingEpisode[];
   duplicateScriptOrders: IndexBuildDuplicateOrder[];
   duplicateProductionCodes: IndexBuildDuplicateProductionCode[];
+  danglingAssetManifestEntries: DanglingManifestEntry[];
 }
 
 /**
  * Recompute every entity's, glossary term's, and script's outgoing mentions
  * against the store's complete, current candidate list, and detect dangling
- * relation targets and script Order/Production Code collisions across the
- * whole project. Intended to run once, after every file in a full disk build
- * has already been upserted/read (see the module doc comment).
+ * relation targets, script Order/Production Code collisions, and dangling
+ * asset-manifest entries (`assets/entityManifest.ts`) across the whole
+ * project. Intended to run once, after every file in a full disk build has
+ * already been upserted/read (see the module doc comment).
  */
 function recomputeMentionsAndFindIssues(
   store: IndexStore,
   scriptTexts: ReadonlyMap<string, string>,
   scriptsRoot: string,
+  assetManifests: ProjectAssetManifests,
 ): CrossFileIssues {
   const candidates = buildMentionCandidates(store);
   const entities = store.listEntities();
@@ -526,7 +569,24 @@ function recomputeMentionsAndFindIssues(
   }
 
   const { duplicateScriptOrders, duplicateProductionCodes } = findScriptIssues(store.listScripts(), scriptsRoot);
-  return { danglingRelations, danglingEpisodes, duplicateScriptOrders, duplicateProductionCodes };
+
+  const knownIdsByType = (type: string): Set<string> =>
+    new Set(entities.filter((entity) => entity.data.type === type).map((entity) => entity.id));
+  const knownCharacterIds = knownIdsByType('character');
+  const danglingAssetManifestEntries: DanglingManifestEntry[] = [
+    ...findDanglingManifestEntries(assetManifests.characters ?? {}, knownCharacterIds, 'assets/manifests/characters.json'),
+    ...findDanglingManifestEntries(assetManifests.locations ?? {}, knownIdsByType('location'), 'assets/manifests/locations.json'),
+    ...findDanglingManifestEntries(assetManifests.objects ?? {}, knownIdsByType('object'), 'assets/manifests/objects.json'),
+    ...findDanglingManifestEntries(assetManifests.voice ?? {}, knownCharacterIds, 'assets/manifests/voice.json'),
+  ];
+
+  return {
+    danglingRelations,
+    danglingEpisodes,
+    duplicateScriptOrders,
+    duplicateProductionCodes,
+    danglingAssetManifestEntries,
+  };
 }
 
 /**

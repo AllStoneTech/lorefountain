@@ -12,19 +12,27 @@
  * `Initialize Workspace` and runs anywhere with `node validate.js`.
  *
  * Exit code is `0` when nothing is wrong, `1` when there's at least one
- * malformed file, dangling relation, or duplicate Production Code (an
- * identity collision, not just a display ambiguity). Plain warnings —
- * misplaced fields, an unusable `Order`/Production Code value, Production
- * Code drift, two scripts in the same season sharing an `Order`, or a tagged
- * SFX/MUSIC/AMB cue with no matching `assets/manifests/audio.json` entry —
- * don't fail the run, matching how the extension treats them as non-blocking.
+ * malformed file, dangling relation, dangling asset-manifest entry, or
+ * duplicate Production Code (all identity collisions/broken references, not
+ * just a display ambiguity). Plain warnings — misplaced fields, an unusable
+ * `Order`/Production Code value, Production Code drift, two scripts in the
+ * same season sharing an `Order`, or a tagged SFX/MUSIC/AMB cue with no
+ * matching `assets/manifests/audio.json` entry — don't fail the run, matching
+ * how the extension treats them as non-blocking.
  */
 
 import * as path from 'node:path';
 import { readAudioManifest } from '../assets/audioManifest';
 import { folderSettingsFromConfig, readLoreFountainConfig } from '../config/configFile';
 import { resolveWorkspaceFolders } from '../config/folders';
-import { buildIndexFromDisk, type IndexBuildSummary } from '../index/build';
+import {
+  readCharacterAssetManifest,
+  readLocationAssetManifest,
+  readObjectAssetManifest,
+  readVoiceAssetManifest,
+} from '../assets/entityManifest';
+import type { ReadManifestFileResult } from '../assets/manifestFile';
+import { buildIndexFromDisk, type IndexBuildSummary, type ProjectAssetManifests } from '../index/build';
 import { createMemoryIndexStore } from '../index/memoryStore';
 
 async function main(): Promise<void> {
@@ -36,12 +44,26 @@ async function main(): Promise<void> {
     console.log(`⚠ lorefountain.config.json (${configResult.reason}): ${configResult.message} — using default folder names.\n`);
   }
 
-  const manifestResult = await readAudioManifest(folders.assets);
-  if (!manifestResult.ok) {
-    console.log(
-      `⚠ assets/manifests/audio.json (${manifestResult.reason}): ${manifestResult.message} — treating every tagged cue as unmapped.\n`,
-    );
-  }
+  const [audio, characters, locations, objects, voice] = await Promise.all([
+    readAudioManifest(folders.assets),
+    readCharacterAssetManifest(folders.assets),
+    readLocationAssetManifest(folders.assets),
+    readObjectAssetManifest(folders.assets),
+    readVoiceAssetManifest(folders.assets),
+  ]);
+  reportManifestIssue('assets/manifests/audio.json', audio);
+  reportManifestIssue('assets/manifests/characters.json', characters);
+  reportManifestIssue('assets/manifests/locations.json', locations);
+  reportManifestIssue('assets/manifests/objects.json', objects);
+  reportManifestIssue('assets/manifests/voice.json', voice);
+
+  const assetManifests: ProjectAssetManifests = {
+    audio: audio.ok ? audio.manifest : {},
+    characters: characters.ok ? characters.manifest : {},
+    locations: locations.ok ? locations.manifest : {},
+    objects: objects.ok ? objects.manifest : {},
+    voice: voice.ok ? voice.manifest : {},
+  };
 
   const store = createMemoryIndexStore();
   const summary = await buildIndexFromDisk(
@@ -52,7 +74,7 @@ async function main(): Promise<void> {
       timeline: folders.timeline,
       scripts: folders.scripts,
     },
-    manifestResult.ok ? manifestResult.manifest : {},
+    assetManifests,
   );
 
   printReport(root, summary);
@@ -60,9 +82,16 @@ async function main(): Promise<void> {
     summary.malformed.length > 0 ||
     summary.danglingRelations.length > 0 ||
     summary.danglingEpisodes.length > 0 ||
-    summary.duplicateProductionCodes.length > 0
+    summary.duplicateProductionCodes.length > 0 ||
+    summary.danglingAssetManifestEntries.length > 0
       ? 1
       : 0;
+}
+
+/** Print a one-line notice when a manifest failed to read, matching the config-file issue notice above. A missing manifest is not reported — it's the expected starting state. */
+function reportManifestIssue(label: string, result: ReadManifestFileResult<unknown>): void {
+  if (result.ok) return;
+  console.log(`⚠ ${label} (${result.reason}): ${result.message} — treating it as empty.\n`);
 }
 
 function printReport(root: string, summary: IndexBuildSummary): void {
@@ -76,7 +105,8 @@ function printReport(root: string, summary: IndexBuildSummary): void {
     summary.danglingRelations.length === 0 &&
     summary.danglingEpisodes.length === 0 &&
     summary.duplicateScriptOrders.length === 0 &&
-    summary.duplicateProductionCodes.length === 0;
+    summary.duplicateProductionCodes.length === 0 &&
+    summary.danglingAssetManifestEntries.length === 0;
   if (nothingToReport) {
     console.log('All clear.');
     return;
@@ -137,6 +167,14 @@ function printReport(root: string, summary: IndexBuildSummary): void {
       for (const filePath of duplicate.filePaths) {
         console.log(`    ${path.relative(root, filePath)}`);
       }
+    }
+    console.log('');
+  }
+
+  if (summary.danglingAssetManifestEntries.length > 0) {
+    console.log(`✘ ${summary.danglingAssetManifestEntries.length} dangling asset-manifest entry(s):`);
+    for (const entry of summary.danglingAssetManifestEntries) {
+      console.log(`  ${entry.manifestFile} — "${entry.key}" doesn't match any known entity`);
     }
   }
 }

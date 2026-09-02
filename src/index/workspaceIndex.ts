@@ -12,9 +12,16 @@
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { readAudioManifest } from '../assets/audioManifest';
+import {
+  readCharacterAssetManifest,
+  readLocationAssetManifest,
+  readObjectAssetManifest,
+  readVoiceAssetManifest,
+} from '../assets/entityManifest';
+import type { ReadManifestFileResult } from '../assets/manifestFile';
 import { getWorkspaceFolders } from '../config/workspaceConfig';
 import { removeCueSidecar } from '../cues/sidecar';
-import { buildIndexFromDisk, reindexFile, removeFileFromIndex, type IndexBuildSummary } from './build';
+import { buildIndexFromDisk, reindexFile, removeFileFromIndex, type IndexBuildSummary, type ProjectAssetManifests } from './build';
 import { createSqlJsIndexStore } from './sqlJsStore';
 import type { IndexStore } from './store';
 
@@ -59,12 +66,26 @@ export class WorkspaceIndex implements vscode.Disposable {
       this.outputChannel.appendLine(`[LoreFountain] ${this.folder.name}: ${configIssue}`);
     }
 
-    const manifestResult = await readAudioManifest(folders.assets);
-    if (!manifestResult.ok) {
-      this.outputChannel.appendLine(
-        `[LoreFountain] ${this.folder.name}: assets/manifests/audio.json (${manifestResult.reason}): ${manifestResult.message}`,
-      );
-    }
+    const [audio, characters, locations, objects, voice] = await Promise.all([
+      readAudioManifest(folders.assets),
+      readCharacterAssetManifest(folders.assets),
+      readLocationAssetManifest(folders.assets),
+      readObjectAssetManifest(folders.assets),
+      readVoiceAssetManifest(folders.assets),
+    ]);
+    this.reportManifestIssue('assets/manifests/audio.json', audio);
+    this.reportManifestIssue('assets/manifests/characters.json', characters);
+    this.reportManifestIssue('assets/manifests/locations.json', locations);
+    this.reportManifestIssue('assets/manifests/objects.json', objects);
+    this.reportManifestIssue('assets/manifests/voice.json', voice);
+
+    const assetManifests: ProjectAssetManifests = {
+      audio: audio.ok ? audio.manifest : {},
+      characters: characters.ok ? characters.manifest : {},
+      locations: locations.ok ? locations.manifest : {},
+      objects: objects.ok ? objects.manifest : {},
+      voice: voice.ok ? voice.manifest : {},
+    };
 
     const summary = await buildIndexFromDisk(
       this.store,
@@ -74,11 +95,17 @@ export class WorkspaceIndex implements vscode.Disposable {
         timeline: folders.timeline,
         scripts: folders.scripts,
       },
-      manifestResult.ok ? manifestResult.manifest : {},
+      assetManifests,
     );
     this.logSummary(summary);
     this.changeEmitter.fire();
     return summary;
+  }
+
+  /** Log a manifest read failure to the output channel, matching `configIssue`'s posture. A missing manifest is not logged — it's the expected starting state. */
+  private reportManifestIssue(label: string, result: ReadManifestFileResult<unknown>): void {
+    if (result.ok) return;
+    this.outputChannel.appendLine(`[LoreFountain] ${this.folder.name}: ${label} (${result.reason}): ${result.message}`);
   }
 
   dispose(): void {
@@ -177,6 +204,11 @@ export class WorkspaceIndex implements vscode.Disposable {
     for (const duplicate of summary.duplicateProductionCodes) {
       this.outputChannel.appendLine(
         `[LoreFountain] ERROR: ${duplicate.filePaths.length} scripts share Production Code "${duplicate.productionCode}" — ${duplicate.filePaths.join(', ')}`,
+      );
+    }
+    for (const entry of summary.danglingAssetManifestEntries) {
+      this.outputChannel.appendLine(
+        `[LoreFountain] ERROR: ${entry.manifestFile} — "${entry.key}" doesn't match any known entity.`,
       );
     }
   }

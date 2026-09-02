@@ -13,11 +13,10 @@
  * JSON or a schema violation is reported, never thrown.
  */
 
-import * as fsp from 'node:fs/promises';
-import * as path from 'node:path';
 import { z } from 'zod';
 import type { CueEntry } from '../cues/parseCues';
 import type { ValidationIssue } from '../model/errors';
+import { readManifestFile, type ReadManifestFileResult } from './manifestFile';
 
 /** One asset manifest entry: the file that fulfills a tagged cue, plus optional provenance. */
 export const audioManifestEntrySchema = z.object({
@@ -36,9 +35,7 @@ export type AudioManifest = z.infer<typeof audioManifestSchema>;
 const AUDIO_MANIFEST_RELATIVE_PATH = ['manifests', 'audio.json'];
 
 /** Outcome of {@link readAudioManifest}. */
-export type ReadAudioManifestResult =
-  | { ok: true; manifest: AudioManifest; found: boolean }
-  | { ok: false; reason: 'malformed-json' | 'invalid-schema'; message: string };
+export type ReadAudioManifestResult = ReadManifestFileResult<AudioManifest>;
 
 /**
  * Read and validate `assets/manifests/audio.json`.
@@ -51,35 +48,7 @@ export type ReadAudioManifestResult =
  * @returns The parsed manifest (or empty), or a described non-throwing failure.
  */
 export async function readAudioManifest(assetsRoot: string): Promise<ReadAudioManifestResult> {
-  const filePath = path.join(assetsRoot, ...AUDIO_MANIFEST_RELATIVE_PATH);
-
-  let text: string;
-  try {
-    text = await fsp.readFile(filePath, 'utf8');
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-      return { ok: true, manifest: {}, found: false };
-    }
-    return { ok: false, reason: 'malformed-json', message: errorMessage(err) };
-  }
-
-  let parsedJson: unknown;
-  try {
-    parsedJson = JSON.parse(text);
-  } catch (err) {
-    return { ok: false, reason: 'malformed-json', message: `Invalid JSON: ${errorMessage(err)}` };
-  }
-
-  const parsed = audioManifestSchema.safeParse(parsedJson);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      reason: 'invalid-schema',
-      message: parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; '),
-    };
-  }
-
-  return { ok: true, manifest: parsed.data, found: true };
+  return readManifestFile(assetsRoot, AUDIO_MANIFEST_RELATIVE_PATH, audioManifestSchema, {});
 }
 
 /** A non-blocking warning about a tagged cue with no matching audio manifest entry. */
@@ -109,9 +78,4 @@ export function findUnmappedCueTags(cues: readonly CueEntry[], manifest: AudioMa
     });
   }
   return warnings;
-}
-
-/** Extract a message from an unknown thrown value. */
-function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
 }
