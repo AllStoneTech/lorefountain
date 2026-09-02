@@ -11,6 +11,7 @@
 
 import * as path from 'node:path';
 import * as vscode from 'vscode';
+import { readAudioManifest } from '../assets/audioManifest';
 import { getWorkspaceFolders } from '../config/workspaceConfig';
 import { removeCueSidecar } from '../cues/sidecar';
 import { buildIndexFromDisk, reindexFile, removeFileFromIndex, type IndexBuildSummary } from './build';
@@ -57,12 +58,24 @@ export class WorkspaceIndex implements vscode.Disposable {
     if (configIssue) {
       this.outputChannel.appendLine(`[LoreFountain] ${this.folder.name}: ${configIssue}`);
     }
-    const summary = await buildIndexFromDisk(this.store, {
-      world: folders.world,
-      glossary: folders.glossary,
-      timeline: folders.timeline,
-      scripts: folders.scripts,
-    });
+
+    const manifestResult = await readAudioManifest(folders.assets);
+    if (!manifestResult.ok) {
+      this.outputChannel.appendLine(
+        `[LoreFountain] ${this.folder.name}: assets/manifests/audio.json (${manifestResult.reason}): ${manifestResult.message}`,
+      );
+    }
+
+    const summary = await buildIndexFromDisk(
+      this.store,
+      {
+        world: folders.world,
+        glossary: folders.glossary,
+        timeline: folders.timeline,
+        scripts: folders.scripts,
+      },
+      manifestResult.ok ? manifestResult.manifest : {},
+    );
     this.logSummary(summary);
     this.changeEmitter.fire();
     return summary;

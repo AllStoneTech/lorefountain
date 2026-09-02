@@ -15,11 +15,13 @@
  * malformed file, dangling relation, or duplicate Production Code (an
  * identity collision, not just a display ambiguity). Plain warnings —
  * misplaced fields, an unusable `Order`/Production Code value, Production
- * Code drift, or two scripts in the same season sharing an `Order` — don't
- * fail the run, matching how the extension treats them as non-blocking.
+ * Code drift, two scripts in the same season sharing an `Order`, or a tagged
+ * SFX/MUSIC/AMB cue with no matching `assets/manifests/audio.json` entry —
+ * don't fail the run, matching how the extension treats them as non-blocking.
  */
 
 import * as path from 'node:path';
+import { readAudioManifest } from '../assets/audioManifest';
 import { folderSettingsFromConfig, readLoreFountainConfig } from '../config/configFile';
 import { resolveWorkspaceFolders } from '../config/folders';
 import { buildIndexFromDisk, type IndexBuildSummary } from '../index/build';
@@ -34,13 +36,24 @@ async function main(): Promise<void> {
     console.log(`⚠ lorefountain.config.json (${configResult.reason}): ${configResult.message} — using default folder names.\n`);
   }
 
+  const manifestResult = await readAudioManifest(folders.assets);
+  if (!manifestResult.ok) {
+    console.log(
+      `⚠ assets/manifests/audio.json (${manifestResult.reason}): ${manifestResult.message} — treating every tagged cue as unmapped.\n`,
+    );
+  }
+
   const store = createMemoryIndexStore();
-  const summary = await buildIndexFromDisk(store, {
-    world: folders.world,
-    glossary: folders.glossary,
-    timeline: folders.timeline,
-    scripts: folders.scripts,
-  });
+  const summary = await buildIndexFromDisk(
+    store,
+    {
+      world: folders.world,
+      glossary: folders.glossary,
+      timeline: folders.timeline,
+      scripts: folders.scripts,
+    },
+    manifestResult.ok ? manifestResult.manifest : {},
+  );
 
   printReport(root, summary);
   process.exitCode =

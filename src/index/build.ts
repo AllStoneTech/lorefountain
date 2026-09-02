@@ -17,6 +17,17 @@
  * `cues/sidecar.ts`, for the same reason: the sidecar is derived data that
  * must never drift from the script it was parsed from.
  *
+ * A full {@link buildIndexFromDisk} additionally checks every tagged cue
+ * (`cues/parseCues.ts`'s `[tag]` syntax) against the project's audio manifest
+ * (`assets/audioManifest.ts`), reporting a per-script warning for any tag with
+ * no matching entry. Unlike the duplicate-Order/duplicate-Production-Code
+ * checks below, this one needs no cross-script aggregation — only the one
+ * script's own cues and the fixed manifest input — but it's still scoped to
+ * the full build only, not {@link reindexFile}, for the same reason `Order`
+ * collisions are: keeping "what's checked incrementally on save" a strict
+ * subset of "what a full `Rebuild Index`/`validate.js` run checks" avoids two
+ * different warning surfaces silently drifting apart.
+ *
  * A full build never throws on a bad file: malformed YAML, schema violations,
  * and filesystem read errors are all collected and reported in the returned
  * summary so the index rebuild can skip/flag rather than crash (Spec §23).
@@ -61,6 +72,7 @@
 
 import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
+import { findUnmappedCueTags, type AudioManifest, type CueManifestWarning } from '../assets/audioManifest';
 import { updateCueSidecar } from '../cues/sidecar';
 import type { ValidationIssue } from '../model/errors';
 import { parseEntityFile, type EntityWarning } from '../model/entity';
@@ -101,7 +113,7 @@ export interface ScriptDriftWarning extends ValidationIssue {
 }
 
 /** Every kind of non-blocking, per-file warning the index can produce. */
-export type IndexWarning = EntityWarning | ScriptWarning | ScriptDriftWarning;
+export type IndexWarning = EntityWarning | ScriptWarning | ScriptDriftWarning | CueManifestWarning;
 
 /** One file that parsed successfully but had a non-blocking warning (misplaced field, unusable Order/Production Code, or Production Code drift). */
 export interface IndexBuildWarning {
@@ -173,13 +185,21 @@ export type ReindexFileResult =
  * Safe to call against a workspace where these folders don't exist yet — an
  * absent folder simply contributes zero files, not an error.
  *
+ * `audioManifest` is the already-read, already-validated contents of
+ * `assets/manifests/audio.json` (see `assets/audioManifest.ts` — reading and
+ * validating it is the caller's job, same split as `lorefountain.config.json`
+ * vs. `resolveWorkspaceFolders`). Defaults to empty, which simply means every
+ * tagged cue is reported as unmapped.
+ *
  * @param store - The index to populate.
  * @param folders - Absolute paths to the `world`, `glossary`, `timeline`, and `scripts` folders.
+ * @param audioManifest - The project's parsed audio manifest, for the unmapped-cue-tag warning below.
  * @returns Counts of what was indexed, plus any malformed files or warnings.
  */
 export async function buildIndexFromDisk(
   store: IndexStore,
   folders: { world: string; glossary: string; timeline: string; scripts: string },
+  audioManifest: AudioManifest = {},
 ): Promise<IndexBuildSummary> {
   const summary: IndexBuildSummary = {
     entityCount: 0,
@@ -245,12 +265,13 @@ export async function buildIndexFromDisk(
       const text = await fsp.readFile(filePath, 'utf8');
       scriptTexts.set(filePath, text);
       summary.scriptCount += 1;
-      await updateCueSidecar(filePath, text);
+      const cues = await updateCueSidecar(filePath, text);
 
       const { script, warnings } = parseScriptTitlePage(text, { id: idFromFilePath(filePath), filePath });
       store.upsertScript(script);
-      if (warnings.length > 0) {
-        summary.warnings.push({ filePath, warnings });
+      const allWarnings: IndexWarning[] = [...warnings, ...findUnmappedCueTags(cues, audioManifest)];
+      if (allWarnings.length > 0) {
+        summary.warnings.push({ filePath, warnings: allWarnings });
       }
     } catch (err) {
       summary.malformed.push({ filePath, reason: 'read-error', message: errorMessage(err) });

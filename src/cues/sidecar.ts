@@ -37,14 +37,17 @@ export function cueSidecarPathFor(scriptPath: string): string {
  *
  * @param scriptPath - Absolute path to the `.fountain` script.
  * @param scriptText - The script's current, already-read text.
+ * @returns The cues just written (or `[]` if the sidecar was removed) — the
+ *   caller already has these parsed, so e.g. `index/build.ts`'s audio-manifest
+ *   cross-check can reuse them instead of re-running `extractCues`.
  */
-export async function updateCueSidecar(scriptPath: string, scriptText: string): Promise<void> {
+export async function updateCueSidecar(scriptPath: string, scriptText: string): Promise<CueEntry[]> {
   const cues = extractCues(scriptText);
   const sidecarPath = cueSidecarPathFor(scriptPath);
 
   if (cues.length === 0) {
     await removeCueSidecar(scriptPath);
-    return;
+    return cues;
   }
 
   const sidecar: CueSidecar = {
@@ -54,6 +57,7 @@ export async function updateCueSidecar(scriptPath: string, scriptText: string): 
     cues,
   };
   await fsp.writeFile(sidecarPath, `${JSON.stringify(sidecar, null, 2)}\n`, 'utf8');
+  return cues;
 }
 
 /** Remove a script's cue sidecar, if one exists. Safe to call when absent. */

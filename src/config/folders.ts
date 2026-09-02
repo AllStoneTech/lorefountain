@@ -15,6 +15,7 @@ export interface FolderSettings {
   scripts?: string;
   world?: string;
   imports?: string;
+  assets?: string;
 }
 
 /** Documented default folder names (Spec §5). */
@@ -22,10 +23,23 @@ export const DEFAULT_FOLDERS: Required<FolderSettings> = {
   scripts: 'scripts',
   world: 'world',
   imports: 'imports',
+  assets: 'assets',
 };
 
-/** This workspace's actual folder names (relative to the workspace root, e.g. `"world"`) — every key resolved, no optionals. Used wherever a folder's *name* (not its absolute path) is needed, e.g. substituting it into a scaffolded README. */
-export type FolderNames = Required<FolderSettings>;
+/**
+ * This workspace's actual folder names (relative to the workspace root, e.g.
+ * `"world"`) for the three folders that have a scaffolded README template —
+ * used wherever a folder's *name* (not its absolute path) is needed to
+ * substitute into one. Deliberately not `Required<FolderSettings>`: `assets`
+ * (and any future configurable folder with no README template of its own)
+ * has nothing to substitute into and so has no reason to be threaded through
+ * this type.
+ */
+export interface FolderNames {
+  scripts: string;
+  world: string;
+  imports: string;
+}
 
 /** Resolved, absolute workspace folder paths. */
 export interface WorkspaceFolders {
@@ -41,6 +55,8 @@ export interface WorkspaceFolders {
   notes: string;
   /** Drop-zone for existing source docs/bibles to migrate (Spec §13.5). */
   imports: string;
+  /** Production assets (audio, character/location rigs) and their manifests — e.g. `assets/manifests/audio.json` (Spec §15.x). Peer of `world`, not a subfolder of it: an audio manifest is production/technical data, not lore. */
+  assets: string;
 }
 
 /**
@@ -60,6 +76,7 @@ export function resolveWorkspaceFolders(
   const scripts = settings.scripts?.trim() || DEFAULT_FOLDERS.scripts;
   const world = settings.world?.trim() || DEFAULT_FOLDERS.world;
   const imports = settings.imports?.trim() || DEFAULT_FOLDERS.imports;
+  const assets = settings.assets?.trim() || DEFAULT_FOLDERS.assets;
 
   return {
     scripts: path.join(workspaceRoot, scripts),
@@ -68,5 +85,6 @@ export function resolveWorkspaceFolders(
     timeline: path.join(workspaceRoot, world, 'timeline'),
     notes: path.join(workspaceRoot, world, 'notes'),
     imports: path.join(workspaceRoot, imports),
+    assets: path.join(workspaceRoot, assets),
   };
 }

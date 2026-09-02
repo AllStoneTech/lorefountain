@@ -153,7 +153,7 @@ describe('writeDefaultConfigIfAbsent', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.found).toBe(true);
-    expect(result.config.folders).toEqual({ world: 'world', scripts: 'scripts', imports: 'imports' });
+    expect(result.config.folders).toEqual({ world: 'world', scripts: 'scripts', imports: 'imports', assets: 'assets' });
   });
 
   it('does not overwrite an existing config file, and reports false', async () => {

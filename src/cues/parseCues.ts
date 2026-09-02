@@ -28,6 +28,20 @@
  * `description` instead — collect-and-continue, the same posture as
  * `index/relations.ts`'s dangling-relation handling: never guess or error
  * on an unrecognized keyword.
+ *
+ * An optional `[tag]` immediately after the prefix (e.g. `SFX: [kola-nuts-clatter]
+ * the kola nuts clatter in a bowl`) is this convention's stable handle into
+ * `assets/manifests/audio.json` (`index/build.ts`'s cross-file check warns
+ * when a tagged cue has no matching manifest entry). A tag is required to be
+ * slug-shaped — lowercase letters, digits, and single internal hyphens only,
+ * no leading/trailing hyphen — deliberately narrower than free text: that
+ * shape can never collide with a `[[Wikilink]]` entity mention appearing
+ * later in the same cue's description (a wikilink's first inner character is
+ * itself `[`, which the tag pattern's `[a-z0-9]` class rejects), and it keeps
+ * tag matching exact rather than fuzzy, so a rename never silently maps to
+ * the wrong asset. The tag is optional — a cue can exist before anyone has
+ * tagged or sourced its asset — and is extracted before role/timing on a
+ * `MUSIC:` line, since it always sits closest to the prefix.
  */
 
 export type CueType = 'sfx' | 'music' | 'amb';
@@ -41,6 +55,8 @@ export type MusicTiming = 'IN' | 'OUT';
 /** One cue found in a script. */
 export interface CueEntry {
   type: CueType;
+  /** The cue's stable `[tag]` handle into `assets/manifests/audio.json`, if one was written. Absent for an untagged cue — not yet an error, since a cue can exist before its asset is sourced. */
+  tag?: string;
   /** Only ever present for `music` cues. Independent of `timing` — either, both, or neither may be set. */
   role?: MusicRole;
   /** Only ever present for `music` cues. Independent of `role` — either, both, or neither may be set. */
@@ -51,6 +67,14 @@ export interface CueEntry {
 }
 
 const CUE_LINE = /^[ \t]*(SFX|MUSIC|AMB):[ \t]*(.*)$/;
+
+/**
+ * A leading `[tag]` on a cue's remaining text, e.g. `[kola-nuts-clatter] the
+ * kola nuts clatter`. Deliberately restricted to slug shape (see the module
+ * doc comment) so it can never be confused with a `[[Wikilink]]` entity
+ * mention appearing later in the same description.
+ */
+const CUE_TAG = /^\[([a-z0-9]+(?:-[a-z0-9]+)*)\][ \t]*(.*)$/;
 
 // "SOURCE BED" is listed before "BED" for longest-match-first readability,
 // though it's not actually load-bearing: none of these four alternatives
@@ -63,6 +87,11 @@ const MUSIC_TIMING = /^(IN|OUT)\b[ \t]*-?[ \t]*(.*)$/;
 
 /**
  * Extract every SFX:/MUSIC:/AMB: cue from a script's raw text.
+ *
+ * A leading `[tag]` (see the module doc comment) is extracted first, before
+ * anything else — including a MUSIC cue's role/timing keywords, which always
+ * sit after it if both are present, e.g. `MUSIC: [tense-swell] BED IN low,
+ * patient`.
  *
  * For a MUSIC cue, role and timing are extracted independently, in
  * sequence — role first, then timing against whatever's left — each
@@ -83,7 +112,15 @@ export function extractCues(scriptText: string): CueEntry[] {
     if (!match) return;
 
     const type = match[1].toLowerCase() as CueType;
-    const rest = match[2].trim();
+    let rest = match[2];
+
+    let tag: string | undefined;
+    const tagMatch = CUE_TAG.exec(rest);
+    if (tagMatch) {
+      tag = tagMatch[1];
+      rest = tagMatch[2];
+    }
+    rest = rest.trim();
 
     if (type === 'music') {
       let remaining = rest;
@@ -102,11 +139,11 @@ export function extractCues(scriptText: string): CueEntry[] {
         remaining = timingMatch[2];
       }
 
-      cues.push({ type, role, timing, description: remaining.trim(), line });
+      cues.push({ type, tag, role, timing, description: remaining.trim(), line });
       return;
     }
 
-    cues.push({ type, description: rest, line });
+    cues.push({ type, tag, description: rest, line });
   });
 
   return cues;

@@ -81,4 +81,58 @@ describe('extractCues', () => {
   it('returns an empty array for a script with no cues', () => {
     expect(extractCues('INT. THE ARK - NIGHT\n\nSANGO\nWhere are you taking us?\n')).toEqual([]);
   });
+
+  describe('tag', () => {
+    it('extracts a leading [tag] from a SFX cue, separate from the description', () => {
+      const cues = extractCues('SFX: [kola-nuts-clatter] kola nuts clatter in a bowl');
+      expect(cues).toEqual([
+        { type: 'sfx', tag: 'kola-nuts-clatter', description: 'kola nuts clatter in a bowl', line: 0 },
+      ]);
+    });
+
+    it('does not mistake a [[Wikilink]] entity mention later in the description for a second tag, or for the tag itself', () => {
+      const cues = extractCues('SFX: [kola-nuts-clatter] the [[Kola Nuts]] rattle against the desk');
+      expect(cues).toEqual([
+        {
+          type: 'sfx',
+          tag: 'kola-nuts-clatter',
+          description: 'the [[Kola Nuts]] rattle against the desk',
+          line: 0,
+        },
+      ]);
+    });
+
+    it('does not treat a [[Wikilink]] immediately after the prefix, with no space, as a tag', () => {
+      const cues = extractCues('SFX:[[Kola Nuts]] rattle against the desk');
+      expect(cues).toEqual([{ type: 'sfx', description: '[[Kola Nuts]] rattle against the desk', line: 0 }]);
+    });
+
+    it('extracts a tag on an AMB cue', () => {
+      const cues = extractCues('AMB: [ark-engine-hum] distant engine hum');
+      expect(cues).toEqual([{ type: 'amb', tag: 'ark-engine-hum', description: 'distant engine hum', line: 0 }]);
+    });
+
+    it('extracts a tag on a MUSIC cue, before its role/timing keywords', () => {
+      const cues = extractCues('MUSIC: [tense-swell] BED IN low, patient');
+      expect(cues).toEqual([
+        { type: 'music', tag: 'tense-swell', role: 'BED', timing: 'IN', description: 'low, patient', line: 0 },
+      ]);
+    });
+
+    it('leaves the cue untagged when no [tag] is present', () => {
+      const cues = extractCues('SFX: metal groaning');
+      expect(cues).toEqual([{ type: 'sfx', description: 'metal groaning', line: 0 }]);
+      expect(cues[0].tag).toBeUndefined();
+    });
+
+    it('does not treat brackets appearing mid-description (not immediately after the prefix) as a tag', () => {
+      const cues = extractCues('SFX: a door [creaks] open');
+      expect(cues).toEqual([{ type: 'sfx', description: 'a door [creaks] open', line: 0 }]);
+    });
+
+    it('does not treat an uppercase or spaced bracket immediately after the prefix as a tag', () => {
+      const cues = extractCues('SFX: [Kola Nuts] clatter');
+      expect(cues).toEqual([{ type: 'sfx', description: '[Kola Nuts] clatter', line: 0 }]);
+    });
+  });
 });

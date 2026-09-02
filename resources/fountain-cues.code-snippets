@@ -14,6 +14,21 @@
     "body": "MUSIC: ${1|BED,STING,BRIDGE,SOURCE BED,IN,OUT|} ${2:description}",
     "description": "Insert a music cue (Spec §15.1) — role (BED/STING/BRIDGE/SOURCE BED) and timing (IN/OUT) are independent and both optional; pick one here, then type a second keyword by hand for the rare combined case (e.g. accept BED, then type ' IN ' before the description) — extracted into the script's cue sidecar."
   },
+  "SFX Cue (tagged)": {
+    "prefix": "sfx-tag",
+    "body": "SFX: [${1:tag}] ${2:description}",
+    "description": "Insert a sound-effect cue with a [tag] — its stable handle into assets/manifests/audio.json, so the same asset is reused every time this cue recurs across the season instead of being re-picked or regenerated. Leave the tag off (plain 'sfx' snippet) until the asset is sourced."
+  },
+  "Ambience Cue (tagged)": {
+    "prefix": "amb-tag",
+    "body": "AMB: [${1:tag}] ${2:description}",
+    "description": "Insert an ambience/room-tone cue with a [tag] — its stable handle into assets/manifests/audio.json. Leave the tag off (plain 'amb' snippet) until the asset is sourced."
+  },
+  "Music Cue (tagged)": {
+    "prefix": "mus-tag",
+    "body": "MUSIC: [${1:tag}] ${2|BED,STING,BRIDGE,SOURCE BED,IN,OUT|} ${3:description}",
+    "description": "Insert a music cue with a [tag] — its stable handle into assets/manifests/audio.json. Leave the tag off (plain 'mus' snippet) until the asset is sourced."
+  },
   "Shot": {
     "prefix": "shot",
     "body": "SHOT: ${1:description}",

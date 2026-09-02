@@ -54,6 +54,16 @@ describe('updateCueSidecar', () => {
     await updateCueSidecar(scriptPath, 'INT. THE ARK - NIGHT\n\nSANGO\nNo cues here.\n');
     expect(existsSync(cueSidecarPathFor(scriptPath))).toBe(false);
   });
+
+  it('returns the cues it just wrote, so a caller can reuse them without re-parsing', async () => {
+    const cues = await updateCueSidecar(scriptPath, 'SFX: [kola-nuts-clatter] metal groaning\n');
+    expect(cues).toEqual([{ type: 'sfx', tag: 'kola-nuts-clatter', description: 'metal groaning', line: 0 }]);
+  });
+
+  it('returns an empty array when the script has no cues (and no sidecar is written)', async () => {
+    const cues = await updateCueSidecar(scriptPath, 'No cues here.\n');
+    expect(cues).toEqual([]);
+  });
 });
 
 describe('removeCueSidecar', () => {

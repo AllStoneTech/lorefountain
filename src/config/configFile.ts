@@ -30,6 +30,7 @@ export const loreFountainConfigSchema = z
         world: z.string().optional(),
         scripts: z.string().optional(),
         imports: z.string().optional(),
+        assets: z.string().optional(),
       })
       .optional(),
     world: z
@@ -97,6 +98,7 @@ export function folderSettingsFromConfig(config: LoreFountainConfig): FolderSett
     world: config.folders?.world,
     scripts: config.folders?.scripts,
     imports: config.folders?.imports,
+    assets: config.folders?.assets,
   };
 }
 

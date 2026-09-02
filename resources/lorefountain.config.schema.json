@@ -26,6 +26,11 @@
           "type": "string",
           "default": "imports",
           "description": "Drop-zone folder for existing source docs/bibles to migrate via the 'Migrate Existing Lore' command."
+        },
+        "assets": {
+          "type": "string",
+          "default": "assets",
+          "description": "Folder for production assets and their manifests (e.g. assets/manifests/audio.json, mapping SFX/MUSIC/AMB cue tags to the licensed/generated files that fulfill them). A peer of world/, not a subfolder of it."
         }
       },
       "additionalProperties": false

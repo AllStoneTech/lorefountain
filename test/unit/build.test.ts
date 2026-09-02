@@ -440,6 +440,52 @@ describe('buildIndexFromDisk', () => {
     ]);
   });
 
+  it('warns when a tagged cue has no matching entry in the passed-in audio manifest', async () => {
+    await writeFile(tmpRoot, 'scripts/1x01.fountain', ['Title: Pilot', '', 'SFX: [kola-nuts-clatter] kola nuts clatter'].join('\n'));
+
+    const summary = await buildIndexFromDisk(store, {
+      world: path.join(tmpRoot, 'world'),
+      glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
+      scripts: path.join(tmpRoot, 'scripts'),
+    });
+
+    expect(summary.warnings).toHaveLength(1);
+    expect(summary.warnings[0].warnings).toEqual([
+      { code: 'unmapped-cue-tag', path: expect.stringContaining('cues['), message: expect.stringContaining('kola-nuts-clatter') },
+    ]);
+  });
+
+  it('does not warn when a tagged cue has a matching entry in the passed-in audio manifest', async () => {
+    await writeFile(tmpRoot, 'scripts/1x01.fountain', ['Title: Pilot', '', 'SFX: [kola-nuts-clatter] kola nuts clatter'].join('\n'));
+
+    const summary = await buildIndexFromDisk(
+      store,
+      {
+        world: path.join(tmpRoot, 'world'),
+        glossary: path.join(tmpRoot, 'world', 'glossary'),
+        timeline: path.join(tmpRoot, 'world', 'timeline'),
+        scripts: path.join(tmpRoot, 'scripts'),
+      },
+      { 'kola-nuts-clatter': { file: 'assets/sfx/kola-nuts-clatter.wav' } },
+    );
+
+    expect(summary.warnings).toEqual([]);
+  });
+
+  it('does not warn about an untagged cue when no audio manifest is passed', async () => {
+    await writeFile(tmpRoot, 'scripts/1x01.fountain', ['Title: Pilot', '', 'SFX: metal groaning'].join('\n'));
+
+    const summary = await buildIndexFromDisk(store, {
+      world: path.join(tmpRoot, 'world'),
+      glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
+      scripts: path.join(tmpRoot, 'scripts'),
+    });
+
+    expect(summary.warnings).toEqual([]);
+  });
+
   it('does not index .fountain files as entities, and excludes notes/ scripts are unaffected by that exclusion', async () => {
     await writeFile(tmpRoot, 'scripts/1x01.fountain', 'INT. SOMEWHERE - DAY\n\nAction line.');
     const summary = await buildIndexFromDisk(store, {

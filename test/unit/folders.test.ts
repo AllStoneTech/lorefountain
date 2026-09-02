@@ -16,6 +16,7 @@ describe('resolveWorkspaceFolders', () => {
     expect(folders.scripts).toBe(path.join(ROOT, DEFAULT_FOLDERS.scripts));
     expect(folders.world).toBe(path.join(ROOT, DEFAULT_FOLDERS.world));
     expect(folders.imports).toBe(path.join(ROOT, DEFAULT_FOLDERS.imports));
+    expect(folders.assets).toBe(path.join(ROOT, DEFAULT_FOLDERS.assets));
   });
 
   it('derives glossary, timeline, and notes as fixed subfolders of world', () => {
@@ -25,21 +26,24 @@ describe('resolveWorkspaceFolders', () => {
     expect(folders.notes).toBe(path.join(ROOT, 'lore', 'notes'));
   });
 
-  it('honors overrides for scripts, world, and imports independently', () => {
+  it('honors overrides for scripts, world, imports, and assets independently', () => {
     const folders = resolveWorkspaceFolders(ROOT, {
       scripts: 'screenplays',
       world: 'bible',
       imports: 'source-docs',
+      assets: 'production-assets',
     });
     expect(folders.scripts).toBe(path.join(ROOT, 'screenplays'));
     expect(folders.world).toBe(path.join(ROOT, 'bible'));
     expect(folders.imports).toBe(path.join(ROOT, 'source-docs'));
+    expect(folders.assets).toBe(path.join(ROOT, 'production-assets'));
   });
 
   it('falls back to defaults for empty or whitespace-only overrides', () => {
-    const folders = resolveWorkspaceFolders(ROOT, { scripts: '  ', world: '', imports: undefined });
+    const folders = resolveWorkspaceFolders(ROOT, { scripts: '  ', world: '', imports: undefined, assets: '  ' });
     expect(folders.scripts).toBe(path.join(ROOT, DEFAULT_FOLDERS.scripts));
     expect(folders.world).toBe(path.join(ROOT, DEFAULT_FOLDERS.world));
     expect(folders.imports).toBe(path.join(ROOT, DEFAULT_FOLDERS.imports));
+    expect(folders.assets).toBe(path.join(ROOT, DEFAULT_FOLDERS.assets));
   });
 });
