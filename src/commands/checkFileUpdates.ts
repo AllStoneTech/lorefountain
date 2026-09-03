@@ -72,6 +72,7 @@ async function checkFileUpdatesCommand(
     world: path.relative(workspaceRoot, folders.world) || 'world',
     scripts: path.relative(workspaceRoot, folders.scripts) || 'scripts',
     imports: path.relative(workspaceRoot, folders.imports) || 'imports',
+    assets: path.relative(workspaceRoot, folders.assets) || 'assets',
   };
 
   const agentStatuses = await checkAgentFileVersions(workspaceRoot);
@@ -139,7 +140,7 @@ function reportReadmeFinding(
   outputChannel: vscode.OutputChannel,
   resourcesPath: string,
   projectName: string,
-  folderNames: { world: string; scripts: string; imports: string },
+  folderNames: { world: string; scripts: string; imports: string; assets: string },
 ): ActionableFinding {
   const getEffectiveContent = async (): Promise<string> => {
     const raw = await fsp.readFile(path.join(resourcesPath, 'readmes', finding.templateName), 'utf8');

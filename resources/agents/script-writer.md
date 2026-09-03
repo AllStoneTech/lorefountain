@@ -1,4 +1,4 @@
-<!-- lorefountain-docs-version: 2 -->
+<!-- lorefountain-docs-version: 3 -->
 # LoreFountain — Script-Writing Reference
 
 Read this before creating or editing any `.fountain` file under `scripts/`.
@@ -53,6 +53,18 @@ Examples: `SFX: metal groaning`, `MUSIC: STING - the reveal`, `MUSIC: BED IN - l
 Every script's cues are parsed automatically into a `<script-name>.cues.json` sidecar file next to it. Never hand-edit that sidecar — it's regenerated from the script on every save (or by `node agents/validate.js` — see below) and any manual edit will be silently overwritten.
 
 This convention is free to use in any project — extraction itself doesn't require a license. **Export Cue Sheet** (LoreFountain Pro), which turns these cues into a working session cue list, does.
+
+### Tagging a cue: linking it to a specific asset
+
+Any `SFX:`, `MUSIC:`, or `AMB:` cue can carry an optional `[tag]` immediately after the prefix — a stable, slug-shaped handle (lowercase letters, digits, and single hyphens only, e.g. `[kola-nuts-clatter]`) into `assets/manifests/audio.json`, which maps that exact tag to the actual licensed/generated file that fulfills it:
+
+```
+SFX: [kola-nuts-clatter] kola nuts clatter in a bowl as ORISHA drops one
+```
+
+Tag a cue when the writer wants the *same* sound design choice reused every time it recurs across the season, rather than a fresh pick or regeneration each time it appears — a recurring effect (a specific door creak, a character's specific ringtone) or a recurring music cue, not a one-off sound. Reuse the exact same tag string across every script where that same asset should apply; a typo creates a new, disconnected tag rather than erroring, so double-check against `assets/manifests/audio.json`'s existing keys (or ask the writer) before inventing a new one.
+
+An untagged cue is completely normal — tag one only when asked, or when you can tell from context the writer wants this exact sound reused elsewhere. A tagged cue with no matching `assets/manifests/audio.json` entry is reported as a non-blocking warning by `node agents/validate.js`, never an error: the asset may simply not be sourced yet. Never invent or edit `assets/manifests/audio.json` yourself unless the writer explicitly asks — it's hand-authored production data, not something to guess at.
 
 ## The shot-list convention
 

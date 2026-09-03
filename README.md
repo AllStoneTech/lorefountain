@@ -27,6 +27,13 @@ detection, transcript export, and project-level AI agent instructions
 (`AGENTS.md`/`agents/*.md`). There's also a headless `validate.js` for
 CI or AI-agent use with no VS Code dependency.
 
+Cues (`SFX:`/`MUSIC:`/`AMB:`) can carry an optional `[tag]`, and entities
+can have production assets (audio, character/location/object rigs) mapped
+to them by id — both through a form-based **Asset Manifest editor** under
+`assets/manifests/` — so a recurring sound, likeness, or set condition is
+reused every time it recurs across a season instead of re-picked or
+regenerated.
+
 **LoreFountain Pro** adds Continuity Management, an Entity Graph view,
 Story-Bible Export, BBC Radio Drama Export, SFX/Cue-Sheet Export, and Shot
 List Export. Pro is unlocked for everyone during the public launch promo —

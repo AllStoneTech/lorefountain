@@ -5,6 +5,36 @@ All notable changes to LoreFountain are documented here. This project follows
 
 ## [Unreleased]
 
+### Added
+
+- **Asset manifests, keyed to reuse the same production asset every time it
+  recurs.** `SFX:`/`MUSIC:`/`AMB:` cues can now carry an optional `[tag]`
+  (e.g. `SFX: [kola-nuts-clatter] ...`), a stable handle into a new
+  `assets/manifests/audio.json` mapping that tag to the licensed/generated
+  file that fulfills it — so a recurring sound design choice is reused
+  across the season instead of re-picked or regenerated each time it
+  appears. A tagged cue with no matching entry is a non-blocking warning.
+- **Entity-keyed manifests for characters, locations, objects, and voice.**
+  `assets/manifests/characters.json`, `locations.json`, `objects.json`, and
+  `voice.json` key off an entity's existing id rather than a fresh tag,
+  splitting each entry into a persistent `versions` baseline (a scar
+  introduced in Season 2 stays in every later version) and, for
+  characters/locations/objects, a named `looks`/`dressing` variant layer for
+  temporary/swappable conditions. A manifest key with no matching entity is
+  now reported as an error, the same severity as a dangling relation target.
+- **A form-based editor for all five manifest files**, matching the Story
+  Card editor's pattern — add/remove entries, versions, and looks/dressing
+  rows, with an entity-id picker for the four entity-keyed kinds, instead of
+  hand-editing JSON.
+- **Dedicated help panels for the Asset Manifest, Story Card, and Story
+  Overview editors** — a `$(question)` icon in each editor's own title bar,
+  the same idea as the World/Scripts/Continuity views' title-bar help, now
+  extended to custom text editors.
+- **`assets/` joins `world/`/`scripts/`/`imports/` as a configurable
+  workspace folder** (`lorefountain.config.json`'s `folders.assets`),
+  scaffolded by "Initialize Workspace" with its own README, same as the
+  other three.
+
 ## [1.0.0] - 2026-08-23
 
 First public release, published to the VS Code Marketplace and Open VSX.

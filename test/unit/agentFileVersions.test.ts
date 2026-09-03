@@ -43,13 +43,13 @@ describe('checkAgentFileVersions', () => {
 
     const results = await checkAgentFileVersions(workspaceDir);
     const agentsMd = results.find((r) => r.relativePath === 'AGENTS.md');
-    expect(agentsMd).toMatchObject({ status: 'untracked', currentVersion: 1 });
+    expect(agentsMd).toMatchObject({ status: 'untracked', currentVersion: 2 });
   });
 
   it('reports a file behind the current version as stale', async () => {
-    // AGENT_FILE_VERSIONS currently pins every file at 1; a marker of 0 is
-    // an artificial-but-valid way to exercise the "behind current" branch
-    // without depending on the real constant ever being bumped.
+    // AGENT_FILE_VERSIONS currently pins world-builder.md at 3; a marker of
+    // 0 is an artificial-but-valid way to exercise the "behind current"
+    // branch without depending on the real constant's exact value.
     writeFileSync(
       join(workspaceDir, 'agents', 'world-builder.md'),
       '<!-- lorefountain-docs-version: 0 -->\nEntities live in world/.\n',
@@ -57,18 +57,18 @@ describe('checkAgentFileVersions', () => {
 
     const results = await checkAgentFileVersions(workspaceDir);
     const worldBuilder = results.find((r) => r.relativePath === join('agents', 'world-builder.md'));
-    expect(worldBuilder).toMatchObject({ status: 'stale', workspaceVersion: 0, currentVersion: 1 });
+    expect(worldBuilder).toMatchObject({ status: 'stale', workspaceVersion: 0, currentVersion: 3 });
   });
 
   it('reports a file matching the current version as current', async () => {
     writeFileSync(
       join(workspaceDir, 'agents', 'world-builder.md'),
-      '<!-- lorefountain-docs-version: 1 -->\nEntities live in world/.\n',
+      '<!-- lorefountain-docs-version: 3 -->\nEntities live in world/.\n',
     );
 
     const results = await checkAgentFileVersions(workspaceDir);
     const worldBuilder = results.find((r) => r.relativePath === join('agents', 'world-builder.md'));
-    expect(worldBuilder).toMatchObject({ status: 'current', version: 1 });
+    expect(worldBuilder).toMatchObject({ status: 'current', version: 3 });
   });
 
   it('skips a tracked file that was never scaffolded into this workspace', async () => {

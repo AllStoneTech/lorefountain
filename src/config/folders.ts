@@ -28,18 +28,11 @@ export const DEFAULT_FOLDERS: Required<FolderSettings> = {
 
 /**
  * This workspace's actual folder names (relative to the workspace root, e.g.
- * `"world"`) for the three folders that have a scaffolded README template —
- * used wherever a folder's *name* (not its absolute path) is needed to
- * substitute into one. Deliberately not `Required<FolderSettings>`: `assets`
- * (and any future configurable folder with no README template of its own)
- * has nothing to substitute into and so has no reason to be threaded through
- * this type.
+ * `"world"`) — every key resolved, no optionals. Used wherever a folder's
+ * *name* (not its absolute path) is needed, e.g. substituting it into a
+ * scaffolded README (every one of these four folders has one).
  */
-export interface FolderNames {
-  scripts: string;
-  world: string;
-  imports: string;
-}
+export type FolderNames = Required<FolderSettings>;
 
 /** Resolved, absolute workspace folder paths. */
 export interface WorkspaceFolders {

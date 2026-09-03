@@ -32,6 +32,15 @@ files there beyond the script itself.
   (`BED`, `STING`, `BRIDGE`, `SOURCE BED` — what kind of musical moment it is)
   and a **Timing** (`IN`, `OUT` — a fade). Either, both, or neither may
   appear, e.g. `MUSIC: BED IN - low, patient, unresolved`.
+- Any of the three cue types can also carry an optional **`[tag]`** right
+  after the prefix — a stable handle into `assets/manifests/audio.json`,
+  mapping that exact tag to the file that fulfills it so the same sound
+  design choice is reused every time it recurs, e.g.
+  `SFX: [kola-nuts-clatter] kola nuts clatter in a bowl`. Untagged is the
+  normal state for a cue whose asset isn't sourced yet. Open any
+  `assets/manifests/*.json` file for a form-based editor (its own title
+  bar has a matching `$(question)` help button) instead of hand-editing the
+  JSON.
 - A second convention for camera/pre-production — `SHOT:`, `POSE:`,
   `LIGHT:`, and `DURATION:` — works the same way: `SHOT:` starts a new shot
   (freeform framing, e.g. `WIDE`, `CLOSE-UP on SANGO`), and the other three
@@ -62,6 +71,8 @@ files there beyond the script itself.
   - `amb` → `AMB: description`
   - `mus` → `MUSIC: BED|STING|BRIDGE|SOURCE BED|IN|OUT description` (pick a Role
     and/or Timing keyword from the dropdown, or none at all)
+  - `sfx-tag` / `amb-tag` / `mus-tag` → the same three cues with a leading
+    `[tag]` placeholder already in place
   - `shot` → `SHOT: description`
   - `pose` → `POSE: description`
   - `light` → `LIGHT: description`

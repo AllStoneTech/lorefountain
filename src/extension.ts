@@ -502,8 +502,10 @@ async function rebuildAllWorkspaceIndexes(): Promise<void> {
  *
  * Never touches anything outside `world/` (and its `glossary`/`timeline`/
  * `notes` subfolders), `scripts/`, `imports/` (created empty, never written
- * into again — Spec §13.5's drop-zone is user-owned), and the root config
- * file. If `world` or `scripts` already exists — a workspace pointed at an
+ * into again — Spec §13.5's drop-zone is user-owned), `assets/` (also
+ * created empty — the manifest files under it are entirely hand-authored,
+ * opt-in, never scaffolded), and the root config file. If `world` or
+ * `scripts` already exists — a workspace pointed at an
  * existing project, not a blank one — this asks before proceeding, since
  * LoreFountain didn't create that folder and shouldn't silently assume
  * ownership of whatever's already in it (the project owner, 2026-07-24).
@@ -524,7 +526,7 @@ async function initializeWorkspace(): Promise<void> {
     const proceed = 'Use Existing Folder(s)';
     const choice = await vscode.window.showWarningMessage(
       `LoreFountain found an existing "${names.join('" and "')}" folder in "${folder.name}". ` +
-        "LoreFountain never touches anything outside its own folders — proceeding will index what's already there and add only what's missing (a config file, agent instructions and a validator for AI coding tools, READMEs, a Story Overview template, and any of glossary/timeline/notes/imports that don't exist yet).",
+        "LoreFountain never touches anything outside its own folders — proceeding will index what's already there and add only what's missing (a config file, agent instructions and a validator for AI coding tools, READMEs, a Story Overview template, and any of glossary/timeline/notes/imports/assets that don't exist yet).",
       { modal: true },
       proceed,
     );
@@ -532,7 +534,7 @@ async function initializeWorkspace(): Promise<void> {
   }
 
   await Promise.all(
-    [folders.scripts, folders.world, folders.glossary, folders.timeline, folders.notes, folders.imports].map(
+    [folders.scripts, folders.world, folders.glossary, folders.timeline, folders.notes, folders.imports, folders.assets].map(
       (dir) => fsp.mkdir(dir, { recursive: true }),
     ),
   );
@@ -543,6 +545,7 @@ async function initializeWorkspace(): Promise<void> {
     world: path.relative(folder.uri.fsPath, folders.world) || 'world',
     scripts: path.relative(folder.uri.fsPath, folders.scripts) || 'scripts',
     imports: path.relative(folder.uri.fsPath, folders.imports) || 'imports',
+    assets: path.relative(folder.uri.fsPath, folders.assets) || 'assets',
   };
   await scaffoldAgentFilesIfAbsent(resourcesPath, folder.uri.fsPath);
   await scaffoldReadmesIfAbsent(resourcesPath, folder.uri.fsPath, folderNames, folder.name);

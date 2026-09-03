@@ -6,7 +6,7 @@ import { checkReadmeVersions } from '../../src/config/readmeVersions';
 
 describe('checkReadmeVersions', () => {
   let workspaceDir: string;
-  const folders = { world: 'world', scripts: 'scripts', imports: 'imports' };
+  const folders = { world: 'world', scripts: 'scripts', imports: 'imports', assets: 'assets' };
 
   beforeEach(() => {
     workspaceDir = mkdtempSync(join(tmpdir(), 'lorefountain-readme-versions-workspace-'));
@@ -22,7 +22,16 @@ describe('checkReadmeVersions', () => {
 
     const results = await checkReadmeVersions(workspaceDir, folders);
     const root = results.find((r) => r.relativePath === 'README.md');
-    expect(root).toMatchObject({ templateName: 'root.md', status: 'untracked', currentVersion: 1 });
+    expect(root).toMatchObject({ templateName: 'root.md', status: 'untracked', currentVersion: 2 });
+  });
+
+  it('tracks the assets.md template at its own target path', async () => {
+    mkdirSync(join(workspaceDir, 'assets'), { recursive: true });
+    writeFileSync(join(workspaceDir, 'assets', 'README.md'), '<!-- lorefountain-docs-version: 1 -->\nAssets folder.\n');
+
+    const results = await checkReadmeVersions(workspaceDir, folders);
+    const assetsReadme = results.find((r) => r.templateName === 'assets.md');
+    expect(assetsReadme).toMatchObject({ relativePath: join('assets', 'README.md'), status: 'current', version: 1 });
   });
 
   it('reports a README behind the current version as stale', async () => {
@@ -48,7 +57,7 @@ describe('checkReadmeVersions', () => {
     mkdirSync(join(workspaceDir, 'lore'), { recursive: true });
     writeFileSync(join(workspaceDir, 'lore', 'README.md'), '<!-- lorefountain-docs-version: 1 -->\nLore folder.\n');
 
-    const results = await checkReadmeVersions(workspaceDir, { world: 'lore', scripts: 'scripts', imports: 'imports' });
+    const results = await checkReadmeVersions(workspaceDir, { world: 'lore', scripts: 'scripts', imports: 'imports', assets: 'assets' });
     const worldReadme = results.find((r) => r.templateName === 'world.md');
     expect(worldReadme).toMatchObject({ relativePath: join('lore', 'README.md'), status: 'current', version: 1 });
   });

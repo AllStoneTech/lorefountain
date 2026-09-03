@@ -1,4 +1,4 @@
-<!-- lorefountain-docs-version: 1 -->
+<!-- lorefountain-docs-version: 2 -->
 # {{PROJECT_NAME}}
 
 This project uses **[LoreFountain](https://github.com/AllStoneTech/lorefountain)** — a worldbuilding methodology for Fountain-format writing. At its core, it's just plain Markdown files (with YAML frontmatter) and standard Fountain scripts, checked by a small validator — no proprietary format, nothing locked to one tool. The [LoreFountain VS Code extension](https://github.com/AllStoneTech/lorefountain) is the richest way to use it (hover previews, a form-based editor for entities, one-click rename, structured search), but every file here is readable and editable in any text editor, and an AI coding agent can work in this project with no VS Code involved at all.
@@ -10,6 +10,7 @@ This project uses **[LoreFountain](https://github.com/AllStoneTech/lorefountain)
 - **`{{WORLD_FOLDER}}/notes/`** — a low-stakes scratch space for half-formed ideas. See `{{WORLD_FOLDER}}/notes/README.md`.
 - **`{{SCRIPTS_FOLDER}}/`** — the actual `.fountain` scripts. See `{{SCRIPTS_FOLDER}}/README.md`.
 - **`{{IMPORTS_FOLDER}}/`** — a drop-zone for existing source material (an old bible, outlines, spreadsheets). LoreFountain never modifies anything here. See `{{IMPORTS_FOLDER}}/README.md`.
+- **`{{ASSETS_FOLDER}}/`** — production assets (audio, character/location/object rigs) and the manifests mapping a cue tag or entity id to the file that fulfills it, so the same asset is reused every time it recurs. See `{{ASSETS_FOLDER}}/README.md`.
 
 ## Working with an AI
 
@@ -17,4 +18,4 @@ See `AGENTS.md` at the project root — it's the entry point for any AI coding a
 
 ## Working in VS Code
 
-Install the LoreFountain extension for hover previews on any recognized mention, a form-based Story Card editor for entities, a World view listing everything by category, and commands for renaming, structured search, transcript export, and more.
+Install the LoreFountain extension for hover previews on any recognized mention, a form-based Story Card editor for entities, a form-based editor for the `{{ASSETS_FOLDER}}/manifests/` files, a World view listing everything by category, and commands for renaming, structured search, transcript export, and more.

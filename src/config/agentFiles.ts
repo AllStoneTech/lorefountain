@@ -47,11 +47,18 @@ import * as path from 'node:path';
  * counter, so an edit to one template doesn't flag the others as stale too.
  * All five start at `1`, the baseline as of introducing this tracking; that
  * baseline is not a reconstruction of each file's real edit history.
+ *
+ * `world-builder.md`/`script-writer.md` jump straight to `3`: both files'
+ * own `lorefountain-docs-version` markers had already drifted ahead of this
+ * registry (to `2`) from an earlier content edit that didn't update this
+ * constant — discovered while bumping them again for the asset-manifest
+ * documentation below, so this both reflects the new edit and corrects that
+ * pre-existing drift in one step.
  */
 export const AGENT_FILE_VERSIONS: Record<string, number> = {
-  'AGENTS.md': 1,
-  [path.join('agents', 'world-builder.md')]: 1,
-  [path.join('agents', 'script-writer.md')]: 1,
+  'AGENTS.md': 2,
+  [path.join('agents', 'world-builder.md')]: 3,
+  [path.join('agents', 'script-writer.md')]: 3,
   [path.join('agents', 'initiator.md')]: 1,
   [path.join('agents', 'validate.js')]: 1,
 };

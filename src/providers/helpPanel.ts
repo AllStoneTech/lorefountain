@@ -5,7 +5,11 @@
  * the five Pro export/graph features (which aren't views, so have no title
  * bar of their own) each get one in whichever menu their own command
  * already lives in, in a non-`navigation` overflow group rather than a
- * sixth/seventh toolbar icon (`package.json`'s `contributes.menus`).
+ * sixth/seventh toolbar icon (`package.json`'s `contributes.menus`). The
+ * Asset Manifest, Story Card, and Story Overview custom editors each get one
+ * in their own editor title bar, gated by `when: "activeCustomEditorId ==
+ * '...'"` — the custom-editor equivalent of a tree view's title bar, and the
+ * same placement idea applied to a webview instead of a `TreeView`.
  *
  * `HELP_TOPICS` is the only place a new topic needs registering — this file
  * loops it generically, nothing hardcodes a count.
@@ -44,6 +48,9 @@ const HELP_TOPICS: readonly HelpTopic[] = [
   { command: 'lorefountain.showBBCRadioScriptHelp', docFile: 'bbcRadioScript.md', title: 'Help: BBC Radio Drama Export' },
   { command: 'lorefountain.showCueSheetHelp', docFile: 'cueSheet.md', title: 'Help: SFX/Cue-Sheet Export' },
   { command: 'lorefountain.showShotListHelp', docFile: 'shotList.md', title: 'Help: Shot List Export' },
+  { command: 'lorefountain.showAssetManifestHelp', docFile: 'assetManifest.md', title: 'Help: Asset Manifests' },
+  { command: 'lorefountain.showStoryCardHelp', docFile: 'storyCard.md', title: 'Help: Story Card' },
+  { command: 'lorefountain.showStoryOverviewHelp', docFile: 'storyOverview.md', title: 'Help: Story Overview' },
 ];
 
 /** The view type these panels register under. */

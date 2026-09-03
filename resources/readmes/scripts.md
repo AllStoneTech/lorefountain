@@ -1,9 +1,11 @@
-<!-- lorefountain-docs-version: 1 -->
+<!-- lorefountain-docs-version: 2 -->
 # {{SCRIPTS_FOLDER}}/
 
 Your `.fountain` scripts — 100% standard Fountain, fully portable to any other Fountain tool (Highland, Fade In, Final Draft import, etc.). Nothing LoreFountain-specific is required to make linking to the world work: any entity or glossary term's name appearing anywhere in a script (a character cue, an action line, dialogue) is recognized and linked automatically.
 
 A sound-cue convention (`SFX:`, `MUSIC:`, `AMB:` — `MUSIC:` cues can carry an optional Role and/or Timing modifier) is parsed automatically into a `<script-name>.cues.json` sidecar next to each script — derived data, regenerated on every save, never hand-edited. A second convention (`SHOT:`, `POSE:`, `LIGHT:`, `DURATION:`) covers camera/pre-production breakdown the same way.
+
+Any of the three cue types can also carry an optional `[tag]` right after the prefix, e.g. `SFX: [kola-nuts-clatter] kola nuts clatter in a bowl` — a stable handle into `{{ASSETS_FOLDER}}/manifests/audio.json`, so the same sound design choice is reused every time that exact tag recurs across the season instead of being re-picked or regenerated. Leave a cue untagged until its asset is actually sourced; a tagged cue with no matching manifest entry is only a warning, never an error.
 
 ## One folder per script
 

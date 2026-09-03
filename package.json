@@ -278,6 +278,24 @@
         "icon": "$(question)"
       },
       {
+        "command": "lorefountain.showAssetManifestHelp",
+        "title": "Asset Manifest Editor: How to Use This Editor",
+        "category": "LoreFountain",
+        "icon": "$(question)"
+      },
+      {
+        "command": "lorefountain.showStoryCardHelp",
+        "title": "Story Card Editor: How to Use This Editor",
+        "category": "LoreFountain",
+        "icon": "$(question)"
+      },
+      {
+        "command": "lorefountain.showStoryOverviewHelp",
+        "title": "Story Overview Editor: How to Use This Editor",
+        "category": "LoreFountain",
+        "icon": "$(question)"
+      },
+      {
         "command": "lorefountain.sendFeedback",
         "title": "Send Feedback",
         "category": "LoreFountain"
@@ -496,6 +514,21 @@
           "command": "lorefountain.showShotListHelp",
           "when": "editorLangId == fountain",
           "group": "9_lorefountain"
+        },
+        {
+          "command": "lorefountain.showAssetManifestHelp",
+          "when": "activeCustomEditorId == 'lorefountain.assetManifest'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "lorefountain.showStoryCardHelp",
+          "when": "activeCustomEditorId == 'lorefountain.storyCard'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "lorefountain.showStoryOverviewHelp",
+          "when": "activeCustomEditorId == 'lorefountain.storyOverview'",
+          "group": "navigation@9"
         }
       ],
       "view/item/context": [
