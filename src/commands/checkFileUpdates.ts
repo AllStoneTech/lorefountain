@@ -24,10 +24,23 @@
  * (`renderReadmeTemplate`), so their diff/replace step compares against a
  * *rendered* copy, not the raw bundled template — otherwise a user's real
  * folder names would show as changed against literal `{{WORLD_FOLDER}}`
- * text. Both categories go through the same rendered-content path (an
- * untitled in-memory document as the diff's right-hand side) so the two
- * kinds of finding need no special-casing beyond how each renders its
- * "what it should become" text.
+ * text. Both categories go through the same rendered-content path (a
+ * read-only virtual document, via {@link ProposedContentProvider}, as the
+ * diff's right-hand side) so the two kinds of finding need no special-casing
+ * beyond how each renders its "what it should become" text.
+ *
+ * The diff's right-hand side is deliberately *not* an `untitled:` in-memory
+ * document, despite that being the obvious first approach — an untitled
+ * document is considered dirty the instant it has content, so closing that
+ * tab (done automatically once the writer accepts/declines, see
+ * {@link closeDiffTab}) triggered VS Code's "Do you want to save your
+ * changes?" prompt on every single review, which reads as "confirm
+ * deleting" to a writer who never touched that pane and has no reason to
+ * expect a save dialog. A `vscode.TextDocumentContentProvider`-backed
+ * virtual document (custom `lorefountain-check-updates:` scheme) is never
+ * dirty and has no save affordance at all — the same pattern VS Code's own
+ * `git show`/Peek Definition-style read-only previews use — so the tab
+ * closes silently either way.
  *
  * `vscode`-facing glue; not covered by the vitest unit suite — verify
  * manually via the F5 Extension Development Host.
@@ -42,6 +55,44 @@ import { checkReadmeVersions, type ReadmeVersionStatus } from '../config/readmeV
 import { getWorkspaceFolders } from '../config/workspaceConfig';
 import { registerTrackedCommand } from '../telemetry/trackedCommands';
 
+const PREVIEW_SCHEME = 'lorefountain-check-updates';
+
+/**
+ * Backs the diff view's read-only "what it would become" side. Content is
+ * registered via {@link set} immediately before opening the document (which
+ * triggers {@link provideTextDocumentContent} once, synchronously) and
+ * removed via {@link delete} once that review is done — there's no need to
+ * fire `onDidChange` since each URI is used exactly once and never edited.
+ */
+class ProposedContentProvider implements vscode.TextDocumentContentProvider {
+  private readonly content = new Map<string, string>();
+
+  provideTextDocumentContent(uri: vscode.Uri): string {
+    return this.content.get(uri.toString()) ?? '';
+  }
+
+  set(uri: vscode.Uri, text: string): void {
+    this.content.set(uri.toString(), text);
+  }
+
+  delete(uri: vscode.Uri): void {
+    this.content.delete(uri.toString());
+  }
+}
+
+let previewCounter = 0;
+
+/**
+ * Build a fresh, unique preview URI for one file's review — unique per call
+ * (not just per file) so reviewing the same relative path more than once in
+ * one command invocation can never collide with a stale map entry.
+ *
+ * @param relativePath - The tracked file's workspace-relative path, used only to make the tab's fallback title readable.
+ */
+function buildPreviewUri(relativePath: string): vscode.Uri {
+  return vscode.Uri.from({ scheme: PREVIEW_SCHEME, path: `/${relativePath.replace(/\\/g, '/')}`, query: String(previewCounter++) });
+}
+
 /**
  * Register the "Check for LoreFountain File Updates" command.
  *
@@ -54,9 +105,11 @@ export function registerCheckFileUpdatesCommand(
   outputChannel: vscode.OutputChannel,
   pickTargetWorkspaceFolder: () => Promise<vscode.WorkspaceFolder | undefined>,
 ): void {
+  const previewProvider = new ProposedContentProvider();
   context.subscriptions.push(
+    vscode.workspace.registerTextDocumentContentProvider(PREVIEW_SCHEME, previewProvider),
     registerTrackedCommand(context, 'lorefountain.checkFileUpdates', () =>
-      void checkFileUpdatesCommand(context, outputChannel, pickTargetWorkspaceFolder),
+      void checkFileUpdatesCommand(context, outputChannel, pickTargetWorkspaceFolder, previewProvider),
     ),
   );
 }
@@ -73,6 +126,7 @@ async function checkFileUpdatesCommand(
   context: vscode.ExtensionContext,
   outputChannel: vscode.OutputChannel,
   pickTargetWorkspaceFolder: () => Promise<vscode.WorkspaceFolder | undefined>,
+  previewProvider: ProposedContentProvider,
 ): Promise<void> {
   const folder = await pickTargetWorkspaceFolder();
   if (!folder) return;
@@ -120,7 +174,7 @@ async function checkFileUpdatesCommand(
   if (!picks || picks.length === 0) return;
 
   for (const pick of picks) {
-    await reviewAndUpdateFile(pick.finding, workspaceRoot);
+    await reviewAndUpdateFile(pick.finding, workspaceRoot, previewProvider);
   }
 }
 
@@ -196,58 +250,67 @@ function reportReadmeFinding(
   return { relativePath: finding.relativePath, description: `untracked → v${finding.currentVersion}`, isNew: false, getEffectiveContent };
 }
 
-async function reviewAndUpdateFile(finding: ActionableFinding, workspaceRoot: string): Promise<void> {
+async function reviewAndUpdateFile(
+  finding: ActionableFinding,
+  workspaceRoot: string,
+  previewProvider: ProposedContentProvider,
+): Promise<void> {
   const workspacePath = path.join(workspaceRoot, finding.relativePath);
   const effectiveContent = await finding.getEffectiveContent();
-  const proposed = await vscode.workspace.openTextDocument({ content: effectiveContent, language: 'markdown' });
+  const previewUri = buildPreviewUri(finding.relativePath);
+  previewProvider.set(previewUri, effectiveContent);
 
-  await vscode.commands.executeCommand(
-    'vscode.diff',
-    vscode.Uri.file(workspacePath),
-    proposed.uri,
-    finding.isNew ? `${finding.relativePath} (not yet created ↔ current template)` : `${finding.relativePath} (yours ↔ current template)`,
-  );
+  try {
+    await vscode.commands.executeCommand(
+      'vscode.diff',
+      vscode.Uri.file(workspacePath),
+      previewUri,
+      finding.isNew ? `${finding.relativePath} (not yet created ↔ current template)` : `${finding.relativePath} (yours ↔ current template)`,
+    );
 
-  const confirm = finding.isNew
-    ? await vscode.window.showWarningMessage(
-        `Create "${finding.relativePath}" from the current template? Any missing parent folder is created too.`,
-        { modal: true },
-        'Create from Current Template',
-      )
-    : await vscode.window.showWarningMessage(
-        `Replace your copy of "${finding.relativePath}" with the current template? This overwrites the whole file — copy anything you want to keep out of the diff first.`,
-        { modal: true },
-        'Replace with Current Template',
-      );
+    const confirm = finding.isNew
+      ? await vscode.window.showWarningMessage(
+          `Create "${finding.relativePath}" from the current template? Any missing parent folder is created too.`,
+          { modal: true },
+          'Create from Current Template',
+        )
+      : await vscode.window.showWarningMessage(
+          `Replace your copy of "${finding.relativePath}" with the current template? This overwrites the whole file — copy anything you want to keep out of the diff first.`,
+          { modal: true },
+          'Replace with Current Template',
+        );
 
-  // The diff's right-hand side is a throwaway untitled document with nowhere
-  // to save to — left open, it looks like unfinished work. Close the tab
-  // regardless of the user's choice; the real file was never touched by
-  // opening the diff, only by the writeFile below.
-  await closeDiffTab(proposed.uri);
+    // Close the diff tab regardless of the user's choice, so nothing lingers
+    // looking like unfinished work — safe now that the right-hand side is a
+    // read-only virtual document with nothing to save, so this closes
+    // silently instead of prompting.
+    await closeDiffTab(previewUri);
 
-  if (confirm !== 'Replace with Current Template' && confirm !== 'Create from Current Template') return;
+    if (confirm !== 'Replace with Current Template' && confirm !== 'Create from Current Template') return;
 
-  // mkdir covers both cases uniformly: a no-op when the folder already
-  // exists (the stale-replace path), and the actual folder creation (e.g.
-  // assets/) when this file was never scaffolded at all.
-  await fsp.mkdir(path.dirname(workspacePath), { recursive: true });
-  await fsp.writeFile(workspacePath, effectiveContent, 'utf8');
-  void vscode.window.showInformationMessage(`LoreFountain: ${finding.isNew ? 'created' : 'updated'} "${finding.relativePath}".`);
+    // mkdir covers both cases uniformly: a no-op when the folder already
+    // exists (the stale-replace path), and the actual folder creation (e.g.
+    // assets/) when this file was never scaffolded at all.
+    await fsp.mkdir(path.dirname(workspacePath), { recursive: true });
+    await fsp.writeFile(workspacePath, effectiveContent, 'utf8');
+    void vscode.window.showInformationMessage(`LoreFountain: ${finding.isNew ? 'created' : 'updated'} "${finding.relativePath}".`);
+  } finally {
+    previewProvider.delete(previewUri);
+  }
 }
 
 /**
  * Close the diff tab opened by {@link reviewAndUpdateFile}, identified by
- * its untitled "proposed content" side — that URI is unique per review, so
+ * its virtual "proposed content" side — that URI is unique per review, so
  * this can't mistakenly close an unrelated diff. `vscode.diff` has no
  * corresponding "close" command of its own; the tab-groups API is the only
  * way to target one specific open tab.
  *
- * @param proposedUri - The untitled document's URI used as the diff's modified/right-hand side.
+ * @param previewUri - The virtual document's URI used as the diff's modified/right-hand side.
  */
-async function closeDiffTab(proposedUri: vscode.Uri): Promise<void> {
+async function closeDiffTab(previewUri: vscode.Uri): Promise<void> {
   const tab = vscode.window.tabGroups.all
     .flatMap((group) => group.tabs)
-    .find((t) => t.input instanceof vscode.TabInputTextDiff && t.input.modified.toString() === proposedUri.toString());
+    .find((t) => t.input instanceof vscode.TabInputTextDiff && t.input.modified.toString() === previewUri.toString());
   if (tab) await vscode.window.tabGroups.close(tab);
 }

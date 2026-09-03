@@ -55,10 +55,13 @@ First public release, published to the VS Code Marketplace and Open VSX.
 ### Fixed
 
 - **"Check for LoreFountain File Updates" no longer leaves a stray diff tab
-  open after you review a file.** The diff's "current template" side is a
-  throwaway in-memory document with nowhere to save to, which looked like
-  unfinished work sitting in the editor; it's now closed automatically once
-  you accept or decline the update.
+  open, and closing it no longer prompts to save.** The diff's "current
+  template" side used to be an in-memory `untitled:` document — closing it
+  automatically (rather than leaving it open indefinitely) still triggered
+  VS Code's "save your changes?" prompt on every review, since an untitled
+  document is considered dirty the moment it has content. It's now a
+  read-only virtual document instead, which has no save state at all, so the
+  tab closes silently once you accept or decline the update.
 - **`agents/validate.js`'s tracked version was left at 1 despite gaining real
   audio-manifest validation logic**, so an already-scaffolded copy would
   never have been flagged as stale. Bumped to 2.
