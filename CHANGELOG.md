@@ -5,8 +5,18 @@ All notable changes to LoreFountain are documented here. This project follows
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-02
+
+First public release, published to the VS Code Marketplace and Open VSX.
+
 ### Added
 
+- **Onboarding buttons in the World and Scripts sidebar views.** When no
+  LoreFountain project is found in the open folder (or before any project
+  content has been indexed), both views now show "Try LoreFountain (Sample
+  Workspace)" and "Install a Demo World..." buttons directly in the panel,
+  instead of leaving it blank until the commands are found via the Command
+  Palette.
 - **Asset manifests, keyed to reuse the same production asset every time it
   recurs.** `SFX:`/`MUSIC:`/`AMB:` cues can now carry an optional `[tag]`
   (e.g. `SFX: [kola-nuts-clatter] ...`), a stable handle into a new
@@ -35,18 +45,13 @@ All notable changes to LoreFountain are documented here. This project follows
   scaffolded by "Initialize Workspace" with its own README, same as the
   other three.
 
-## [1.0.0] - 2026-08-23
+### Fixed
 
-First public release, published to the VS Code Marketplace and Open VSX.
-
-### Added
-
-- **Onboarding buttons in the World and Scripts sidebar views.** When no
-  LoreFountain project is found in the open folder (or before any project
-  content has been indexed), both views now show "Try LoreFountain (Sample
-  Workspace)" and "Install a Demo World..." buttons directly in the panel,
-  instead of leaving it blank until the commands are found via the Command
-  Palette.
+- **"Check for LoreFountain File Updates" no longer leaves a stray diff tab
+  open after you review a file.** The diff's "current template" side is a
+  throwaway in-memory document with nowhere to save to, which looked like
+  unfinished work sitting in the editor; it's now closed automatically once
+  you accept or decline the update.
 
 ## [0.12.0] - 2026-08-12
 

@@ -174,8 +174,31 @@ async function reviewAndUpdateFile(finding: ActionableFinding, workspaceRoot: st
     { modal: true },
     'Replace with Current Template',
   );
+
+  // The diff's right-hand side is a throwaway untitled document with nowhere
+  // to save to — left open, it looks like unfinished work. Close the tab
+  // regardless of the user's choice; the real file was never touched by
+  // opening the diff, only by the writeFile below.
+  await closeDiffTab(proposed.uri);
+
   if (confirm !== 'Replace with Current Template') return;
 
   await fsp.writeFile(workspacePath, effectiveContent, 'utf8');
   void vscode.window.showInformationMessage(`LoreFountain: updated "${finding.relativePath}".`);
+}
+
+/**
+ * Close the diff tab opened by {@link reviewAndUpdateFile}, identified by
+ * its untitled "proposed content" side — that URI is unique per review, so
+ * this can't mistakenly close an unrelated diff. `vscode.diff` has no
+ * corresponding "close" command of its own; the tab-groups API is the only
+ * way to target one specific open tab.
+ *
+ * @param proposedUri - The untitled document's URI used as the diff's modified/right-hand side.
+ */
+async function closeDiffTab(proposedUri: vscode.Uri): Promise<void> {
+  const tab = vscode.window.tabGroups.all
+    .flatMap((group) => group.tabs)
+    .find((t) => t.input instanceof vscode.TabInputTextDiff && t.input.modified.toString() === proposedUri.toString());
+  if (tab) await vscode.window.tabGroups.close(tab);
 }
