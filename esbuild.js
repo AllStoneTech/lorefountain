@@ -191,7 +191,12 @@ async function main() {
     // AGENT_FILE_VERSIONS['agents/validate.js'] in src/config/agentFiles.ts —
     // the one deliberate place this version number is duplicated, since
     // this plain Node build script can't import that TS constant directly.
-    banner: { js: '// lorefountain-docs-version: 1' },
+    // (This drifted to 1 while that constant moved to 2 for the
+    // audio-manifest validation work — caught only by actually rebuilding
+    // and checking the packaged output, not by anything automatic. There's
+    // no compile-time guard against this happening again; if this number
+    // ever matters enough to be worth one, that's the fix, not a comment.)
+    banner: { js: '// lorefountain-docs-version: 2' },
     plugins: [
       {
         name: 'log-cli-build',
