@@ -62,8 +62,11 @@ describe('checkReadmeVersions', () => {
     expect(worldReadme).toMatchObject({ relativePath: join('lore', 'README.md'), status: 'current', version: 1 });
   });
 
-  it('skips a tracked README that was never scaffolded into this workspace', async () => {
+  it('reports a tracked README that was never scaffolded into this workspace as missing', async () => {
     const results = await checkReadmeVersions(workspaceDir, folders);
-    expect(results).toEqual([]);
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.every((r) => r.status === 'missing')).toBe(true);
+    const root = results.find((r) => r.relativePath === 'README.md');
+    expect(root).toMatchObject({ templateName: 'root.md', status: 'missing', currentVersion: 2 });
   });
 });

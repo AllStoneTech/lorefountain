@@ -71,18 +71,22 @@ describe('checkAgentFileVersions', () => {
     expect(worldBuilder).toMatchObject({ status: 'current', version: 3 });
   });
 
-  it('skips a tracked file that was never scaffolded into this workspace', async () => {
+  it('reports a tracked file that was never scaffolded into this workspace as missing', async () => {
     const results = await checkAgentFileVersions(workspaceDir);
-    expect(results).toEqual([]);
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.every((r) => r.status === 'missing')).toBe(true);
+    const agentsMd = results.find((r) => r.relativePath === 'AGENTS.md');
+    expect(agentsMd).toMatchObject({ status: 'missing', currentVersion: 2 });
   });
 
   it('reports validate.js current when its JS-style marker matches', async () => {
     writeFileSync(
       join(workspaceDir, 'agents', 'validate.js'),
-      '// lorefountain-docs-version: 1\nconsole.log("validating");\n',
+      '// lorefountain-docs-version: 2\nconsole.log("validating");\n',
     );
 
     const results = await checkAgentFileVersions(workspaceDir);
-    expect(results).toEqual([{ relativePath: join('agents', 'validate.js'), status: 'current', version: 1 }]);
+    const validateJs = results.find((r) => r.relativePath === join('agents', 'validate.js'));
+    expect(validateJs).toEqual({ relativePath: join('agents', 'validate.js'), status: 'current', version: 2 });
   });
 });

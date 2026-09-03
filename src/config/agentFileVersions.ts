@@ -25,7 +25,8 @@ const VERSION_MARKER_PATTERN = /lorefountain-docs-version:\s*(\d+)/;
 export type AgentFileVersionStatus =
   | { relativePath: string; status: 'current'; version: number }
   | { relativePath: string; status: 'stale'; workspaceVersion: number; currentVersion: number }
-  | { relativePath: string; status: 'untracked'; currentVersion: number };
+  | { relativePath: string; status: 'untracked'; currentVersion: number }
+  | { relativePath: string; status: 'missing'; currentVersion: number };
 
 /**
  * Extract the version number from a scaffolded file's version marker.
@@ -44,7 +45,7 @@ export function parseVersionMarker(content: string): number | undefined {
  * currently bundled with this extension.
  *
  * @param workspaceRoot - Absolute path to the workspace root to check.
- * @returns One status per tracked file that actually exists in the workspace (a file that was never scaffolded at all is skipped, not reported).
+ * @returns One status per tracked file, including one never scaffolded into this workspace at all (reported as `missing`, not silently skipped).
  */
 export async function checkAgentFileVersions(workspaceRoot: string): Promise<AgentFileVersionStatus[]> {
   const results: AgentFileVersionStatus[] = [];
@@ -55,6 +56,7 @@ export async function checkAgentFileVersions(workspaceRoot: string): Promise<Age
     try {
       content = await fsp.readFile(targetPath, 'utf8');
     } catch {
+      results.push({ relativePath, status: 'missing', currentVersion });
       continue;
     }
 

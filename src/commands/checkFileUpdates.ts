@@ -5,10 +5,20 @@
  * once and never touch them again, so both silently drift from the bundled
  * templates as LoreFountain evolves. This command surfaces that drift for
  * both categories together (`checkAgentFileVersions`/`checkReadmeVersions`)
- * and lets the writer review each stale file in a real diff view before
- * choosing, per file, whether to replace it — never a silent bulk
- * overwrite, matching the "never clobber a writer's edits" posture both
- * scaffolders already follow.
+ * and lets the writer review each stale *or missing* file in a real diff
+ * view before choosing, per file, whether to replace or create it — never a
+ * silent bulk write, matching the "never clobber a writer's edits" posture
+ * both scaffolders already follow.
+ *
+ * A `missing` finding (a tracked file never scaffolded into this workspace
+ * at all — e.g. `assets/README.md` in a project that predates the
+ * asset-manifest feature) goes through the exact same review/diff/confirm
+ * path as a `stale` one: `vscode.diff` handles a nonexistent left-hand URI
+ * gracefully (shown as an empty "new file"), and the write step already
+ * creates any missing parent folder via `fs.mkdir(..., { recursive: true })`
+ * — so this command effectively subsumes what "Initialize Workspace" would
+ * otherwise be needed for, but per file and with the same explicit
+ * confirmation everything else here already requires.
  *
  * READMEs get per-workspace `{{...}}` placeholder substitution
  * (`renderReadmeTemplate`), so their diff/replace step compares against a
@@ -54,6 +64,8 @@ export function registerCheckFileUpdatesCommand(
 interface ActionableFinding {
   relativePath: string;
   description: string;
+  /** `true` for a `missing` finding — never scaffolded into this workspace at all, as opposed to an existing file that's merely stale. Changes the confirmation dialog's wording and the diff view isn't comparing against real prior content. */
+  isNew: boolean;
   getEffectiveContent: () => Promise<string>;
 }
 
@@ -117,12 +129,24 @@ function reportAgentFinding(
   outputChannel: vscode.OutputChannel,
   resourcesPath: string,
 ): ActionableFinding {
+  const getEffectiveContent = () => fsp.readFile(path.join(resourcesPath, finding.relativePath), 'utf8');
+
   if (finding.status === 'stale') {
     outputChannel.appendLine(`[LoreFountain] ${finding.relativePath}: v${finding.workspaceVersion} → v${finding.currentVersion} available`);
     return {
       relativePath: finding.relativePath,
       description: `v${finding.workspaceVersion} → v${finding.currentVersion}`,
-      getEffectiveContent: () => fsp.readFile(path.join(resourcesPath, finding.relativePath), 'utf8'),
+      isNew: false,
+      getEffectiveContent,
+    };
+  }
+  if (finding.status === 'missing') {
+    outputChannel.appendLine(`[LoreFountain] ${finding.relativePath}: not created yet → v${finding.currentVersion} available`);
+    return {
+      relativePath: finding.relativePath,
+      description: `not created yet → v${finding.currentVersion}`,
+      isNew: true,
+      getEffectiveContent,
     };
   }
   outputChannel.appendLine(
@@ -131,7 +155,8 @@ function reportAgentFinding(
   return {
     relativePath: finding.relativePath,
     description: `untracked → v${finding.currentVersion}`,
-    getEffectiveContent: () => fsp.readFile(path.join(resourcesPath, finding.relativePath), 'utf8'),
+    isNew: false,
+    getEffectiveContent,
   };
 }
 
@@ -149,12 +174,26 @@ function reportReadmeFinding(
 
   if (finding.status === 'stale') {
     outputChannel.appendLine(`[LoreFountain] ${finding.relativePath}: v${finding.workspaceVersion} → v${finding.currentVersion} available`);
-    return { relativePath: finding.relativePath, description: `v${finding.workspaceVersion} → v${finding.currentVersion}`, getEffectiveContent };
+    return {
+      relativePath: finding.relativePath,
+      description: `v${finding.workspaceVersion} → v${finding.currentVersion}`,
+      isNew: false,
+      getEffectiveContent,
+    };
+  }
+  if (finding.status === 'missing') {
+    outputChannel.appendLine(`[LoreFountain] ${finding.relativePath}: not created yet → v${finding.currentVersion} available`);
+    return {
+      relativePath: finding.relativePath,
+      description: `not created yet → v${finding.currentVersion}`,
+      isNew: true,
+      getEffectiveContent,
+    };
   }
   outputChannel.appendLine(
     `[LoreFountain] ${finding.relativePath}: not version-tracked yet (predates this feature) → v${finding.currentVersion} available`,
   );
-  return { relativePath: finding.relativePath, description: `untracked → v${finding.currentVersion}`, getEffectiveContent };
+  return { relativePath: finding.relativePath, description: `untracked → v${finding.currentVersion}`, isNew: false, getEffectiveContent };
 }
 
 async function reviewAndUpdateFile(finding: ActionableFinding, workspaceRoot: string): Promise<void> {
@@ -166,14 +205,20 @@ async function reviewAndUpdateFile(finding: ActionableFinding, workspaceRoot: st
     'vscode.diff',
     vscode.Uri.file(workspacePath),
     proposed.uri,
-    `${finding.relativePath} (yours ↔ current template)`,
+    finding.isNew ? `${finding.relativePath} (not yet created ↔ current template)` : `${finding.relativePath} (yours ↔ current template)`,
   );
 
-  const confirm = await vscode.window.showWarningMessage(
-    `Replace your copy of "${finding.relativePath}" with the current template? This overwrites the whole file — copy anything you want to keep out of the diff first.`,
-    { modal: true },
-    'Replace with Current Template',
-  );
+  const confirm = finding.isNew
+    ? await vscode.window.showWarningMessage(
+        `Create "${finding.relativePath}" from the current template? Any missing parent folder is created too.`,
+        { modal: true },
+        'Create from Current Template',
+      )
+    : await vscode.window.showWarningMessage(
+        `Replace your copy of "${finding.relativePath}" with the current template? This overwrites the whole file — copy anything you want to keep out of the diff first.`,
+        { modal: true },
+        'Replace with Current Template',
+      );
 
   // The diff's right-hand side is a throwaway untitled document with nowhere
   // to save to — left open, it looks like unfinished work. Close the tab
@@ -181,10 +226,14 @@ async function reviewAndUpdateFile(finding: ActionableFinding, workspaceRoot: st
   // opening the diff, only by the writeFile below.
   await closeDiffTab(proposed.uri);
 
-  if (confirm !== 'Replace with Current Template') return;
+  if (confirm !== 'Replace with Current Template' && confirm !== 'Create from Current Template') return;
 
+  // mkdir covers both cases uniformly: a no-op when the folder already
+  // exists (the stale-replace path), and the actual folder creation (e.g.
+  // assets/) when this file was never scaffolded at all.
+  await fsp.mkdir(path.dirname(workspacePath), { recursive: true });
   await fsp.writeFile(workspacePath, effectiveContent, 'utf8');
-  void vscode.window.showInformationMessage(`LoreFountain: updated "${finding.relativePath}".`);
+  void vscode.window.showInformationMessage(`LoreFountain: ${finding.isNew ? 'created' : 'updated'} "${finding.relativePath}".`);
 }
 
 /**

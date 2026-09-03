@@ -23,7 +23,8 @@ import { README_TEMPLATES } from './readmeFiles';
 export type ReadmeVersionStatus =
   | { relativePath: string; templateName: string; status: 'current'; version: number }
   | { relativePath: string; templateName: string; status: 'stale'; workspaceVersion: number; currentVersion: number }
-  | { relativePath: string; templateName: string; status: 'untracked'; currentVersion: number };
+  | { relativePath: string; templateName: string; status: 'untracked'; currentVersion: number }
+  | { relativePath: string; templateName: string; status: 'missing'; currentVersion: number };
 
 /**
  * Compare a workspace's scaffolded READMEs against the versions currently
@@ -31,7 +32,7 @@ export type ReadmeVersionStatus =
  *
  * @param workspaceRoot - Absolute path to the workspace root to check.
  * @param folders - The workspace's actual configured folder names, to resolve each README's real target path.
- * @returns One status per tracked README that actually exists in the workspace (a README that was never scaffolded at all is skipped, not reported).
+ * @returns One status per tracked README, including one never scaffolded into this workspace at all (reported as `missing`, not silently skipped).
  */
 export async function checkReadmeVersions(
   workspaceRoot: string,
@@ -46,6 +47,7 @@ export async function checkReadmeVersions(
     try {
       content = await fsp.readFile(targetPath, 'utf8');
     } catch {
+      results.push({ relativePath, templateName: template.templateName, status: 'missing', currentVersion: template.version });
       continue;
     }
 

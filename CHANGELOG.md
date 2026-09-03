@@ -44,6 +44,13 @@ First public release, published to the VS Code Marketplace and Open VSX.
   workspace folder** (`lorefountain.config.json`'s `folders.assets`),
   scaffolded by "Initialize Workspace" with its own README, same as the
   other three.
+- **"Check for LoreFountain File Updates" now offers to create tracked files
+  it's never seen before, not just update stale ones.** A project set up
+  before a given agent doc, README, or `agents/validate.js` existed (or
+  before the `assets/` convention did at all) previously had that file
+  silently skipped — now it's reported as "not created yet" alongside
+  everything stale, with the same per-file diff/confirm flow, and any
+  missing parent folder is created along with it.
 
 ### Fixed
 
@@ -52,6 +59,9 @@ First public release, published to the VS Code Marketplace and Open VSX.
   throwaway in-memory document with nowhere to save to, which looked like
   unfinished work sitting in the editor; it's now closed automatically once
   you accept or decline the update.
+- **`agents/validate.js`'s tracked version was left at 1 despite gaining real
+  audio-manifest validation logic**, so an already-scaffolded copy would
+  never have been flagged as stale. Bumped to 2.
 
 ## [0.12.0] - 2026-08-12
 

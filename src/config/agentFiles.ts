@@ -54,13 +54,20 @@ import * as path from 'node:path';
  * constant — discovered while bumping them again for the asset-manifest
  * documentation below, so this both reflects the new edit and corrects that
  * pre-existing drift in one step.
+ *
+ * `validate.js` bumps to `2` for the same reason, caught one commit later:
+ * `src/cli/validate.ts` gained real audio-manifest validation (reads
+ * `assets/manifests/audio.json`, warns on an unmapped tagged cue) alongside
+ * the asset-manifest feature, but this constant wasn't bumped in that same
+ * commit — so an already-scaffolded `validate.js` would have silently never
+ * been flagged as stale despite genuinely different behavior underneath.
  */
 export const AGENT_FILE_VERSIONS: Record<string, number> = {
   'AGENTS.md': 2,
   [path.join('agents', 'world-builder.md')]: 3,
   [path.join('agents', 'script-writer.md')]: 3,
   [path.join('agents', 'initiator.md')]: 1,
-  [path.join('agents', 'validate.js')]: 1,
+  [path.join('agents', 'validate.js')]: 2,
 };
 
 /**
