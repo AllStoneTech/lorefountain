@@ -16,6 +16,7 @@ import * as vscode from 'vscode';
 import { parseStoryOverviewFile, serializeStoryOverview, type StoryOverview } from '../model/storyOverview';
 import { applyFormStateToStoryOverview, storyOverviewToFormState, type StoryOverviewFormState } from './storyOverviewForm';
 import { buildStoryOverviewHtml } from './storyOverviewHtml';
+import { renderStoryOverviewBody } from './storyOverviewRender';
 
 /** The view type this provider registers under (must match package.json's `customEditors` contribution). */
 export const STORY_OVERVIEW_VIEW_TYPE = 'lorefountain.storyOverview';
@@ -38,7 +39,11 @@ export function createStoryOverviewEditorProvider(): vscode.CustomTextEditorProv
       const postState = (): void => {
         const overview = parseCurrentOverview(document);
         if (!overview) return; // malformed — leave the webview showing its last good state
-        void webviewPanel.webview.postMessage({ type: 'update', formState: storyOverviewToFormState(overview) });
+        void webviewPanel.webview.postMessage({
+          type: 'update',
+          formState: storyOverviewToFormState(overview),
+          renderedBody: renderStoryOverviewBody(overview.body),
+        });
       };
 
       const changeSubscription = vscode.workspace.onDidChangeTextDocument((event) => {
