@@ -52,6 +52,24 @@ First public release, published to the VS Code Marketplace and Open VSX.
   everything stale, with the same per-file diff/confirm flow, and any
   missing parent folder is created along with it.
 
+- **Cue Sheet export (Pro) now includes each cue's tag and its resolved
+  asset.** A tagged cue's `[tag]` and the matching `audio.json` manifest
+  entry — asset file, source, and license — appear as columns in both the
+  CSV and Markdown output, so a sound designer no longer cross-checks the
+  manifest by hand.
+- **"Check for LoreFountain Updates" command.** Compares the installed
+  version against the newest GitHub Release and, if there's a newer one,
+  offers the release notes or the Extensions view. It only ever reports —
+  Marketplace and Open VSX installs update themselves, so nothing is
+  downloaded or side-loaded.
+- **The Story Overview body now shows as rendered Markdown** and only drops
+  into the raw text box when you click **Edit** or double-click the text,
+  the way a Markdown body reads in Notion or Obsidian. An empty body still
+  opens straight into the editor.
+- **Pro commands are now covered by the opt-in usage tracking** the free
+  tier's commands already used (still off by default, still subject to VS
+  Code's own telemetry setting).
+
 ### Fixed
 
 - **"Check for LoreFountain File Updates" no longer leaves a stray diff tab
