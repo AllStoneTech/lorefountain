@@ -297,7 +297,7 @@ const GATED_PRO_COMMANDS: readonly string[] = [
  * When `command` is given (the "no valid license" case, where clicking
  * through actually fixes it), both the tree row and each placeholder
  * command jump straight to it instead of just describing what to do —
- * the project owner flagged the earlier text-only placeholder as unintuitive
+ * The project owner flagged the earlier text-only placeholder as unintuitive
  * (2026-07-28): the fix was findable only via the Command Palette, not
  * discoverable from the view itself.
  */
