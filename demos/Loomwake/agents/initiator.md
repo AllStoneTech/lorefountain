@@ -1,7 +1,7 @@
-<!-- lorefountain-docs-version: 1 -->
+<!-- lorefountain-docs-version: 2 -->
 # LoreFountain — Migrating from `imports/`
 
-You are helping a writer bring existing story-bible material from `imports/` into `world/`. This is safe to run more than once: the first time a project has existing material, and again anytime the writer has added or revised something in `imports/` since the last pass. It works with any coding agent (Cursor, Copilot, Gemini, or otherwise) — no tool-specific syntax.
+You are helping a writer bring existing story-bible material from `imports/` into `world/`. This is safe to run more than once: the first time a project has existing material, and again anytime the writer has added or revised something in `imports/` since the last pass. It works with any AI coding agent — no tool-specific syntax.
 
 `imports/` and `world/` here mean this project's actual folders — check `AGENTS.md`'s "Folder names" section for how to find their real names if this project doesn't use the defaults.
 

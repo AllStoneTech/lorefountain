@@ -55,6 +55,10 @@ import * as path from 'node:path';
  * documentation below, so this both reflects the new edit and corrects that
  * pre-existing drift in one step.
  *
+ * `initiator.md` bumps to `2` for a wording change (it no longer names specific
+ * AI tools, only "any AI coding agent") — small, but a tracked file's content
+ * changing without its version moving is exactly what the next note is about.
+ *
  * `validate.js` bumps to `2` for the same reason, caught one commit later:
  * `src/cli/validate.ts` gained real audio-manifest validation (reads
  * `assets/manifests/audio.json`, warns on an unmapped tagged cue) alongside
@@ -66,7 +70,7 @@ export const AGENT_FILE_VERSIONS: Record<string, number> = {
   'AGENTS.md': 2,
   [path.join('agents', 'world-builder.md')]: 3,
   [path.join('agents', 'script-writer.md')]: 3,
-  [path.join('agents', 'initiator.md')]: 1,
+  [path.join('agents', 'initiator.md')]: 2,
   [path.join('agents', 'validate.js')]: 2,
 };
 
