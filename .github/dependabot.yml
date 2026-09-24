@@ -5,6 +5,11 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # vsce refuses to package when @types/vscode is newer than
+      # engines.vscode; that pin moves only when the supported VS Code
+      # floor is raised on purpose.
+      - dependency-name: '@types/vscode'
   - package-ecosystem: github-actions
     directory: /
     schedule:
