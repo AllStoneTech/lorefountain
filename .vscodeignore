@@ -1,9 +1,7 @@
 # Everything here is excluded from the packaged .vsix.
 # The bundled output in dist/ is the only code shipped.
 
-.github/**
-.vscode/**
-.vscode-test/**
+# Every dot-directory: editor, CI, and local tooling config
 .*/**
 src/**
 test/**

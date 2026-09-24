@@ -13,20 +13,30 @@
   "bugs": {
     "url": "https://github.com/AllStoneTech/lorefountain/issues"
   },
-  "homepage": "https://github.com/AllStoneTech/lorefountain#readme",
+  "homepage": "https://www.allstonetech.com/lorefountain",
   "icon": "resources/icon.png",
   "engines": {
     "vscode": "^1.125.0"
   },
   "categories": [
+    "Programming Languages",
+    "Snippets",
     "Other"
   ],
   "keywords": [
     "fountain",
     "screenwriting",
+    "screenplay",
     "worldbuilding",
+    "story bible",
+    "lore",
     "audio drama",
-    "markdown"
+    "radio drama",
+    "continuity",
+    "markdown",
+    "writing",
+    "entity",
+    "wiki"
   ],
   "main": "./dist/extension.js",
   "activationEvents": [
@@ -336,11 +346,21 @@
         "viewType": "lorefountain.assetManifest",
         "displayName": "LoreFountain Asset Manifest",
         "selector": [
-          { "filenamePattern": "**/assets/manifests/audio.json" },
-          { "filenamePattern": "**/assets/manifests/characters.json" },
-          { "filenamePattern": "**/assets/manifests/locations.json" },
-          { "filenamePattern": "**/assets/manifests/objects.json" },
-          { "filenamePattern": "**/assets/manifests/voice.json" }
+          {
+            "filenamePattern": "**/assets/manifests/audio.json"
+          },
+          {
+            "filenamePattern": "**/assets/manifests/characters.json"
+          },
+          {
+            "filenamePattern": "**/assets/manifests/locations.json"
+          },
+          {
+            "filenamePattern": "**/assets/manifests/objects.json"
+          },
+          {
+            "filenamePattern": "**/assets/manifests/voice.json"
+          }
         ],
         "priority": "default"
       }
@@ -694,5 +714,15 @@
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.65.0",
     "vitest": "^4.1.10"
+  },
+  "galleryBanner": {
+    "color": "#1e2a38",
+    "theme": "dark"
+  },
+  "capabilities": {
+    "virtualWorkspaces": {
+      "supported": false,
+      "description": "LoreFountain reads and writes project files on disk and needs a local folder."
+    }
   }
 }

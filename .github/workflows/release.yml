@@ -1,16 +1,16 @@
 name: Release
 
-# Builds a real .vsix and attaches it to a GitHub Release whenever a
-# version tag is pushed — the "push code, get a build" half of an
-# auto-publish pipeline (see docs/PUBLISHING.md). Does NOT publish to the
-# VS Code Marketplace or Open VSX on its own; those need VSCE_PAT/OVSX_PAT
-# repo secrets and are commented out below until that's set up.
+# Builds a .vsix and attaches it to a GitHub Release whenever a version tag is
+# pushed (see docs/PUBLISHING.md). Does NOT publish to the VS Code Marketplace
+# or Open VSX on its own; those need VSCE_PAT/OVSX_PAT repo secrets and are
+# commented out below until that's set up.
 #
-# Uploads under a fixed filename (lorefountain.vsix, not
-# lorefountain-<version>.vsix) so https://github.com/AllStoneTech/lorefountain/releases/latest/download/lorefountain.vsix
-# always resolves to the newest build — but that URL is only reachable
-# once this repo itself is public (see docs/TODO.md); while private, this
-# workflow still produces the artifact, just not a publicly downloadable one.
+# The paid-tier module lives in a separate private repository (the pro/
+# submodule), which this workflow's default token can't read. If a
+# PRO_REPO_TOKEN secret (a fine-grained token with read access to that
+# repository) is configured, it's checked out and bundled; if not, the build
+# is free-tier only and the artifact is named accordingly, so a Pro-less file
+# can never be mistaken for the real release build.
 
 on:
   push:
@@ -23,16 +23,22 @@ permissions:
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
+    env:
+      PRO_REPO_TOKEN: ${{ secrets.PRO_REPO_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-        # No submodules checkout on purpose: the pro/ submodule is a
-        # separate private repo this workflow's default token can't read.
-        # esbuild.js already handles pro/ being absent by skipping the
-        # paid-tier bundle, same as any local clone without submodule access.
+
+      - name: Check out the private Pro module
+        if: env.PRO_REPO_TOKEN != ''
+        uses: actions/checkout@v4
+        with:
+          repository: AllStoneTech/lorefountain-pro
+          token: ${{ secrets.PRO_REPO_TOKEN }}
+          path: pro
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - run: npm ci
 
@@ -42,19 +48,29 @@ jobs:
 
       - run: npm run package
 
-      - name: Rename to a stable filename
-        run: mv lorefountain-*.vsix lorefountain.vsix
+      - name: Name the artifact
+        run: |
+          if [ -n "$PRO_REPO_TOKEN" ]; then
+            mv lorefountain-*.vsix lorefountain.vsix
+            echo "ASSET=lorefountain.vsix" >> "$GITHUB_ENV"
+          else
+            mv lorefountain-*.vsix lorefountain-free-only.vsix
+            echo "ASSET=lorefountain-free-only.vsix" >> "$GITHUB_ENV"
+            echo "::warning::PRO_REPO_TOKEN is not set - this build has no Pro module and is named lorefountain-free-only.vsix."
+          fi
 
       - uses: softprops/action-gh-release@v2
         with:
-          files: lorefountain.vsix
+          files: ${{ env.ASSET }}
           generate_release_notes: true
 
-      # Once VSCE_PAT/OVSX_PAT secrets exist (see docs/PUBLISHING.md) and
-      # you're actually ready for a public marketplace listing, uncomment:
-      # - run: npx vsce publish --packagePath lorefountain.vsix
+      # Once PRO_REPO_TOKEN, VSCE_PAT and OVSX_PAT are all configured (see
+      # docs/PUBLISHING.md) and you're ready for automated publishing,
+      # uncomment. Never enable these without PRO_REPO_TOKEN: the stores would
+      # receive a build without Pro.
+      # - run: npx vsce publish --packagePath ${{ env.ASSET }}
       #   env:
       #     VSCE_PAT: ${{ secrets.VSCE_PAT }}
-      # - run: npx ovsx publish lorefountain.vsix
+      # - run: npx ovsx publish ${{ env.ASSET }}
       #   env:
       #     OVSX_PAT: ${{ secrets.OVSX_PAT }}

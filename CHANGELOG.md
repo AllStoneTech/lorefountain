@@ -5,7 +5,7 @@ All notable changes to LoreFountain are documented here. This project follows
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-09-02
+## [1.0.0] - 2026-09-24
 
 First public release, published to the VS Code Marketplace and Open VSX.
 
