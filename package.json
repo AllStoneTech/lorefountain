@@ -695,7 +695,7 @@
     "docx": "^9.7.1",
     "fountain-js": "^1.2.4",
     "markdown-it": "^15.0.0",
-    "sql.js": "^1.14.1",
+    "sql.js": "^1.14.2",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
   },
@@ -708,12 +708,12 @@
     "@types/vscode": "^1.125.0",
     "@vscode/vsce": "^3.9.2",
     "esbuild": "^0.28.1",
-    "eslint": "^10.7.0",
-    "javascript-obfuscator": "^5.5.0",
+    "eslint": "^10.11.0",
+    "javascript-obfuscator": "^5.8.0",
     "ovsx": "^1.1.1",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.65.0",
-    "vitest": "^4.1.10"
+    "vitest": "^5.0.1"
   },
   "galleryBanner": {
     "color": "#1e2a38",
@@ -724,5 +724,9 @@
       "supported": false,
       "description": "LoreFountain reads and writes project files on disk and needs a local folder."
     }
+  },
+  "funding": {
+    "type": "individual",
+    "url": "https://www.allstonetech.com/support?source=lorefountain"
   }
 }
