@@ -6,8 +6,6 @@ Things that still need to happen, tracked here so they survive between sessions.
 
 **Flip repository visibility.** A deliberate action in GitHub's repo settings, done after the marketplace builds have had some real-world testing. Several things only start working once it's public: "Install Demo World" (it fetches `demos/` through GitHub's unauthenticated API, which returns `404` for a private repo), the release-page link from "Check for LoreFountain Updates" (degrades to "couldn't check" while private), and the screenshots on the Marketplace / Open VSX listings, which are relative links resolved against the repository.
 
-**Add a funding/sponsor link once a platform is decided.** No URL is set yet — once one is, wire it into `package.json`'s `funding` field and the README.
-
 **Clarify licensing of the bundled Pro module.** `LICENSE` is MIT, and the packaged `.vsix` carries that license file, but it also contains the (obfuscated, proprietary) paid-tier bundle `dist/pro.js`. Decide how that should read — for example a note in the license/README that MIT covers the free tier and the Pro module is separately licensed — before or at launch.
 
 ## Before Pro is enforced (after the launch promo ends)

@@ -98,6 +98,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contributor guide,
 including what a good pull request looks like here and how production builds
 are packaged/obfuscated.
 
+## Support
+
+If LoreFountain saves you time, you can [buy us a cup of coffee](https://www.allstonetech.com/support?source=lorefountain) — it helps fund continued development.
+
 ## License
 
 MIT © All Stone Tech. See [LICENSE](LICENSE). The Fountain parsing dependencies
