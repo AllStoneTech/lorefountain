@@ -26,11 +26,11 @@ jobs:
     env:
       PRO_REPO_TOKEN: ${{ secrets.PRO_REPO_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check out the private Pro module
         if: env.PRO_REPO_TOKEN != ''
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: AllStoneTech/lorefountain-pro
           token: ${{ secrets.PRO_REPO_TOKEN }}
