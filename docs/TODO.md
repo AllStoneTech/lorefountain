@@ -20,18 +20,6 @@ The license, telemetry, and feedback endpoints on AllStoneTech.com are live and 
 - **Publisher accounts.** The VS Code Marketplace publisher `allstonetech` and the Open VSX namespace of the same name need to be created and tokens generated. See `docs/PUBLISHING.md` for the step-by-step.
 - **Release workflow and the private Pro module.** `.github/workflows/release.yml` builds a Pro-enabled `.vsix` only when a `PRO_REPO_TOKEN` secret (read access to the private `lorefountain-pro` repo) is configured; without it, it builds a free-tier-only artifact and says so. Configure that secret before turning on any automated marketplace publish, otherwise the stores would receive a build without Pro.
 
-## Screenshots
-
-The README's Install and Getting started sections are text-only for now. Capture these in a clean, throwaway profile (so no personal windows or settings appear), save them as PNGs in `docs/images/`, and add them to the README:
-
-1. The LoreFountain sidebar (World view) open on a demo project, with a few categories expanded.
-2. A Story Card editing an entity.
-3. A `.fountain` script with a hover preview on a character name.
-4. The Story Overview editor showing the rendered body.
-5. (Pro) The Entity Graph.
-
-A clean profile with the extension installed, pointed at a demo copy, can be launched with `code --user-data-dir <tmp>/user --extensions-dir <tmp>/ext --install-extension lorefountain-<version>.vsix` followed by `code --user-data-dir <tmp>/user --extensions-dir <tmp>/ext <demo-copy>`.
-
 ## Not yet scoped
 
 Nothing currently.

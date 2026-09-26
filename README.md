@@ -19,8 +19,14 @@ LoreFountain needs VS Code 1.125 or newer and works on a local folder (it reads 
 1. **Look around a finished project first.** Run **LoreFountain: Try LoreFountain (Sample Workspace)** from the Command Palette (`Ctrl+Shift+P`) for a small sample, or **LoreFountain: Install Demo World...** for a full-length one. Both open in a new window and never touch your current folder.
 2. **Or start your own.** Open an empty folder (or one with `.fountain` scripts in it) and run **LoreFountain: Initialize Workspace**. It creates `world/`, `scripts/`, `imports/`, and `assets/`, plus a short README in each explaining what it's for.
 3. **Create your first entity.** Open the LoreFountain view in the Activity Bar and use **New Character** (or Location, Faction, Object, Concept, Arc). Each entity is a plain Markdown file that opens as a form — a *Story Card* — instead of raw YAML.
+
+   ![The LoreFountain sidebar beside a Story Card for a character](docs/images/world-view-and-story-card.png)
 4. **Link it into a script.** Type a character's name in a `.fountain` script, in a cue or in dialogue, or write `[[Their Name]]` anywhere. Hover it for the Story Card, or autocomplete the name as you type.
+
+   ![Hovering a character cue in a Fountain script shows that character's Story Card](docs/images/script-hover-preview.png)
 5. **Keep going.** Rename an entity and every reference follows (**Rename Entity**), find every scene two characters share (**Structured Search**), track when things happen on the Timeline, and write the premise once in the **Story Overview**.
+
+   ![The Story Overview editor showing a rendered Markdown premise, setting, and key characters](docs/images/story-overview.png)
 6. **Bring your existing notes.** Drop old bibles and outlines into `imports/`, then run **LoreFountain: Migrate Existing Lore** to hand a ready-made prompt to whichever AI coding agent you use. LoreFountain never modifies `imports/` itself.
 
 **Keeping current.** **Check for LoreFountain Updates** tells you when a newer release exists (Marketplace and Open VSX installs also update on their own). **Check for LoreFountain File Updates** compares a project's scaffolded agent instructions and READMEs against the versions bundled with your installed extension, offers to create any that are missing, and lets you review each change before anything is written.
@@ -57,6 +63,8 @@ regenerated.
 Story-Bible Export, BBC Radio Drama Export, SFX/Cue-Sheet Export, and Shot
 List Export. Pro is unlocked for everyone during the public launch promo —
 no license key needed until then. See `CHANGELOG.md` for release history.
+
+![The Entity Graph (Pro), showing every entity and its typed relationships](docs/images/entity-graph.png)
 
 ## Telemetry & Feedback
 
