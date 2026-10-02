@@ -8,7 +8,7 @@ hover previews, autocomplete, and backlinks.
 
 ## Install
 
-- **VS Code:** open the Extensions view, search for **LoreFountain**, and click Install (or press `Ctrl+P` and run `ext install allstonetech.lorefountain`).
+- **VS Code:** open the Extensions view, search for **LoreFountain**, and click Install (or press `Ctrl+P` and run `ext install All-Stone-Tech.lorefountain`).
 - **Cursor, Windsurf, Antigravity, VSCodium:** these editors use the [Open VSX Registry](https://open-vsx.org); search for **LoreFountain** in their Extensions view.
 - **From a file:** download the `.vsix` from the [latest release](https://github.com/AllStoneTech/lorefountain/releases/latest), then Extensions view → the `...` menu → **Install from VSIX...**.
 

@@ -19,7 +19,7 @@ import * as vscode from 'vscode';
 import { registerTrackedCommand } from '../telemetry/trackedCommands';
 import { checkForNewerVersion } from '../updates/versionCheck';
 
-const EXTENSION_ID = 'allstonetech.lorefountain';
+const EXTENSION_ID = 'All-Stone-Tech.lorefountain';
 
 /**
  * Register the "Check for LoreFountain Updates" command.
