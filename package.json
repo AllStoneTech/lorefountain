@@ -706,7 +706,7 @@
     "@types/node": "^22.0.0",
     "@types/sql.js": "^1.4.11",
     "@types/vscode": "^1.125.0",
-    "@vscode/vsce": "^3.9.2",
+    "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.1",
     "eslint": "^10.11.0",
     "javascript-obfuscator": "^5.8.0",
