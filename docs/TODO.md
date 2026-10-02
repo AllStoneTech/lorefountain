@@ -18,6 +18,7 @@ The license, telemetry, and feedback endpoints on AllStoneTech.com are live and 
 ## Publishing
 
 - **Publisher accounts.** The VS Code Marketplace publisher `allstonetech` and the Open VSX namespace of the same name need to be created and tokens generated. See `docs/PUBLISHING.md` for the step-by-step.
+- **Marketplace publishing moves to Microsoft Entra ID on 2026-12-01.** Azure DevOps stops supporting tokens scoped to all accessible organizations on that date, and `vsce` needs that scope. A token-based publish works for the first release; every release after the deadline needs `vsce publish --azure-credential` and the managed-identity setup in `docs/PUBLISHING.md`. Confirm whether local-machine publishing is supported, or move the release to a pipeline, before then.
 - **Release workflow and the private Pro module.** `.github/workflows/release.yml` builds a Pro-enabled `.vsix` only when a `PRO_REPO_TOKEN` secret (read access to the private `lorefountain-pro` repo) is configured; without it, it builds a free-tier-only artifact and says so. Configure that secret before turning on any automated marketplace publish, otherwise the stores would receive a build without Pro.
 
 ## Not yet scoped
