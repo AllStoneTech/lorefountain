@@ -696,7 +696,7 @@
     "fountain-js": "^1.2.4",
     "markdown-it": "^15.0.0",
     "sql.js": "^1.14.2",
-    "yaml": "^2.9.0",
+    "yaml": "^2.9.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
