@@ -711,7 +711,7 @@
     "eslint": "^10.11.0",
     "javascript-obfuscator": "^5.8.0",
     "ovsx": "^1.1.1",
-    "typescript": "~6.0.3",
+    "typescript": "~7.0.2",
     "typescript-eslint": "^8.65.0",
     "vitest": "^5.0.1"
   },
