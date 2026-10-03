@@ -5,6 +5,13 @@ All notable changes to LoreFountain are documented here. This project follows
 
 ## [Unreleased]
 
+### Added
+
+- **A license notice for LoreFountain Pro** (`LICENSE-PRO.md`). The free tier
+  stays MIT; the compiled Pro module is proprietary and is now described as
+  such in the package and the README.
+
+
 ## [1.0.0] - 2026-09-24
 
 First public release, published to the VS Code Marketplace and Open VSX.

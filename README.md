@@ -112,5 +112,9 @@ If LoreFountain saves you time, you can [buy us a cup of coffee](https://www.all
 
 ## License
 
-MIT © All Stone Tech. See [LICENSE](LICENSE). The Fountain parsing dependencies
-(Afterwriting, Fountain.js) are likewise MIT-licensed.
+The free tier is MIT © All Stone Tech. See [LICENSE](LICENSE). The Fountain
+parsing dependencies (Afterwriting, Fountain.js) are likewise MIT-licensed.
+
+LoreFountain Pro is proprietary and is not covered by the MIT License. It ships
+only in compiled form inside the extension package; its source is not in this
+repository. See [LICENSE-PRO.md](LICENSE-PRO.md) for the terms.
