@@ -713,7 +713,7 @@
     "ovsx": "^1.2.0",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.65.0",
-    "vitest": "^5.0.1"
+    "vitest": "^5.0.2"
   },
   "galleryBanner": {
     "color": "#1e2a38",
