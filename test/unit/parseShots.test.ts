@@ -128,3 +128,35 @@ DURATION: 4s
     expect(extractShots('INT. KITCHEN - NIGHT\n\nSANGO\nWhere are you taking us?\n')).toEqual([]);
   });
 });
+
+describe('extractShots — shot tags', () => {
+  it('reads an optional [tag] and keeps it out of the description', () => {
+    const shots = extractShots('INT. A - DAY\n\nSHOT: [archive-ident] WIDE, abstract\n\nSHOT: MEDIUM, on LUCIEN\n');
+    expect(shots[0]).toMatchObject({ tag: 'archive-ident', description: 'WIDE, abstract' });
+    expect(shots[1].tag).toBeUndefined();
+    expect(shots[1].description).toBe('MEDIUM, on LUCIEN');
+  });
+
+  it('reads a tag on a SHOT: line Fountain misreads as a character cue', () => {
+    const shots = extractShots('INT. A - DAY\n\nSHOT: [1x01-wide] WIDE ESTABLISHING\nPOSE: SANGO STANDS\n');
+    expect(shots).toEqual([
+      {
+        sceneNumber: 1,
+        sceneHeadingText: 'INT. A - DAY',
+        shotNumber: 1,
+        tag: '1x01-wide',
+        description: 'WIDE ESTABLISHING',
+        pose: 'SANGO STANDS',
+      },
+    ]);
+  });
+
+  it('leaves a non-slug bracket as part of the description', () => {
+    expect(extractShots('INT. A - DAY\n\nSHOT: [Wide] establishing\n')[0]).toMatchObject({ description: '[Wide] establishing' });
+  });
+
+  it('does not number or return an implicit shot 0', () => {
+    const shots = extractShots('INT. A - DAY\n\nMara waits.\n\nSHOT: WIDE\n');
+    expect(shots.map((shot) => shot.shotNumber)).toEqual([1]);
+  });
+});

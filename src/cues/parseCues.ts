@@ -39,10 +39,13 @@
  * later in the same cue's description (a wikilink's first inner character is
  * itself `[`, which the tag pattern's `[a-z0-9]` class rejects), and it keeps
  * tag matching exact rather than fuzzy, so a rename never silently maps to
- * the wrong asset. The tag is optional — a cue can exist before anyone has
+ * the wrong asset. The tag shape is shared with `SHOT:` lines and lives in
+ * `fountain/conventions.ts`, so the two parsers can't drift. The tag is optional — a cue can exist before anyone has
  * tagged or sourced its asset — and is extracted before role/timing on a
  * `MUSIC:` line, since it always sits closest to the prefix.
  */
+
+import { matchLeadingTag } from '../fountain/conventions';
 
 export type CueType = 'sfx' | 'music' | 'amb';
 
@@ -67,14 +70,6 @@ export interface CueEntry {
 }
 
 const CUE_LINE = /^[ \t]*(SFX|MUSIC|AMB):[ \t]*(.*)$/;
-
-/**
- * A leading `[tag]` on a cue's remaining text, e.g. `[kola-nuts-clatter] the
- * kola nuts clatter`. Deliberately restricted to slug shape (see the module
- * doc comment) so it can never be confused with a `[[Wikilink]]` entity
- * mention appearing later in the same description.
- */
-const CUE_TAG = /^\[([a-z0-9]+(?:-[a-z0-9]+)*)\][ \t]*(.*)$/;
 
 // "SOURCE BED" is listed before "BED" for longest-match-first readability,
 // though it's not actually load-bearing: none of these four alternatives
@@ -114,13 +109,10 @@ export function extractCues(scriptText: string): CueEntry[] {
     const type = match[1].toLowerCase() as CueType;
     let rest = match[2];
 
-    let tag: string | undefined;
-    const tagMatch = CUE_TAG.exec(rest);
-    if (tagMatch) {
-      tag = tagMatch[1];
-      rest = tagMatch[2];
-    }
-    rest = rest.trim();
+    // A leading `[tag]`, shape shared with SHOT: lines (see `fountain/conventions.ts`).
+    const tagMatch = matchLeadingTag(rest);
+    const tag = tagMatch.tag;
+    rest = tagMatch.rest.trim();
 
     if (type === 'music') {
       let remaining = rest;

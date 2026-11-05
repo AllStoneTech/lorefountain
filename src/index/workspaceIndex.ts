@@ -19,8 +19,10 @@ import {
   readVoiceAssetManifest,
 } from '../assets/entityManifest';
 import type { ReadManifestFileResult } from '../assets/manifestFile';
+import { readShotManifest, SHOT_MANIFEST_LABEL } from '../assets/shotManifest';
 import { getWorkspaceFolders } from '../config/workspaceConfig';
 import { removeCueSidecar } from '../cues/sidecar';
+import { removeShotSidecar } from '../shots/sidecar';
 import { buildIndexFromDisk, reindexFile, removeFileFromIndex, type IndexBuildSummary, type ProjectAssetManifests } from './build';
 import { createSqlJsIndexStore } from './sqlJsStore';
 import type { IndexStore } from './store';
@@ -66,18 +68,20 @@ export class WorkspaceIndex implements vscode.Disposable {
       this.outputChannel.appendLine(`[LoreFountain] ${this.folder.name}: ${configIssue}`);
     }
 
-    const [audio, characters, locations, objects, voice] = await Promise.all([
+    const [audio, characters, locations, objects, voice, shots] = await Promise.all([
       readAudioManifest(folders.assets),
       readCharacterAssetManifest(folders.assets),
       readLocationAssetManifest(folders.assets),
       readObjectAssetManifest(folders.assets),
       readVoiceAssetManifest(folders.assets),
+      readShotManifest(folders.assets),
     ]);
     this.reportManifestIssue('assets/manifests/audio.json', audio);
     this.reportManifestIssue('assets/manifests/characters.json', characters);
     this.reportManifestIssue('assets/manifests/locations.json', locations);
     this.reportManifestIssue('assets/manifests/objects.json', objects);
     this.reportManifestIssue('assets/manifests/voice.json', voice);
+    this.reportManifestIssue(SHOT_MANIFEST_LABEL, shots);
 
     const assetManifests: ProjectAssetManifests = {
       audio: audio.ok ? audio.manifest : {},
@@ -85,6 +89,7 @@ export class WorkspaceIndex implements vscode.Disposable {
       locations: locations.ok ? locations.manifest : {},
       objects: objects.ok ? objects.manifest : {},
       voice: voice.ok ? voice.manifest : {},
+      shots: shots.ok ? shots.manifest : {},
     };
 
     const summary = await buildIndexFromDisk(
@@ -133,6 +138,7 @@ export class WorkspaceIndex implements vscode.Disposable {
     scriptsWatcher.onDidDelete((uri) => {
       removeFileFromIndex(this.store, uri.fsPath, 'script');
       void removeCueSidecar(uri.fsPath);
+      void removeShotSidecar(uri.fsPath);
       this.changeEmitter.fire();
     });
     this.disposables.push(scriptsWatcher);
@@ -159,6 +165,9 @@ export class WorkspaceIndex implements vscode.Disposable {
     }
     for (const warning of result.warnings) {
       this.outputChannel.appendLine(`[LoreFountain] WARNING ${filePath}: ${warning.message}`);
+    }
+    for (const note of result.notes) {
+      this.outputChannel.appendLine(`[LoreFountain] NOTE ${filePath}: ${note.message}`);
     }
     for (const relation of result.danglingRelations) {
       this.outputChannel.appendLine(
@@ -210,6 +219,17 @@ export class WorkspaceIndex implements vscode.Disposable {
       this.outputChannel.appendLine(
         `[LoreFountain] ERROR: ${entry.manifestFile} — "${entry.key}" doesn't match any known entity.`,
       );
+    }
+    for (const issue of summary.shotManifestIssues.filter((i) => i.severity === 'warning')) {
+      this.outputChannel.appendLine(`[LoreFountain] WARNING: ${issue.message}`);
+    }
+    for (const entry of summary.notes) {
+      for (const note of entry.notes) {
+        this.outputChannel.appendLine(`[LoreFountain] NOTE ${entry.filePath}: ${note.message}`);
+      }
+    }
+    for (const issue of summary.shotManifestIssues.filter((i) => i.severity === 'info')) {
+      this.outputChannel.appendLine(`[LoreFountain] NOTE: ${issue.message}`);
     }
   }
 }

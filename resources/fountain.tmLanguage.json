@@ -78,18 +78,21 @@
       }
     },
     "cue-prefix": {
-      "match": "^\\s*((?:SFX|MUSIC|AMB):)\\s*(SOURCE BED|BED|STING|BRIDGE|IN|OUT)?",
+      "match": "^\\s*((?:SFX|MUSIC|AMB):)\\s*(\\[[a-z0-9]+(?:-[a-z0-9]+)*\\])?\\s*(SOURCE BED|BED|STING|BRIDGE|IN|OUT)?",
       "name": "support.function.cue-prefix.lorefountain",
       "captures": {
         "1": { "name": "support.function.cue-prefix.lorefountain" },
-        "2": { "name": "keyword.other.cue-modifier.lorefountain" }
+        "2": { "name": "variable.other.asset-tag.lorefountain" },
+        "3": { "name": "keyword.other.cue-modifier.lorefountain" }
       }
     },
     "shot-prefix": {
-      "match": "^\\s*((?:SHOT|POSE|LIGHT|DURATION):)",
+      "match": "^\\s*(?:(SHOT:)\\s*(\\[[a-z0-9]+(?:-[a-z0-9]+)*\\])?|((?:POSE|LIGHT|DURATION|PAUSE):))",
       "name": "support.function.shot-prefix.lorefountain",
       "captures": {
-        "1": { "name": "support.function.shot-prefix.lorefountain" }
+        "1": { "name": "support.function.shot-prefix.lorefountain" },
+        "2": { "name": "variable.other.asset-tag.lorefountain" },
+        "3": { "name": "support.function.shot-prefix.lorefountain" }
       }
     },
     "emphasis": {

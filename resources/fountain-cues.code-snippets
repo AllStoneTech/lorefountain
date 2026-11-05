@@ -34,6 +34,16 @@
     "body": "SHOT: ${1:description}",
     "description": "Insert a new camera shot — starts a shot record for Shot List Export (Pro). Freeform framing/angle description, e.g. WIDE, CLOSE-UP on CHARACTER, OTS."
   },
+  "Shot (tagged)": {
+    "prefix": "shot-tag",
+    "body": "SHOT: [${1:tag}] ${2:description}",
+    "description": "Insert a camera shot with a [tag] — its stable handle into assets/manifests/shots.json, mapping the shot to the still or clip that fills it. Prefix episode-specific tags with the production code (1x01-basement-wide); leave the prefix off recurring shots (archive-ident); never put scene or shot numbers in a tag."
+  },
+  "Scene Pause": {
+    "prefix": "pause",
+    "body": "PAUSE: ${1:2s}",
+    "description": "Insert a scene-level pause — a silence that belongs to the scene, not a speaker. The length is optional ('2s', 'long'). For a character's own pause inside their dialogue, use a (beat) parenthetical instead."
+  },
   "Shot Pose": {
     "prefix": "pose",
     "body": "POSE: ${1:description}",

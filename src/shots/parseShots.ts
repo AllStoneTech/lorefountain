@@ -10,9 +10,21 @@
  * decompose into clean orthogonal axes the way MUSIC's role/timing split
  * eventually did (see `cues/parseCues.ts`'s doc comment); locking it down
  * would repeat the mistake that split fixed.
+ *
+ * A `SHOT:` line may carry an optional `[tag]` right after the prefix
+ * (`SHOT: [archive-ident] WIDE, abstract`), the same slug-shaped handle cues
+ * use (`fountain/conventions.ts`), keying the shot into
+ * `assets/manifests/shots.json`. Position ("Scene 2, Shot 3") can't key a
+ * manifest, since inserting one shot renumbers every later one; a tag can.
+ * Tags are optional and never part of `description`.
+ *
+ * The line walk itself lives in `scanScript.ts`, shared with the
+ * `.shots.json` sidecar builder (`shotMap.ts`), including the workaround for
+ * Fountain misreading an all-caps `SHOT:` line as a character cue.
  */
 
-import { parseFountain, mapTokensToPositions } from '../fountain/parse';
+import { matchLeadingTag, parseDurationSeconds } from '../fountain/conventions';
+import { scanScript } from './scanScript';
 
 /** One camera shot, extracted from a script. */
 export interface Shot {
@@ -31,13 +43,20 @@ export interface Shot {
   durationText?: string;
   /** A numeric seconds value parsed leniently out of `durationText`, when possible — for potential future runtime-summing. Never guessed at; left unset rather than misparsed. */
   durationSeconds?: number;
+  /** The shot's stable `[tag]` handle into `assets/manifests/shots.json`, when one was written. Optional: an untagged shot is valid, it just can't be mapped to an asset. */
+  tag?: string;
 }
 
-const SHOT_LINE = /^[ \t]*SHOT:[ \t]*(.*)$/;
-const POSE_LINE = /^[ \t]*POSE:[ \t]*(.*)$/;
-const LIGHT_LINE = /^[ \t]*LIGHT:[ \t]*(.*)$/;
-const DURATION_LINE = /^[ \t]*DURATION:[ \t]*(.*)$/;
-const DURATION_SECONDS = /(?:about\s+|~\s*)?(\d+(?:\.\d+)?)\s*(?:s|sec|secs|second|seconds)\b/i;
+/**
+ * Split a `SHOT:` line's text into its optional tag and its description.
+ *
+ * @param rest - The text after `SHOT:`.
+ * @returns The tag (if any) and the trimmed description, without the tag.
+ */
+export function parseShotText(rest: string): { tag?: string; description: string } {
+  const { tag, rest: description } = matchLeadingTag(rest);
+  return tag === undefined ? { description: description.trim() } : { tag, description: description.trim() };
+}
 
 /**
  * Extract every shot from a script's raw text.
@@ -55,9 +74,6 @@ const DURATION_SECONDS = /(?:about\s+|~\s*)?(\d+(?:\.\d+)?)\s*(?:s|sec|secs|seco
  * @returns Every shot found, in document order.
  */
 export function extractShots(scriptText: string): Shot[] {
-  const tokens = parseFountain(scriptText);
-  const positioned = mapTokensToPositions(scriptText, tokens);
-
   const shots: Shot[] = [];
   let sceneNumber = 0;
   let sceneHeadingText = '';
@@ -69,62 +85,44 @@ export function extractShots(scriptText: string): Shot[] {
     current = undefined;
   };
 
-  for (const pt of positioned) {
-    const token = pt.token;
-
-    if (token.type === 'scene_heading') {
+  // `scanScript` already turns a SHOT:/POSE:/LIGHT:/DURATION: line that
+  // Fountain misread as a character cue (likely here, since shot vocabulary
+  // like WIDE or CLOSE-UP is conventionally capitalized) back into a
+  // directive, so every shape Fountain's parser produces is handled.
+  for (const item of scanScript(scriptText)) {
+    if (item.kind === 'heading') {
       flush();
       sceneNumber += 1;
-      sceneHeadingText = (token.text ?? '').trim();
+      sceneHeadingText = item.text;
       shotCounterInScene = 0;
       continue;
     }
-    // A SHOT:/POSE:/LIGHT:/DURATION: line is ordinary action-line prose by
-    // intent, but Fountain's own character-cue heuristic (an ALL-CAPS line
-    // immediately followed by non-blank text = character + dialogue) can
-    // misclassify one as `character`, with any lines stacked immediately
-    // after it (no blank line between) glommed into one `dialogue` token —
-    // this is *likely* here specifically because real shot-type vocabulary
-    // (WIDE, CLOSE-UP, ESTABLISHING) is conventionally capitalized, unlike
-    // this project's existing SFX:/MUSIC:/AMB: cue descriptions, which
-    // happen to always be lowercase prose in practice and so never trigger
-    // it. Scanning `character` and `dialogue` token text the same way as
-    // `action` — rather than requiring users to avoid natural
-    // capitalization or blank-line-separate every field — keeps this
-    // convention working regardless of which shape Fountain's parser
-    // produces; a genuine character cue's text simply never matches these
-    // four prefixes, so real dialogue is untouched.
-    if (token.type !== 'action' && token.type !== 'character' && token.type !== 'dialogue') continue;
+    if (item.kind !== 'directive') continue;
 
-    const physicalLines = (token.text ?? '').split('\n');
-    for (const lineText of physicalLines) {
-      const shotMatch = SHOT_LINE.exec(lineText);
-      if (shotMatch) {
+    const value = item.rest.trim();
+    switch (item.keyword) {
+      case 'SHOT': {
         flush();
         shotCounterInScene += 1;
-        current = { sceneNumber, sceneHeadingText, shotNumber: shotCounterInScene, description: shotMatch[1].trim() };
-        continue;
+        const { tag, description } = parseShotText(item.rest);
+        current = { sceneNumber, sceneHeadingText, shotNumber: shotCounterInScene, description };
+        if (tag !== undefined) current.tag = tag;
+        break;
       }
-
-      const poseMatch = POSE_LINE.exec(lineText);
-      if (poseMatch) {
-        if (current) current.pose = poseMatch[1].trim();
-        continue;
-      }
-
-      const lightMatch = LIGHT_LINE.exec(lineText);
-      if (lightMatch) {
-        if (current) current.light = lightMatch[1].trim();
-        continue;
-      }
-
-      const durationMatch = DURATION_LINE.exec(lineText);
-      if (durationMatch && current) {
-        const durationText = durationMatch[1].trim();
-        current.durationText = durationText;
-        const secondsMatch = DURATION_SECONDS.exec(durationText);
-        current.durationSeconds = secondsMatch ? Number(secondsMatch[1]) : undefined;
-      }
+      case 'POSE':
+        if (current) current.pose = value;
+        break;
+      case 'LIGHT':
+        if (current) current.light = value;
+        break;
+      case 'DURATION':
+        if (current) {
+          current.durationText = value;
+          current.durationSeconds = parseDurationSeconds(value);
+        }
+        break;
+      default:
+        break;
     }
   }
   flush();

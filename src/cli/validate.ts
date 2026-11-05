@@ -18,7 +18,13 @@
  * `Order`/Production Code value, Production Code drift, two scripts in the
  * same season sharing an `Order`, or a tagged SFX/MUSIC/AMB cue with no
  * matching `assets/manifests/audio.json` entry — don't fail the run, matching
- * how the extension treats them as non-blocking.
+ * how the extension treats them as non-blocking. The same goes for the shot
+ * checks: a tagged SHOT: with no `assets/manifests/shots.json` entry, a
+ * manifest `kind` that contradicts its file extension, and an orphaned
+ * parenthetical are warnings. Notes (a standalone `Beat.` line, an
+ * ambiguous heading location, an unused shots.json entry) are printed last
+ * and never fail the run. A malformed or schema-invalid manifest, shots.json
+ * included, is reported as a notice and treated as empty, like the other five.
  */
 
 import * as path from 'node:path';
@@ -32,6 +38,7 @@ import {
   readVoiceAssetManifest,
 } from '../assets/entityManifest';
 import type { ReadManifestFileResult } from '../assets/manifestFile';
+import { readShotManifest, SHOT_MANIFEST_LABEL } from '../assets/shotManifest';
 import { buildIndexFromDisk, type IndexBuildSummary, type ProjectAssetManifests } from '../index/build';
 import { createMemoryIndexStore } from '../index/memoryStore';
 
@@ -44,18 +51,20 @@ async function main(): Promise<void> {
     console.log(`⚠ lorefountain.config.json (${configResult.reason}): ${configResult.message} — using default folder names.\n`);
   }
 
-  const [audio, characters, locations, objects, voice] = await Promise.all([
+  const [audio, characters, locations, objects, voice, shots] = await Promise.all([
     readAudioManifest(folders.assets),
     readCharacterAssetManifest(folders.assets),
     readLocationAssetManifest(folders.assets),
     readObjectAssetManifest(folders.assets),
     readVoiceAssetManifest(folders.assets),
+    readShotManifest(folders.assets),
   ]);
   reportManifestIssue('assets/manifests/audio.json', audio);
   reportManifestIssue('assets/manifests/characters.json', characters);
   reportManifestIssue('assets/manifests/locations.json', locations);
   reportManifestIssue('assets/manifests/objects.json', objects);
   reportManifestIssue('assets/manifests/voice.json', voice);
+  reportManifestIssue(SHOT_MANIFEST_LABEL, shots);
 
   const assetManifests: ProjectAssetManifests = {
     audio: audio.ok ? audio.manifest : {},
@@ -63,6 +72,7 @@ async function main(): Promise<void> {
     locations: locations.ok ? locations.manifest : {},
     objects: objects.ok ? objects.manifest : {},
     voice: voice.ok ? voice.manifest : {},
+    shots: shots.ok ? shots.manifest : {},
   };
 
   const store = createMemoryIndexStore();
@@ -106,7 +116,9 @@ function printReport(root: string, summary: IndexBuildSummary): void {
     summary.danglingEpisodes.length === 0 &&
     summary.duplicateScriptOrders.length === 0 &&
     summary.duplicateProductionCodes.length === 0 &&
-    summary.danglingAssetManifestEntries.length === 0;
+    summary.danglingAssetManifestEntries.length === 0 &&
+    summary.shotManifestIssues.length === 0 &&
+    summary.notes.length === 0;
   if (nothingToReport) {
     console.log('All clear.');
     return;
@@ -175,6 +187,31 @@ function printReport(root: string, summary: IndexBuildSummary): void {
     console.log(`✘ ${summary.danglingAssetManifestEntries.length} dangling asset-manifest entry(s):`);
     for (const entry of summary.danglingAssetManifestEntries) {
       console.log(`  ${entry.manifestFile} — "${entry.key}" doesn't match any known entity`);
+    }
+    console.log('');
+  }
+
+  const manifestWarnings = summary.shotManifestIssues.filter((issue) => issue.severity === 'warning');
+  if (manifestWarnings.length > 0) {
+    console.log(`⚠ ${manifestWarnings.length} shot manifest warning(s):`);
+    for (const issue of manifestWarnings) {
+      console.log(`  ${issue.message}`);
+    }
+    console.log('');
+  }
+
+  // Notes are informational: printed last, never counted toward the exit code.
+  const manifestNotes = summary.shotManifestIssues.filter((issue) => issue.severity === 'info');
+  const noteCount = summary.notes.reduce((count, entry) => count + entry.notes.length, 0) + manifestNotes.length;
+  if (noteCount > 0) {
+    console.log(`ℹ ${noteCount} note(s):`);
+    for (const entry of summary.notes) {
+      for (const note of entry.notes) {
+        console.log(`  ${path.relative(root, entry.filePath)} — ${note.message}`);
+      }
+    }
+    for (const issue of manifestNotes) {
+      console.log(`  ${issue.message}`);
     }
   }
 }

@@ -202,6 +202,8 @@ describe('buildIndexFromDisk', () => {
       duplicateScriptOrders: [],
       duplicateProductionCodes: [],
       danglingAssetManifestEntries: [],
+      notes: [],
+      shotManifestIssues: [],
     });
   });
 
@@ -828,5 +830,92 @@ describe('reindexFile and removeFileFromIndex', () => {
 
     removeFileFromIndex(store, scriptPath, 'script');
     expect(store.getScriptByPath(scriptPath)).toBeUndefined();
+  });
+});
+
+describe('shot maps in the index build', () => {
+  let tmpRoot: string;
+  let store: IndexStore;
+  const folders = (root: string) => ({
+    world: path.join(root, 'world'),
+    glossary: path.join(root, 'world', 'glossary'),
+    timeline: path.join(root, 'world', 'timeline'),
+    scripts: path.join(root, 'scripts'),
+  });
+  const locationMd = (name: string) => ['---', `name: ${name}`, 'type: location', '---', '', 'Body.'].join('\n');
+
+  beforeEach(async () => {
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'lorefountain-build-shots-test-'));
+    store = await createSqlJsIndexStore();
+  });
+
+  afterEach(async () => {
+    store.dispose();
+    await fs.rm(tmpRoot, { recursive: true, force: true });
+  });
+
+  it('writes a .shots.json sidecar resolved against the indexed entities', async () => {
+    await writeFile(tmpRoot, 'world/mara.md', characterMd('Mara'));
+    await writeFile(tmpRoot, 'world/hollow-house.md', locationMd('Hollow House'));
+    const scriptPath = await writeFile(
+      tmpRoot,
+      'scripts/1x01/1x01.fountain',
+      'INT. HOLLOW HOUSE - NIGHT\n\nSHOT: [1x01-wide] WIDE\nPOSE: Mara waits\n\nMARA\nHello.\n',
+    );
+
+    await buildIndexFromDisk(store, folders(tmpRoot));
+
+    const sidecar = JSON.parse(await fs.readFile(scriptPath.replace(/\.fountain$/, '.shots.json'), 'utf8'));
+    expect(sidecar.shots[0]).toMatchObject({
+      tag: '1x01-wide',
+      locations: ['hollow-house'],
+      entities: ['mara'],
+      spoken: [{ speaker: 'MARA', speakerEntity: 'mara', extensions: [], text: 'Hello.' }],
+    });
+  });
+
+  it('reports unmapped shot tags and orphaned parentheticals as warnings, and bare pauses as notes', async () => {
+    const scriptPath = await writeFile(
+      tmpRoot,
+      'scripts/1x01.fountain',
+      'INT. A - DAY\n\nSHOT: [needs-art] WIDE\n\nMARA\nHi.\n\n(beat)\nStill here.\n\nBeat.\n',
+    );
+
+    const summary = await buildIndexFromDisk(store, folders(tmpRoot), {});
+
+    const warningCodes = summary.warnings.find((entry) => entry.filePath === scriptPath)?.warnings.map((w) => 'code' in w && w.code);
+    expect(warningCodes).toEqual(['unmapped-shot-tag', 'orphaned-parenthetical']);
+    expect(summary.notes).toEqual([
+      { filePath: scriptPath, notes: [expect.objectContaining({ code: 'bare-pause-line', severity: 'info' })] },
+    ]);
+  });
+
+  it('reports shot manifest issues at the project level', async () => {
+    await writeFile(tmpRoot, 'scripts/1x01.fountain', 'INT. A - DAY\n\nSHOT: [used-shot] WIDE\n');
+    const summary = await buildIndexFromDisk(store, folders(tmpRoot), {
+      shots: {
+        'used-shot': { file: 'shots/used.mp4', kind: 'still' },
+        'cut-shot': { file: 'shots/cut.png', kind: 'still' },
+      },
+    });
+
+    expect(summary.warnings).toEqual([]);
+    expect(summary.shotManifestIssues.map((issue) => [issue.code, issue.key])).toEqual([
+      ['shot-kind-mismatch', 'used-shot'],
+      ['unused-shot-tag', 'cut-shot'],
+    ]);
+  });
+
+  it('runs per-script format checks on save but leaves manifest cross-checks to the full build', async () => {
+    const scriptPath = await writeFile(tmpRoot, 'scripts/1x01.fountain', 'INT. A - DAY\n\nSHOT: [needs-art] WIDE\n\nBeat.\n');
+
+    const result = await reindexFile(store, scriptPath, 'script');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.warnings).toEqual([]);
+      expect(result.notes.map((note) => note.code)).toEqual(['bare-pause-line']);
+    }
+    expect(await fs.readFile(scriptPath.replace(/\.fountain$/, '.shots.json'), 'utf8')).toContain('needs-art');
   });
 });

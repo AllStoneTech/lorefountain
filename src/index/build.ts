@@ -15,7 +15,14 @@
  * Every time a script's text is read here — full build or incremental
  * reindex — its cue sidecar (Spec §15) is also regenerated via
  * `cues/sidecar.ts`, for the same reason: the sidecar is derived data that
- * must never drift from the script it was parsed from.
+ * must never drift from the script it was parsed from. The shot sidecar
+ * (`.shots.json`, `shots/sidecar.ts`) is regenerated alongside it, resolving
+ * entity mentions, speakers and heading locations against the entities
+ * currently in the store. Its per-script format checks
+ * (`orphaned-parenthetical`, plus the `bare-pause-line`/`ambiguous-location`
+ * notes) run on save and on a full build; the shot manifest cross-checks
+ * (`unmapped-shot-tag`, `shot-kind-mismatch`, `unused-shot-tag`) run on a
+ * full build only, like the cue manifest check below.
  *
  * A full {@link buildIndexFromDisk} additionally checks every tagged cue
  * (`cues/parseCues.ts`'s `[tag]` syntax) against the project's audio manifest
@@ -88,7 +95,16 @@ import {
   type DressedAssetManifest,
   type VoiceAssetManifest,
 } from '../assets/entityManifest';
+import {
+  findShotManifestIssues,
+  findUnmappedShotTags,
+  type ShotManifest,
+  type ShotManifestIssue,
+  type ShotTagWarning,
+} from '../assets/shotManifest';
 import { updateCueSidecar } from '../cues/sidecar';
+import type { ScriptShotIssue, ShotMapEntity, ShotMapResult } from '../shots/shotMap';
+import { updateShotSidecar } from '../shots/sidecar';
 import type { ValidationIssue } from '../model/errors';
 import { parseEntityFile, type EntityWarning } from '../model/entity';
 import { parseGlossaryFile } from '../model/glossary';
@@ -128,12 +144,31 @@ export interface ScriptDriftWarning extends ValidationIssue {
 }
 
 /** Every kind of non-blocking, per-file warning the index can produce. */
-export type IndexWarning = EntityWarning | ScriptWarning | ScriptDriftWarning | CueManifestWarning;
+export type IndexWarning =
+  | EntityWarning
+  | ScriptWarning
+  | ScriptDriftWarning
+  | CueManifestWarning
+  | ShotTagWarning
+  | ScriptShotIssue;
+
+/**
+ * A per-file note: informational, softer than a warning, never failing
+ * anything (`bare-pause-line`, `ambiguous-location`). Notes are reported in
+ * their own section so they don't dilute real warnings.
+ */
+export type IndexNote = ScriptShotIssue;
 
 /** One file that parsed successfully but had a non-blocking warning (misplaced field, unusable Order/Production Code, or Production Code drift). */
 export interface IndexBuildWarning {
   filePath: string;
   warnings: IndexWarning[];
+}
+
+/** One file with informational notes. */
+export interface IndexBuildNote {
+  filePath: string;
+  notes: IndexNote[];
 }
 
 /** One relation (Spec §4.5) whose `target` doesn't resolve to a known entity id. */
@@ -177,6 +212,10 @@ export interface IndexBuildSummary {
   duplicateProductionCodes: IndexBuildDuplicateProductionCode[];
   /** Manifest keys (`characters.json`/`locations.json`/`objects.json`/`voice.json`) with no matching entity — see `assets/entityManifest.ts`. */
   danglingAssetManifestEntries: DanglingManifestEntry[];
+  /** Informational per-file notes (see {@link IndexNote}). */
+  notes: IndexBuildNote[];
+  /** Project-level shot manifest issues: `shot-kind-mismatch` (warning) and `unused-shot-tag` (info) — see `assets/shotManifest.ts`. */
+  shotManifestIssues: ShotManifestIssue[];
 }
 
 /**
@@ -193,6 +232,7 @@ export interface ProjectAssetManifests {
   locations?: DressedAssetManifest;
   objects?: DressedAssetManifest;
   voice?: VoiceAssetManifest;
+  shots?: ShotManifest;
 }
 
 /** The four kinds of file the index tracks. Notes (§13.4) are never indexed. */
@@ -203,6 +243,7 @@ export type ReindexFileResult =
   | {
       ok: true;
       warnings: IndexWarning[];
+      notes: IndexNote[];
       danglingRelations: IndexBuildDanglingRelation[];
       danglingEpisodes: IndexBuildDanglingEpisode[];
     }
@@ -234,6 +275,7 @@ export async function buildIndexFromDisk(
   assetManifests: ProjectAssetManifests = {},
 ): Promise<IndexBuildSummary> {
   const audioManifest = assetManifests.audio ?? {};
+  const shotManifest = assetManifests.shots ?? {};
   const summary: IndexBuildSummary = {
     entityCount: 0,
     glossaryCount: 0,
@@ -246,6 +288,8 @@ export async function buildIndexFromDisk(
     duplicateScriptOrders: [],
     duplicateProductionCodes: [],
     danglingAssetManifestEntries: [],
+    notes: [],
+    shotManifestIssues: [],
   };
 
   const entityFiles = (await listFilesWithExtension(folders.world, '.md', ENTITY_EXCLUDED_SUBDIRS)).filter(
@@ -294,23 +338,40 @@ export async function buildIndexFromDisk(
   // reading each script file twice).
   const scriptFiles = await listFilesWithExtension(folders.scripts, '.fountain');
   const scriptTexts = new Map<string, string>();
+  // Every entity is already upserted above, so shot sidecars resolve against the complete set.
+  const shotEntities = shotMapEntitiesFrom(store);
+  const usedShotTags = new Set<string>();
   for (const filePath of scriptFiles) {
     try {
       const text = await fsp.readFile(filePath, 'utf8');
       scriptTexts.set(filePath, text);
       summary.scriptCount += 1;
       const cues = await updateCueSidecar(filePath, text);
+      const shotMap = await updateShotSidecar(filePath, text, shotEntities);
+      for (const shot of shotMap.shots) {
+        if (shot.tag !== undefined) usedShotTags.add(shot.tag);
+      }
 
       const { script, warnings } = parseScriptTitlePage(text, { id: idFromFilePath(filePath), filePath });
       store.upsertScript(script);
-      const allWarnings: IndexWarning[] = [...warnings, ...findUnmappedCueTags(cues, audioManifest)];
+      const { warnings: shotWarnings, notes } = splitShotIssues(shotMap);
+      const allWarnings: IndexWarning[] = [
+        ...warnings,
+        ...findUnmappedCueTags(cues, audioManifest),
+        ...findUnmappedShotTags(shotMap.shots, shotManifest),
+        ...shotWarnings,
+      ];
       if (allWarnings.length > 0) {
         summary.warnings.push({ filePath, warnings: allWarnings });
+      }
+      if (notes.length > 0) {
+        summary.notes.push({ filePath, notes });
       }
     } catch (err) {
       summary.malformed.push({ filePath, reason: 'read-error', message: errorMessage(err) });
     }
   }
+  summary.shotManifestIssues = findShotManifestIssues(shotManifest, usedShotTags);
 
   // A single pass over the now-complete candidate list, after every file has
   // been upserted — see the module doc comment on why this differs from the
@@ -363,12 +424,16 @@ export async function reindexFile(
 
   if (kind === 'script') {
     await updateCueSidecar(filePath, text);
+    const shotMap = await updateShotSidecar(filePath, text, shotMapEntitiesFrom(store));
+    // Per-script format checks run on save too; manifest cross-checks stay
+    // full-build only (see the module doc comment).
+    const { warnings: shotWarnings, notes } = splitShotIssues(shotMap);
 
     const priorProductionCode = store.getScriptByPath(filePath)?.productionCode;
     const { script, warnings } = parseScriptTitlePage(text, { id, filePath });
     store.upsertScript(script);
 
-    const allWarnings: IndexWarning[] = [...warnings];
+    const allWarnings: IndexWarning[] = [...warnings, ...shotWarnings];
     const newProductionCode = script.frontmatter.productionCode;
     if (priorProductionCode !== undefined && newProductionCode !== undefined && priorProductionCode !== newProductionCode) {
       allWarnings.push({
@@ -382,7 +447,7 @@ export async function reindexFile(
       const candidates = buildMentionCandidates(store);
       store.setMentionsForSource({ id, kind: 'script', filePath }, extractMentionTargets(text, candidates));
     }
-    return { ok: true, warnings: allWarnings, danglingRelations: [], danglingEpisodes: [] };
+    return { ok: true, warnings: allWarnings, notes, danglingRelations: [], danglingEpisodes: [] };
   }
 
   if (kind === 'entity') {
@@ -411,7 +476,7 @@ export async function reindexFile(
         );
       }
     }
-    return { ok: true, warnings: result.warnings, danglingRelations, danglingEpisodes };
+    return { ok: true, warnings: result.warnings, notes: [], danglingRelations, danglingEpisodes };
   }
 
   if (kind === 'glossary') {
@@ -428,7 +493,7 @@ export async function reindexFile(
         extractMentionTargets(result.term.body, candidates, result.term.id),
       );
     }
-    return { ok: true, warnings: [], danglingRelations: [], danglingEpisodes: [] };
+    return { ok: true, warnings: [], notes: [], danglingRelations: [], danglingEpisodes: [] };
   }
 
   const result = parseTimelineEventFile(text, { id, filePath });
@@ -444,7 +509,36 @@ export async function reindexFile(
       extractMentionTargets(result.event.body, candidates, result.event.id),
     );
   }
-  return { ok: true, warnings: [], danglingRelations: [], danglingEpisodes: [] };
+  return { ok: true, warnings: [], notes: [], danglingRelations: [], danglingEpisodes: [] };
+}
+
+/**
+ * Every entity in the store, shaped for the shot map's mention, speaker and
+ * heading-location resolution.
+ *
+ * @param store - The index to read entities from.
+ * @returns One {@link ShotMapEntity} per entity: id, type, and name plus aliases.
+ */
+function shotMapEntitiesFrom(store: IndexStore): ShotMapEntity[] {
+  return store.listEntities().map((entity) => ({
+    id: entity.id,
+    type: entity.data.type,
+    names: [entity.name, ...(entity.data.aliases ?? [])],
+  }));
+}
+
+/**
+ * Split a shot map's per-script issues into warnings and notes by severity.
+ *
+ * @param shotMap - The result of `updateShotSidecar` for one script.
+ * @returns Warning-severity issues and info-severity notes, each in line order.
+ */
+function splitShotIssues(shotMap: ShotMapResult): { warnings: ScriptShotIssue[]; notes: IndexNote[] } {
+  const byLine = [...shotMap.issues].sort((a, b) => a.line - b.line);
+  return {
+    warnings: byLine.filter((issue) => issue.severity === 'warning'),
+    notes: byLine.filter((issue) => issue.severity === 'info'),
+  };
 }
 
 /** Every Production Code currently known to the store, for {@link findDanglingEpisodeCodes}. */

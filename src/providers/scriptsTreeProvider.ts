@@ -136,11 +136,12 @@ export class ScriptsTreeProvider
     return sortScripts(scripts).map((script) => ({ kind: 'script', folder, script }));
   }
 
-  /** A script's sibling files in its own folder — audio, images, anything else a writer put there — excluding the script itself and its derived cue sidecar. */
+  /** A script's sibling files in its own folder — audio, images, anything else a writer put there — excluding the script itself and its derived cue and shot sidecars. */
   private async artifactsFor(folder: vscode.WorkspaceFolder, script: ScriptRecord): Promise<ScriptsTreeNode[]> {
     const dir = path.dirname(script.filePath);
     const scriptBasename = path.basename(script.filePath);
     const sidecarBasename = scriptBasename.replace(/\.fountain$/, '.cues.json');
+    const shotSidecarBasename = scriptBasename.replace(/\.fountain$/, '.shots.json');
 
     let entries: import('node:fs').Dirent[];
     try {
@@ -150,7 +151,13 @@ export class ScriptsTreeProvider
     }
 
     return entries
-      .filter((entry) => entry.isFile() && entry.name !== scriptBasename && entry.name !== sidecarBasename)
+      .filter(
+        (entry) =>
+          entry.isFile() &&
+          entry.name !== scriptBasename &&
+          entry.name !== sidecarBasename &&
+          entry.name !== shotSidecarBasename,
+      )
       .map((entry) => ({ kind: 'artifact' as const, folder, filePath: path.join(dir, entry.name) }))
       .sort((a, b) => path.basename(a.filePath).localeCompare(path.basename(b.filePath)));
   }
