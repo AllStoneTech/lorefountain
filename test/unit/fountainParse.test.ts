@@ -107,3 +107,14 @@ describe('mapTokensToPositions', () => {
     expect(mapTokensToPositions('', parseFountain(''))).toEqual([]);
   });
 });
+
+describe('mapTokensToPositions — multi-line tokens', () => {
+  it('counts the newlines inside a stacked action block, so later lines stay correct', () => {
+    const text = 'INT. A - DAY\n\nSHOT: WIDE\nPOSE: standing\nLIGHT: dim\n\nMARA\nHi.\n';
+    const positioned = mapTokensToPositions(text, parseFountain(text));
+    const character = positioned.find((p) => p.token.type === 'character' && p.token.text === 'MARA');
+    const dialogue = positioned.find((p) => p.token.type === 'dialogue' && p.token.text === 'Hi.');
+    expect(character?.line).toBe(6);
+    expect(dialogue?.line).toBe(7);
+  });
+});

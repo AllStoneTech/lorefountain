@@ -79,6 +79,9 @@ export function mapTokensToPositions(text: string, tokens: readonly Token[]): Po
     line += countNewlines(text, cursor, start);
     const end = start + tokenText.length;
     positioned.push({ token, start, end, line });
+    // A multi-line token (e.g. a stacked action block) also spans newlines of
+    // its own; count them too, or every later token's line comes out short.
+    line += countNewlines(text, start, end);
     cursor = end;
   }
 
