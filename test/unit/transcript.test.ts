@@ -76,3 +76,13 @@ describe('serializeTranscriptMarkdown', () => {
     expect(serializeTranscriptMarkdown('1x01', [])).toBe('# 1x01\n');
   });
 });
+
+describe('buildTranscript — LoreFountain prefix lines', () => {
+  it('never shows an all-caps SHOT: line misread as a character cue as a speaker', () => {
+    const script = 'INT. A - DAY\n\nSHOT: WIDE ESTABLISHING\nPOSE: SANGO STANDS\n\nSANGO\nWe go now.\n';
+    expect(buildTranscript(parseFountain(script))).toEqual([
+      { kind: 'heading', text: 'INT. A - DAY' },
+      { kind: 'line', character: 'SANGO', text: 'We go now.' },
+    ]);
+  });
+});

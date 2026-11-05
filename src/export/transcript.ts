@@ -13,8 +13,15 @@
  * content but as lightweight section breaks for readability (Spec §16's
  * named audiences — accessibility, publishing, show notes — all benefit
  * from knowing where one scene ends and the next begins).
+ *
+ * LoreFountain's own prefix lines (`SHOT:`, `PAUSE:`, `SFX:`, ...) are action
+ * prose, so they're stripped too. Fountain can misread an all-caps one
+ * (`SHOT: WIDE` with a `POSE:` line right under it) as a character cue plus
+ * dialogue; such a block is never a speaking turn, so it's skipped whole
+ * (see `fountain/conventions.ts`).
  */
 
+import { matchPrefixLine } from '../fountain/conventions';
 import type { FountainToken } from '../fountain/parse';
 
 /** One entry in a built transcript: a scene-break heading, or one character's speaking turn. */
@@ -53,7 +60,8 @@ export function buildTranscript(tokens: readonly FountainToken[]): TranscriptEnt
         break;
       case 'character':
         flush();
-        currentCharacter = (token.text ?? '').trim();
+        // A misread prefix line opens no speaking turn: its "dialogue" is dropped with it.
+        currentCharacter = matchPrefixLine(token.text ?? '') ? undefined : (token.text ?? '').trim();
         break;
       case 'dialogue':
         if (currentCharacter && token.text) {
