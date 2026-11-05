@@ -37,15 +37,29 @@ files there beyond the script itself.
   mapping that exact tag to the file that fulfills it so the same sound
   design choice is reused every time it recurs, e.g.
   `SFX: [kola-nuts-clatter] kola nuts clatter in a bowl`. Untagged is the
-  normal state for a cue whose asset isn't sourced yet. Open any
-  `assets/manifests/*.json` file for a form-based editor (its own title
-  bar has a matching `$(question)` help button) instead of hand-editing the
-  JSON.
+  normal state for a cue whose asset isn't sourced yet. Open
+  `audio.json` (or any entity-keyed manifest) for a form-based editor (its
+  own title bar has a matching `$(question)` help button) instead of
+  hand-editing the JSON.
 - A second convention for camera/pre-production — `SHOT:`, `POSE:`,
   `LIGHT:`, and `DURATION:` — works the same way: `SHOT:` starts a new shot
   (freeform framing, e.g. `WIDE`, `CLOSE-UP on SANGO`), and the other three
   set fields on whichever shot is currently open. Shots number sequentially
   within each scene, resetting at every scene heading.
+- A `SHOT:` line can carry a **`[tag]`** too, e.g.
+  `SHOT: [1x01-basement-wide] WIDE, establishing` — a stable handle into
+  `assets/manifests/shots.json` naming the still or clip that fills the
+  shot. Prefix episode-specific tags with the production code, leave the
+  prefix off recurring shots (`archive-ident`), and never put scene or
+  shot numbers in a tag. Every script with shots gets a
+  `<script-name>.shots.json` sidecar (line ranges, what's heard, entities,
+  cue pointers per shot) for downstream tools; like the cue sidecar, it's
+  regenerated on every save.
+- Write a scene pause as `PAUSE:` (optionally `PAUSE: 2s`); a character's
+  own pause stays a `(beat)` parenthetical inside their dialogue. Keep a
+  speech and its parentheticals together with no blank lines — a blank
+  line ends a Fountain dialogue block, so a `(beat)` after one becomes
+  action, and the validator warns about it.
 - Both conventions are free to write in any project. Turning them into a
   working export — a cue sheet, a shot list, or a full BBC-style radio
   script — is LoreFountain Pro; see each export's own help panel (Command

@@ -1,4 +1,4 @@
-<!-- lorefountain-docs-version: 3 -->
+<!-- lorefountain-docs-version: 4 -->
 # LoreFountain — Script-Writing Reference
 
 Read this before creating or editing any `.fountain` file under `scripts/`.
@@ -9,9 +9,41 @@ Read this before creating or editing any `.fountain` file under `scripts/`.
 
 Scripts are 100% standard Fountain — scene headings, character cues, dialogue, parentheticals, transitions. Nothing LoreFountain-specific is required to make linking to the world work, and scripts stay fully portable to any other Fountain tool.
 
+LoreFountain *extends* Fountain with a few plain-English prefix lines (`SFX:`, `MUSIC:`, `AMB:`, `SHOT:`, `POSE:`, `LIGHT:`, `DURATION:`, `PAUSE:`) written as ordinary action lines, but it never changes how standard Fountain is read. Follow the Fountain spec exactly; when a script breaks it, LoreFountain parses it the way Fountain does and warns, rather than guessing what was meant.
+
+### Dialogue blocks and pauses
+
+In Fountain a blank line ends a dialogue block. Keep a character's whole speech, including any parentheticals, together with no blank lines inside it:
+
+```
+MARA
+I found it.
+(beat)
+It was down here the whole time.
+```
+
+If you put a blank line before `(beat)`, Fountain reads the `(beat)` and everything after it as action, not dialogue. Every Fountain tool will show it that way, and `node agents/validate.js` reports it as `orphaned-parenthetical`. If a `SHOT:` or other line has to interrupt a speech, end the dialogue block there and repeat the character cue with `(CONT'D)` afterwards:
+
+```
+MARA
+I found it.
+
+SHOT: [1x01-key-insert] INSERT, the Key on the workbench
+
+MARA (CONT'D)
+It was down here the whole time.
+```
+
+There are two kinds of pause, and they're written differently:
+
+- **A character's own pause** is a parenthetical inside their dialogue: `(beat)`, `(a beat)`, `(long beat)`, `(pause)`, `(a pause)`, `(long pause)` or `(silence)`. It's performance direction for that speaker.
+- **A scene pause**, a silence that belongs to the scene rather than to anyone speaking, is a `PAUSE:` line with an optional length: `PAUSE:`, `PAUSE: 2s`, `PAUSE: long`. Don't write a bare `Beat.` action line for this; it stays ordinary action, and the validator notes it as `bare-pause-line`.
+
+Put extensions such as `V.O.`, `O.S.` or `FILTERED` on the character cue line (`THE ARCHIVE (V.O.) (FILTERED)`), not inside a parenthetical. Only cue-line extensions are recognized as extensions.
+
 ## Folder structure: one folder per script
 
-Each script gets its own folder, one level under an optional season folder: `scripts/Season 01/1x03-the-reveal/1x03-the-reveal.fountain`. Everything else about that episode — its cue sidecar, and anything a writer drops in (audio, images, notes) — lives alongside it in that same folder. LoreFountain has no awareness of what those other files are; they're just along for the ride, the same as anything in `imports/`.
+Each script gets its own folder, one level under an optional season folder: `scripts/Season 01/1x03-the-reveal/1x03-the-reveal.fountain`. Everything else about that episode — its cue and shot sidecars, and anything a writer drops in (audio, images, notes) — lives alongside it in that same folder. LoreFountain has no awareness of what those other files are; they're just along for the ride, the same as anything in `imports/`.
 
 A project with no seasons at all can skip that layer: `scripts/1x01-pilot/1x01-pilot.fountain` is just as valid.
 
@@ -93,9 +125,33 @@ DURATION: ~3 seconds
 
 This convention is free to use in any project — extraction itself doesn't require a license. **Export Shot List** (LoreFountain Pro), which turns these annotations into a CSV/Markdown pre-production breakdown, does.
 
+### Tagging a shot: linking it to a still or clip
+
+A `SHOT:` line can carry an optional `[tag]` right after the prefix, with exactly the same shape as a cue tag (lowercase letters, digits, single hyphens). It's the shot's stable handle into `assets/manifests/shots.json`, which maps the tag to the still or clip that fills the shot:
+
+```
+SHOT: [archive-ident] WIDE, abstract — the Archive Presence (recurring ident)
+SHOT: [1x01-basement-wide] WIDE, establishing — LUCIEN's basement office
+SHOT: MEDIUM, on LUCIEN
+```
+
+Naming convention:
+
+- Prefix an episode-specific shot with the episode's production code: `1x01-basement-wide`.
+- Leave the prefix off a recurring shot used across episodes (an ident, a bumper): `archive-ident`. The same tag in several scripts means the same asset.
+- **Never put a scene or shot number in a tag.** Numbers are exactly what changes when a shot is inserted, which is why shots are keyed by tag at all.
+
+Tags are optional, and an untagged shot is never an error. Repeating a tag within one script is fine (cutting back to the same image). A tagged shot with no `shots.json` entry is a non-blocking warning (`unmapped-shot-tag`): the image may not exist yet. As with `audio.json`, never create or edit `assets/manifests/shots.json` yourself unless the writer asks.
+
+### The shot sidecar
+
+Every script with at least one `SHOT:` line gets a `<script-name>.shots.json` sidecar next to it, regenerated on every save and never hand-edited; it's removed again if the script loses all its shots. For each shot it records the scene and shot number, the tag, the scene heading broken into parts (INT./EXT., setting, time of day, and any location entities the setting names exactly), the shot's line range, everything heard in it (dialogue with speaker and cue-line extensions, both kinds of pause, overlapping dual dialogue), the entities its own text mentions, and the line numbers of cues that *start* in it (pointers into `.cues.json`). Text in a scene before its first `SHOT:` is kept as shot 0, so nothing is lost. Downstream tools read this file instead of parsing Fountain.
+
+If a scene heading's setting matches more than one location entity (two "Basement"s), it's left unresolved and noted as `ambiguous-location`. Give one of them a more specific name or alias rather than guessing.
+
 ## Adding cues and shots when asked
 
-If the writer asks you to add SFX/MUSIC/AMB cues or SHOT/POSE/LIGHT/DURATION annotations to a scene — whether one you're writing fresh or one that's already there — write them directly using the conventions above, in the right place in the action. Choose values that fit what the scene already establishes: a `MUSIC:` cue's Role/Timing should match the moment's dramatic shape (a scene closing softly reads as `MUSIC: OUT`, a reveal reads as `MUSIC: STING`, a scene meant to run tense under dialogue reads as `MUSIC: BED IN`), and a `SHOT:`'s framing should match what the action already describes. This is the same editorial judgment you already use writing the action lines themselves — don't wait to be told the exact keyword for every cue, and don't ask the writer to fill them in themselves unless the scene genuinely doesn't give you enough to go on.
+If the writer asks you to add SFX/MUSIC/AMB cues, SHOT/POSE/LIGHT/DURATION annotations, or PAUSE: lines to a scene — whether one you're writing fresh or one that's already there — write them directly using the conventions above, in the right place in the action. Choose values that fit what the scene already establishes: a `MUSIC:` cue's Role/Timing should match the moment's dramatic shape (a scene closing softly reads as `MUSIC: OUT`, a reveal reads as `MUSIC: STING`, a scene meant to run tense under dialogue reads as `MUSIC: BED IN`), and a `SHOT:`'s framing should match what the action already describes. This is the same editorial judgment you already use writing the action lines themselves — don't wait to be told the exact keyword for every cue, and don't ask the writer to fill them in themselves unless the scene genuinely doesn't give you enough to go on.
 
 ## Questions about scenes, presence, or dialogue
 
@@ -103,4 +159,4 @@ If the writer asks something like "which scenes have both X and Y in them" or "e
 
 ## Check your own work
 
-After creating or editing any scripts, run `node agents/validate.js` from the project root (this also regenerates every script's cue sidecar). It has no VS Code dependency. Fix anything it reports before telling the writer you're done.
+After creating or editing any scripts, run `node agents/validate.js` from the project root (this also regenerates every script's cue and shot sidecars). It has no VS Code dependency. Fix anything it reports before telling the writer you're done.

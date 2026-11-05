@@ -7,6 +7,9 @@ licensed/generated file that fulfills it, so a recurring asset — a specific
 sound effect, a character's likeness, a location's look — is reused every
 time it recurs across a season instead of being re-picked or regenerated.
 
+A sixth manifest, `shots.json` (shot tag → still or clip), opens as plain
+JSON for now; see `assets/README.md` for its shape.
+
 ## Two shapes, one editor
 
 **`audio.json`** is flat: each entry is a cue **tag** — written in a script

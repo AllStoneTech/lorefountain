@@ -57,7 +57,11 @@ can have production assets (audio, character/location/object rigs) mapped
 to them by id — both through a form-based **Asset Manifest editor** under
 `assets/manifests/` — so a recurring sound, likeness, or set condition is
 reused every time it recurs across a season instead of re-picked or
-regenerated.
+regenerated. `SHOT:` lines can carry a `[tag]` too, mapped to the still or
+clip that fills them in `assets/manifests/shots.json`, and every script
+with shots gets a `.shots.json` sidecar (each shot's line range, narration,
+pauses, entities, and cue pointers) so a video pipeline can assemble an
+episode without parsing Fountain itself.
 
 **LoreFountain Pro** adds Continuity Management, an Entity Graph view,
 Story-Bible Export, BBC Radio Drama Export, SFX/Cue-Sheet Export, and Shot

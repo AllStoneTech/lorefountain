@@ -1,4 +1,4 @@
-<!-- lorefountain-docs-version: 2 -->
+<!-- lorefountain-docs-version: 3 -->
 # AGENTS.md
 
 This project uses [LoreFountain](https://github.com/AllStoneTech/lorefountain) — Fountain scripts linked to a structured, persistent world. If you're an AI coding agent working in this project, start here before making any changes.
@@ -17,7 +17,7 @@ Any key present overrides that default; any key absent (or the whole file missin
 
 - **Bringing new or revised material in from `imports/`?** Read `agents/initiator.md` — safe to run the first time or any time after.
 - **Creating or editing an entity or glossary file under `world/`?** Read `agents/world-builder.md` — it also covers `assets/manifests/characters.json`/`locations.json`/`objects.json`/`voice.json`, which key off entity ids and need attention if you rename or delete one.
-- **Writing or editing a `.fountain` script under `scripts/`?** Read `agents/script-writer.md` — it covers the `SFX:`/`MUSIC:`/`AMB:`/`SHOT:` conventions and the optional `[tag]` syntax that links a cue to `assets/manifests/audio.json`.
-- **Just finished a batch of edits?** Run `node agents/validate.js` from the project root — no VS Code needed. It reports malformed files, dangling relation targets, and dangling asset-manifest entries before you tell the writer you're done. (It reads `lorefountain.config.json` itself, so it always uses this project's real folder names regardless of what's written above.)
+- **Writing or editing a `.fountain` script under `scripts/`?** Read `agents/script-writer.md` — it covers the `SFX:`/`MUSIC:`/`AMB:`/`SHOT:`/`PAUSE:` conventions, the optional `[tag]` syntax that links a cue to `assets/manifests/audio.json` and a shot to `assets/manifests/shots.json`, and how to keep dialogue and pauses valid Fountain.
+- **Just finished a batch of edits?** Run `node agents/validate.js` from the project root — no VS Code needed. It reports malformed files, dangling relation targets, dangling asset-manifest entries, and script formatting problems (warnings, then informational notes) before you tell the writer you're done. (It reads `lorefountain.config.json` itself, so it always uses this project's real folder names regardless of what's written above.)
 
 Never write into `imports/` unless the writer explicitly asks you to update something there — it holds the writer's own source material, and LoreFountain itself never touches it automatically. Nothing outside `world/`, `scripts/`, `imports/` (only when asked), `assets/` (only when asked — the manifest files are hand-authored, and a binary asset file itself is never something to create yourself), and this project's own config/agent files should be touched either.

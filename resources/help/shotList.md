@@ -12,7 +12,9 @@ See `agents/script-writer.md`'s "shot-list convention" section for the
 full syntax — in short: `SHOT:` opens a new shot (freeform framing,
 e.g. `WIDE`, `CLOSE-UP on SANGO`); `POSE:`, `LIGHT:`, and `DURATION:`
 set fields on whichever shot is currently open. Shots number
-sequentially within each scene, resetting at every scene heading. This
+sequentially within each scene, resetting at every scene heading. A
+shot's optional `[tag]` (`SHOT: [archive-ident] WIDE, abstract`) is never
+part of its Description in the export. This
 convention is free to annotate in any project — only the export itself
 requires Pro.
 

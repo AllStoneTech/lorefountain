@@ -65,13 +65,18 @@ import * as path from 'node:path';
  * the asset-manifest feature, but this constant wasn't bumped in that same
  * commit — so an already-scaffolded `validate.js` would have silently never
  * been flagged as stale despite genuinely different behavior underneath.
+ *
+ * Shot maps (ADR-0038) bump `AGENTS.md` to `3`, `script-writer.md` to `4`
+ * (shot tags, `PAUSE:`, the shot sidecar, valid dialogue blocks) and
+ * `validate.js` to `3` (it now reads `shots.json` and reports the shot
+ * checks) — with `esbuild.js`'s banner moved to `3` in the same commit.
  */
 export const AGENT_FILE_VERSIONS: Record<string, number> = {
-  'AGENTS.md': 2,
+  'AGENTS.md': 3,
   [path.join('agents', 'world-builder.md')]: 3,
-  [path.join('agents', 'script-writer.md')]: 3,
+  [path.join('agents', 'script-writer.md')]: 4,
   [path.join('agents', 'initiator.md')]: 2,
-  [path.join('agents', 'validate.js')]: 2,
+  [path.join('agents', 'validate.js')]: 3,
 };
 
 /**

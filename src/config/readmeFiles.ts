@@ -36,9 +36,9 @@ export const README_TEMPLATES: ReadonlyArray<{
   { templateName: 'glossary.md', targetRelativePath: (folders) => path.join(folders.world, 'glossary', 'README.md'), version: 1 },
   { templateName: 'notes.md', targetRelativePath: (folders) => path.join(folders.world, 'notes', 'README.md'), version: 1 },
   { templateName: 'timeline.md', targetRelativePath: (folders) => path.join(folders.world, 'timeline', 'README.md'), version: 1 },
-  { templateName: 'scripts.md', targetRelativePath: (folders) => path.join(folders.scripts, 'README.md'), version: 2 },
+  { templateName: 'scripts.md', targetRelativePath: (folders) => path.join(folders.scripts, 'README.md'), version: 3 },
   { templateName: 'imports.md', targetRelativePath: (folders) => path.join(folders.imports, 'README.md'), version: 1 },
-  { templateName: 'assets.md', targetRelativePath: (folders) => path.join(folders.assets, 'README.md'), version: 1 },
+  { templateName: 'assets.md', targetRelativePath: (folders) => path.join(folders.assets, 'README.md'), version: 2 },
 ];
 
 /**

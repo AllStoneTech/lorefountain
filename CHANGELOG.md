@@ -3,13 +3,52 @@
 All notable changes to LoreFountain are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [Unreleased] - 1.1.0
+
+Not yet released: 1.1.0 ships together with the upgrade experience
+(what's-new notice, quick fixes and Fix All for the new warnings).
 
 ### Added
 
+- **Shot maps.** A `SHOT:` line can now carry an optional `[tag]`
+  (`SHOT: [1x01-basement-wide] WIDE, establishing`), the same stable handle
+  cues use, mapped to the still or clip that fills the shot in a new
+  hand-authored `assets/manifests/shots.json`
+  (`{ file, kind: still|clip, motion?, source?, license?, prompt? }`).
+  Every script with shots gets a derived `<script>.shots.json` sidecar —
+  each shot's line range, what's heard in it (dialogue with speaker and
+  extensions, pauses, overlapping dual dialogue), the entities it mentions,
+  its scene heading broken into INT./EXT., setting, time of day and
+  resolved locations, and pointers to the cues that start in it — so a
+  video pipeline can assemble an episode without parsing Fountain.
+- **`PAUSE:` for scene pauses**, with an optional length (`PAUSE: 2s`). A
+  character's own pause stays a `(beat)`-style parenthetical.
+- **New validator checks**, in `node agents/validate.js` and the Output
+  channel: `unmapped-shot-tag`, `shot-kind-mismatch` and
+  `orphaned-parenthetical` warnings (the last catches a `(beat)` after a
+  blank line, which Fountain reads as action), and a new informational
+  **notes** section that never fails a run: `bare-pause-line`,
+  `ambiguous-location`, `unused-shot-tag`.
+- Highlighting for cue and shot tags and `PAUSE:`, plus `shot-tag` and
+  `pause` snippets.
+- Updated project docs and agent files (`scripts/README.md`,
+  `assets/README.md`, `AGENTS.md`, `agents/script-writer.md`,
+  `agents/validate.js`) — existing projects are offered the update.
 - **A license notice for LoreFountain Pro** (`LICENSE-PRO.md`). The free tier
   stays MIT; the compiled Pro module is proprietary and is now described as
   such in the package and the README.
+
+### Changed
+
+- A shot's `[tag]` is no longer part of its description, including in
+  Export Shot List.
+
+### Fixed
+
+- Script line numbers after a multi-line action block came out too low,
+  which also misplaced cues in Cue Sheet and BBC Radio Script exports.
+- Transcript Export no longer shows an all-caps `SHOT:` line (misread by
+  Fountain as a character cue) as a speaker.
 
 
 ## [1.0.0] - 2026-09-24

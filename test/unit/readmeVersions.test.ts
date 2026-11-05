@@ -27,11 +27,11 @@ describe('checkReadmeVersions', () => {
 
   it('tracks the assets.md template at its own target path', async () => {
     mkdirSync(join(workspaceDir, 'assets'), { recursive: true });
-    writeFileSync(join(workspaceDir, 'assets', 'README.md'), '<!-- lorefountain-docs-version: 1 -->\nAssets folder.\n');
+    writeFileSync(join(workspaceDir, 'assets', 'README.md'), '<!-- lorefountain-docs-version: 2 -->\nAssets folder.\n');
 
     const results = await checkReadmeVersions(workspaceDir, folders);
     const assetsReadme = results.find((r) => r.templateName === 'assets.md');
-    expect(assetsReadme).toMatchObject({ relativePath: join('assets', 'README.md'), status: 'current', version: 1 });
+    expect(assetsReadme).toMatchObject({ relativePath: join('assets', 'README.md'), status: 'current', version: 2 });
   });
 
   it('reports a README behind the current version as stale', async () => {
