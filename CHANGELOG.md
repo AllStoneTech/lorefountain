@@ -5,10 +5,25 @@ All notable changes to LoreFountain are documented here. This project follows
 
 ## [Unreleased] - 1.1.0
 
-Not yet released: 1.1.0 ships together with the upgrade experience
-(what's-new notice, quick fixes and Fix All for the new warnings).
+Not yet released.
 
 ### Added
+
+- **Script problems in the Problems panel.** Script warnings and notes now
+  show as diagnostics on the line they're about (warnings as warnings,
+  notes as information), alongside the existing Output-channel log.
+- **Quick fixes** (Ctrl+. / Cmd+.), each one standard Fountain correction:
+  join an orphaned `(beat)` back to the previous speech, re-cue the speaker
+  with `(CONT'D)` when a `SHOT:` or other line interrupts a speech, or turn
+  a standalone `Beat.` into `PAUSE:`.
+- **Fix All Script Formatting Issues** applies every safe fix across the
+  project in one refactor preview, where each change can be reviewed and
+  unticked before anything is written.
+- **A What's New notice** after a minor or major update (never for patch
+  releases or fresh installs), opening a new **LoreFountain: What's New**
+  page, and a once-per-project summary offering Fix All when a project's
+  scripts have fixable issues. Both can be turned off under
+  `lorefountain.notifications`.
 
 - **Shot maps.** A `SHOT:` line can now carry an optional `[tag]`
   (`SHOT: [1x01-basement-wide] WIDE, establishing`), the same stable handle
@@ -49,6 +64,8 @@ Not yet released: 1.1.0 ships together with the upgrade experience
   which also misplaced cues in Cue Sheet and BBC Radio Script exports.
 - Transcript Export no longer shows an all-caps `SHOT:` line (misread by
   Fountain as a character cue) as a speaker.
+- **Check for LoreFountain Updates** now appears in the Command Palette; it
+  shipped in 1.0.0 but was never listed there.
 
 
 ## [1.0.0] - 2026-09-24

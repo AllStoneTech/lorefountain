@@ -6,6 +6,24 @@ revisit.
 
 ---
 
+## ADR-0039 — The 1.1 upgrade experience: diagnostics, quick fixes, Fix All, and two notices
+
+**Date:** 2026-11-05 · **Status:** Accepted
+
+Shot maps (ADR-0038) add warnings that light up existing projects, ORUN with ~310 orphaned `(beat)`s. The project owner didn't want users to get those warnings without a way to fix them and a way to learn what's new, so 1.1.0 ships only with this phase. Four layers, beside the existing `checkFileUpdates` (scaffolded docs):
+
+1. **Problems-panel diagnostics for scripts** (prerequisite). LoreFountain had none; everything went to the Output channel. A `DiagnosticCollection` now shows each script issue that has a line (warnings → `Warning`, notes → `Information`); title-page warnings without a line and project-level manifest issues stay Output-only, and the Output log is unchanged. Because manifest cross-checks (`unmapped-cue-tag`/`unmapped-shot-tag`) run on a full build only, a save replaces only that script's save-time diagnostics and keeps the full-build ones until the next rebuild — otherwise saving would make them vanish. Bookkeeping is pure (`diagnostics/scriptIssues.ts`); `WorkspaceIndex` reports into it through a small sink interface.
+2. **Quick fixes**, each exactly one standard Fountain correction (ADR-0038's ground rule): join an orphaned parenthetical to the dialogue block above (delete the blank lines), re-cue `SPEAKER (CONT'D)` with the speaker's cue-line extensions when other lines separate it from that speaker's last block in the scene, and `Beat.` → `PAUSE:`. No speaker in the scene, no fix. Planning is pure (`upgrade/formatFixes.ts`).
+3. **Fix All Script Formatting Issues**: every safe fix across all workspace folders in one `WorkspaceEdit`, each change marked `needsConfirmation` so VS Code's refactor preview lets the writer untick any before anything is written. It re-cues only when nothing but LoreFountain prefix lines intervenes; with plain action in between it might genuinely be action, so it's skipped and counted (the single quick fix still offers it, since a person is choosing). Chains — two orphaned `(beat)`s in one speech — are handled by treating an already-planned fix's lines as dialogue. Scripts that weren't already dirty are saved afterwards so the index refreshes.
+4. **Two notices.** A what's-new notification once per user per minor/major release, opening a writer-facing help page (`resources/help/whatsNew.md`, in the existing help panel, reopenable via **LoreFountain: What's New**) rather than the developer-facing CHANGELOG or the onboarding walkthrough. And a project summary once per project folder per minor/major release, only when Fix All has something to fix (untagged shots are mentioned but never trigger it), with **Fix All…**, **Show Problems** and **Not Now**. Separate settings, `lorefountain.notifications.whatsNew` and `.projectSummary`, since they answer different questions.
+   - **Detecting a 1.0 upgrade.** 1.0 never stored a version, but it writes `lorefountain.deviceId` on every activation. 1.1 reads it at the very start of activation, before anything recreates it: present → upgrade from 1.0.0; absent → fresh install, no notice. A 1.0 user who never opened a Fountain project counts as fresh, which is right since they never used it. Never guessed the other way.
+
+Also: **Check for LoreFountain Updates** shipped in 1.0.0 registered but never declared in `package.json`, so it was missing from the Command Palette; now declared.
+
+Revisit if per-change counts in the Fix All result prove confusing (it reports what actually went away, after any unticking), or if writers want a `source.fixAll` on-save action — deliberately not added, since scripts should never change without the preview.
+
+---
+
 ## ADR-0038 — Shot maps: shot tags, `PAUSE:`, a `.shots.json` sidecar, and `shots.json`
 
 **Date:** 2026-11-05 · **Status:** Accepted

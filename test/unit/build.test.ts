@@ -204,6 +204,7 @@ describe('buildIndexFromDisk', () => {
       danglingAssetManifestEntries: [],
       notes: [],
       shotManifestIssues: [],
+      shotStats: { shots: 0, untagged: 0 },
     });
   });
 
@@ -455,7 +456,12 @@ describe('buildIndexFromDisk', () => {
 
     expect(summary.warnings).toHaveLength(1);
     expect(summary.warnings[0].warnings).toEqual([
-      { code: 'unmapped-cue-tag', path: expect.stringContaining('cues['), message: expect.stringContaining('kola-nuts-clatter') },
+      {
+        code: 'unmapped-cue-tag',
+        line: 2,
+        path: expect.stringContaining('cues['),
+        message: expect.stringContaining('kola-nuts-clatter'),
+      },
     ]);
   });
 
@@ -917,5 +923,31 @@ describe('shot maps in the index build', () => {
       expect(result.notes.map((note) => note.code)).toEqual(['bare-pause-line']);
     }
     expect(await fs.readFile(scriptPath.replace(/\.fountain$/, '.shots.json'), 'utf8')).toContain('needs-art');
+  });
+});
+
+describe('shot stats in the index build', () => {
+  let tmpRoot: string;
+  let store: IndexStore;
+
+  beforeEach(async () => {
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'lorefountain-build-shotstats-test-'));
+    store = await createSqlJsIndexStore();
+  });
+
+  afterEach(async () => {
+    store.dispose();
+    await fs.rm(tmpRoot, { recursive: true, force: true });
+  });
+
+  it('counts explicit shots and untagged ones, never implicit shot 0s', async () => {
+    await writeFile(tmpRoot, 'scripts/1x01.fountain', 'INT. A - DAY\n\nMara waits.\n\nSHOT: [a-wide] WIDE\n\nSHOT: CLOSE\n\nSHOT: INSERT\n');
+    const summary = await buildIndexFromDisk(store, {
+      world: path.join(tmpRoot, 'world'),
+      glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
+      scripts: path.join(tmpRoot, 'scripts'),
+    });
+    expect(summary.shotStats).toEqual({ shots: 3, untagged: 2 });
   });
 });

@@ -60,6 +60,12 @@ files there beyond the script itself.
   speech and its parentheticals together with no blank lines — a blank
   line ends a Fountain dialogue block, so a `(beat)` after one becomes
   action, and the validator warns about it.
+- Script warnings and notes show in the **Problems** panel and as
+  squiggles on the line. Press **Ctrl+.** (**Cmd+.** on a Mac) on one for a
+  quick fix: join a `(beat)` back to the previous speech, re-cue the
+  speaker with `(CONT'D)`, or turn a standalone `Beat.` into `PAUSE:`.
+  **Fix All Script Formatting Issues** (Command Palette) applies every safe
+  fix across the project, after you review each change in a preview.
 - Both conventions are free to write in any project. Turning them into a
   working export — a cue sheet, a shot list, or a full BBC-style radio
   script — is LoreFountain Pro; see each export's own help panel (Command

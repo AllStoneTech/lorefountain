@@ -61,6 +61,10 @@ import { createManifestEditorProvider, MANIFEST_EDITOR_VIEW_TYPE } from './provi
 import { createStoryCardEditorProvider, STORY_CARD_VIEW_TYPE } from './providers/storyCardEditorProvider';
 import { createStoryOverviewEditorProvider, STORY_OVERVIEW_VIEW_TYPE } from './providers/storyOverviewEditorProvider';
 import { WorldTreeProvider } from './providers/worldTreeProvider';
+import { ScriptDiagnostics } from './providers/scriptDiagnostics';
+import { registerScriptQuickFixes } from './providers/scriptQuickFixes';
+import { registerFixScriptFormattingCommand } from './commands/fixScriptFormatting';
+import { captureInstallState, maybeShowProjectSummary, maybeShowWhatsNew } from './commands/upgradeNotices';
 import { checkGitSafety } from './safety/gitSafetyBanner';
 import { maybeShowTelemetryConsentPrompt } from './telemetry/consent';
 import { flushSessionUsageFlags } from './telemetry/events';
@@ -78,6 +82,8 @@ let hoverRegistration: vscode.Disposable | undefined;
 let completionRegistration: vscode.Disposable | undefined;
 let treeProvider: WorldTreeProvider;
 let scriptsTreeProvider: ScriptsTreeProvider;
+/** Problems-panel diagnostics for scripts, fed by every folder's `WorkspaceIndex` (ADR-0039). */
+let scriptDiagnostics: ScriptDiagnostics | undefined;
 /** Fires whenever any workspace folder's index changes — the pro module (if loaded) subscribes once via `ProActivationContext.onIndexChanged` to refresh its own views, without `extension.ts` needing to know anything about what those views are. */
 const indexChangeEmitter = new vscode.EventEmitter<void>();
 
@@ -91,9 +97,16 @@ const indexChangeEmitter = new vscode.EventEmitter<void>();
  * @param context - The extension context provided by the VS Code host.
  */
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+  // Must come first: it reads 1.0's device id before activation creates one.
+  const installState = captureInstallState(context);
   extensionContext = context;
   outputChannel = vscode.window.createOutputChannel('LoreFountain');
   context.subscriptions.push(outputChannel);
+  scriptDiagnostics = new ScriptDiagnostics();
+  context.subscriptions.push(scriptDiagnostics);
+  registerScriptQuickFixes(context);
+  registerFixScriptFormattingCommand(context, outputChannel);
+  void maybeShowWhatsNew(context, installState);
 
   context.subscriptions.push(
     registerTrackedCommand(context, 'lorefountain.reindexWorkspace', () => void rebuildAllWorkspaceIndexes()),
@@ -434,14 +447,15 @@ function updateProviderRegistrations(): void {
 
 async function addIndexFor(folder: vscode.WorkspaceFolder): Promise<void> {
   try {
-    const index = await WorkspaceIndex.create(folder, outputChannel);
+    const index = await WorkspaceIndex.create(folder, outputChannel, scriptDiagnostics);
     indexes.set(folder.uri.toString(), index);
     index.onDidChangeIndex(() => {
       treeProvider.refresh();
       scriptsTreeProvider.refresh();
       indexChangeEmitter.fire();
     });
-    await index.rebuild();
+    const summary = await index.rebuild();
+    void maybeShowProjectSummary(extensionContext, folder, summary);
     void checkGitSafetyForFolder(folder);
   } catch (err) {
     outputChannel.appendLine(

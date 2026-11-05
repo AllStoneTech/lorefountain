@@ -29,7 +29,7 @@ LoreFountain needs VS Code 1.125 or newer and works on a local folder (it reads 
    ![The Story Overview editor showing a rendered Markdown premise, setting, and key characters](docs/images/story-overview.png)
 6. **Bring your existing notes.** Drop old bibles and outlines into `imports/`, then run **LoreFountain: Migrate Existing Lore** to hand a ready-made prompt to whichever AI coding agent you use. LoreFountain never modifies `imports/` itself.
 
-**Keeping current.** **Check for LoreFountain Updates** tells you when a newer release exists (Marketplace and Open VSX installs also update on their own). **Check for LoreFountain File Updates** compares a project's scaffolded agent instructions and READMEs against the versions bundled with your installed extension, offers to create any that are missing, and lets you review each change before anything is written.
+**Keeping current.** **Check for LoreFountain Updates** tells you when a newer release exists (Marketplace and Open VSX installs also update on their own). **Check for LoreFountain File Updates** compares a project's scaffolded agent instructions and READMEs against the versions bundled with your installed extension, offers to create any that are missing, and lets you review each change before anything is written. After a minor or major update, LoreFountain shows one **What's New** notice (reopen it with **LoreFountain: What's New**), and, once per project, offers **Fix All Script Formatting Issues** if your scripts have problems it can correct to standard Fountain; both notices can be turned off under **LoreFountain › Notifications**.
 
 ## Principles
 

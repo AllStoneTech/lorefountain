@@ -79,6 +79,8 @@ export async function readShotManifest(assetsRoot: string): Promise<ReadShotMani
 /** A non-blocking warning about a tagged shot with no matching shot manifest entry. */
 export interface ShotTagWarning extends ValidationIssue {
   code: 'unmapped-shot-tag';
+  /** 0-based line of the SHOT: line, so the warning can be shown on that line. */
+  line: number;
 }
 
 /**
@@ -96,6 +98,7 @@ export function findUnmappedShotTags(shots: readonly ShotMapEntry[], manifest: S
     if (shot.tag === undefined || Object.hasOwn(manifest, shot.tag)) continue;
     warnings.push({
       code: 'unmapped-shot-tag',
+      line: shot.lines.start,
       path: `lines[${shot.lines.start}]`,
       message: `SHOT: [${shot.tag}] (scene ${shot.scene}, shot ${shot.shot}, line ${shot.lines.start + 1}) has no matching entry in ${SHOT_MANIFEST_LABEL} — the asset doesn't exist yet, or the tag doesn't match.`,
     });

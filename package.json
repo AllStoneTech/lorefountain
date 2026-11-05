@@ -179,6 +179,21 @@
         "category": "LoreFountain"
       },
       {
+        "command": "lorefountain.checkForUpdates",
+        "title": "Check for LoreFountain Updates",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.showWhatsNew",
+        "title": "What's New",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.fixScriptFormatting",
+        "title": "Fix All Script Formatting Issues",
+        "category": "LoreFountain"
+      },
+      {
         "command": "lorefountain.migrateExistingLore",
         "title": "Migrate Existing Lore",
         "category": "LoreFountain"
@@ -382,6 +397,16 @@
           "type": "boolean",
           "default": false,
           "markdownDescription": "Share anonymous feature-usage data (which commands and views you use, your license tier, extension version, and editor/OS) to help prioritize development. Off by default, and also gated by VS Code's own `#telemetry.telemetryLevel#` setting — never sent if that's off. Never includes file names, entity names, workspace paths, or file contents. Run `LoreFountain: Show Telemetry Queue` to see exactly what's queued to send, or `LoreFountain: Disable Telemetry` to turn this off and clear the queue."
+        },
+        "lorefountain.notifications.whatsNew": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "After LoreFountain updates to a new minor or major version, show one notification linking to what's new. Never shown for patch releases or on a fresh install. Reopen it any time with `LoreFountain: What's New`."
+        },
+        "lorefountain.notifications.projectSummary": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "When a project is first opened under a new minor or major version, show one notification if its scripts have formatting issues that `LoreFountain: Fix All Script Formatting Issues` can fix."
         }
       }
     },

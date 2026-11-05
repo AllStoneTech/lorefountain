@@ -54,6 +54,8 @@ export async function readAudioManifest(assetsRoot: string): Promise<ReadAudioMa
 /** A non-blocking warning about a tagged cue with no matching audio manifest entry. */
 export interface CueManifestWarning extends ValidationIssue {
   code: 'unmapped-cue-tag';
+  /** 0-based line of the cue, so the warning can be shown on that line. */
+  line: number;
 }
 
 /**
@@ -73,6 +75,7 @@ export function findUnmappedCueTags(cues: readonly CueEntry[], manifest: AudioMa
     if (cue.tag === undefined || cue.tag in manifest) continue;
     warnings.push({
       code: 'unmapped-cue-tag',
+      line: cue.line,
       path: `cues[${cue.line}]`,
       message: `${cue.type.toUpperCase()}: [${cue.tag}] (line ${cue.line + 1}) has no matching entry in assets/manifests/audio.json — the asset hasn't been sourced yet, or the tag doesn't match.`,
     });

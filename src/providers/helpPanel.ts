@@ -51,6 +51,8 @@ const HELP_TOPICS: readonly HelpTopic[] = [
   { command: 'lorefountain.showAssetManifestHelp', docFile: 'assetManifest.md', title: 'Help: Asset Manifests' },
   { command: 'lorefountain.showStoryCardHelp', docFile: 'storyCard.md', title: 'Help: Story Card' },
   { command: 'lorefountain.showStoryOverviewHelp', docFile: 'storyOverview.md', title: 'Help: Story Overview' },
+  // Opened by the what's-new notice (commands/upgradeNotices.ts) and the "What's New" command.
+  { command: 'lorefountain.showWhatsNew', docFile: 'whatsNew.md', title: "What's New in LoreFountain" },
 ];
 
 /** The view type these panels register under. */

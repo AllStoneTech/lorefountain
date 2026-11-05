@@ -91,6 +91,7 @@ describe('findUnmappedCueTags', () => {
     expect(warnings).toEqual([
       {
         code: 'unmapped-cue-tag',
+        line: 3,
         path: 'cues[3]',
         message: expect.stringContaining('[kola-nuts-clatter]'),
       },

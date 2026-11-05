@@ -22,6 +22,7 @@ import type { ReadManifestFileResult } from '../assets/manifestFile';
 import { readShotManifest, SHOT_MANIFEST_LABEL } from '../assets/shotManifest';
 import { getWorkspaceFolders } from '../config/workspaceConfig';
 import { removeCueSidecar } from '../cues/sidecar';
+import type { ScriptIssueEntry, ScriptIssueSink } from '../diagnostics/scriptIssues';
 import { removeShotSidecar } from '../shots/sidecar';
 import { buildIndexFromDisk, reindexFile, removeFileFromIndex, type IndexBuildSummary, type ProjectAssetManifests } from './build';
 import { createSqlJsIndexStore } from './sqlJsStore';
@@ -40,6 +41,7 @@ export class WorkspaceIndex implements vscode.Disposable {
     public readonly folder: vscode.WorkspaceFolder,
     public readonly store: IndexStore,
     private readonly outputChannel: vscode.OutputChannel,
+    private readonly issueSink: ScriptIssueSink | undefined,
   ) {}
 
   /**
@@ -48,14 +50,16 @@ export class WorkspaceIndex implements vscode.Disposable {
    *
    * @param folder - The workspace folder to index.
    * @param outputChannel - Channel to log build issues and watcher activity to.
+   * @param issueSink - Optional receiver for per-script issues (the Problems-panel diagnostics).
    * @returns The ready-to-use index (already built once from disk).
    */
   static async create(
     folder: vscode.WorkspaceFolder,
     outputChannel: vscode.OutputChannel,
+    issueSink?: ScriptIssueSink,
   ): Promise<WorkspaceIndex> {
     const store = await createSqlJsIndexStore();
-    const index = new WorkspaceIndex(folder, store, outputChannel);
+    const index = new WorkspaceIndex(folder, store, outputChannel, issueSink);
     await index.registerWatchers();
     return index;
   }
@@ -103,6 +107,7 @@ export class WorkspaceIndex implements vscode.Disposable {
       assetManifests,
     );
     this.logSummary(summary);
+    this.issueSink?.fullBuild(this.folder.uri.fsPath, scriptIssueEntries(summary));
     this.changeEmitter.fire();
     return summary;
   }
@@ -139,6 +144,7 @@ export class WorkspaceIndex implements vscode.Disposable {
       removeFileFromIndex(this.store, uri.fsPath, 'script');
       void removeCueSidecar(uri.fsPath);
       void removeShotSidecar(uri.fsPath);
+      this.issueSink?.removed(uri.fsPath);
       this.changeEmitter.fire();
     });
     this.disposables.push(scriptsWatcher);
@@ -169,6 +175,7 @@ export class WorkspaceIndex implements vscode.Disposable {
     for (const note of result.notes) {
       this.outputChannel.appendLine(`[LoreFountain] NOTE ${filePath}: ${note.message}`);
     }
+    if (kind === 'script') this.issueSink?.saved(filePath, result.warnings, result.notes);
     for (const relation of result.danglingRelations) {
       this.outputChannel.appendLine(
         `[LoreFountain] WARNING ${filePath}: relation "${relation.relationType}" targets unknown entity "${relation.target}".`,
@@ -251,4 +258,30 @@ function classifyWorldFile(filePath: string, worldPath: string): WorldFileKind {
   if (firstSegment === 'timeline') return 'event';
   if (firstSegment === 'notes') return 'skip';
   return 'entity';
+}
+
+/**
+ * Collect each script's warnings and notes from a full build, for the
+ * Problems-panel diagnostics.
+ *
+ * @param summary - The full build's summary.
+ * @returns One entry per file that has any warning or note.
+ */
+function scriptIssueEntries(summary: IndexBuildSummary): ScriptIssueEntry[] {
+  const byFile = new Map<string, ScriptIssueEntry>();
+  const entryFor = (filePath: string): ScriptIssueEntry => {
+    let entry = byFile.get(filePath);
+    if (!entry) {
+      entry = { filePath, warnings: [], notes: [] };
+      byFile.set(filePath, entry);
+    }
+    return entry;
+  };
+  for (const { filePath, warnings } of summary.warnings) {
+    entryFor(filePath).warnings = warnings;
+  }
+  for (const { filePath, notes } of summary.notes) {
+    entryFor(filePath).notes = notes;
+  }
+  return [...byFile.values()];
 }

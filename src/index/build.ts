@@ -216,6 +216,8 @@ export interface IndexBuildSummary {
   notes: IndexBuildNote[];
   /** Project-level shot manifest issues: `shot-kind-mismatch` (warning) and `unused-shot-tag` (info) — see `assets/shotManifest.ts`. */
   shotManifestIssues: ShotManifestIssue[];
+  /** Explicit `SHOT:` lines across every script, and how many have no `[tag]` yet (informational, for the post-upgrade project summary). */
+  shotStats: { shots: number; untagged: number };
 }
 
 /**
@@ -290,6 +292,7 @@ export async function buildIndexFromDisk(
     danglingAssetManifestEntries: [],
     notes: [],
     shotManifestIssues: [],
+    shotStats: { shots: 0, untagged: 0 },
   };
 
   const entityFiles = (await listFilesWithExtension(folders.world, '.md', ENTITY_EXCLUDED_SUBDIRS)).filter(
@@ -350,6 +353,11 @@ export async function buildIndexFromDisk(
       const shotMap = await updateShotSidecar(filePath, text, shotEntities);
       for (const shot of shotMap.shots) {
         if (shot.tag !== undefined) usedShotTags.add(shot.tag);
+        // Implicit shot 0s are never tagged; count only explicit SHOT: lines.
+        if (shot.shot > 0) {
+          summary.shotStats.shots += 1;
+          if (shot.tag === undefined) summary.shotStats.untagged += 1;
+        }
       }
 
       const { script, warnings } = parseScriptTitlePage(text, { id: idFromFilePath(filePath), filePath });

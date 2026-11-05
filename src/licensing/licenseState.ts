@@ -73,12 +73,26 @@ function hashKey(key: string): string {
  * @returns A random UUID, stable for the lifetime of this install.
  */
 export async function getOrCreateDeviceId(context: vscode.ExtensionContext): Promise<string> {
+  // (See hasDeviceId below: every 1.0+ activation writes this key, which is
+  // how an upgrade from 1.0 is told apart from a fresh install.)
   const existing = context.globalState.get<string>(DEVICE_ID_KEY);
   if (existing) return existing;
 
   const deviceId = crypto.randomUUID();
   await context.globalState.update(DEVICE_ID_KEY, deviceId);
   return deviceId;
+}
+
+/**
+ * Whether this install already has a device id, without creating one. Every
+ * activation since 1.0.0 writes it, so reading it before activation creates
+ * it tells an upgrade from a fresh install (ADR-0039).
+ *
+ * @param context - The extension context (for `globalState`).
+ * @returns True when a device id was stored by an earlier activation.
+ */
+export function hasDeviceId(context: vscode.ExtensionContext): boolean {
+  return context.globalState.get<string>(DEVICE_ID_KEY) !== undefined;
 }
 
 /**
