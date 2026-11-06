@@ -3,6 +3,18 @@
 All notable changes to LoreFountain are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] - after 1.1.0
+
+On the local branch `feature/lorefountain-core`, not part of 1.1.0.
+
+### Changed
+
+- **The parsing code and config reading now come from LoreFountain-Core**
+  ([AllStoneTech/lorefountain-core](https://github.com/AllStoneTech/lorefountain-core)),
+  a separate MIT package shared with LoreFountain-Producer, so both read a
+  project identically. Nothing changes for writers: scripts, sidecars,
+  checks and fixes behave exactly as in 1.1.0 (ADR-0042).
+
 ## [Unreleased] - 1.1.0
 
 Not yet released.

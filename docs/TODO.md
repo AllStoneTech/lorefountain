@@ -29,6 +29,23 @@ ADR-0042 moves the parsing code to the separate LoreFountain-Core repo. It sits 
 - Push the branch, merge it, and release.
 - Producer-side changes ship in the same release. Core's own changelog and docs, and any follow-up to the Producer spec, are handled in those repositories.
 
+## LoreFountain-Producer support
+
+Agreed with the Producer spec on 2026-11-05 (`LoreFountain-Producer/docs/LOREFOUNTAIN-PRODUCER-SPEC.md`, "What the Producer needs from LoreFountain"). Parsing pieces land in LoreFountain-Core first (its `ROADMAP.md`), then here as diagnostics, quick fixes, highlighting, snippets, help and agent docs.
+
+- [x] Shot sidecar fields for 1.1.0: parentheticals as `direction` entries, lyrics, `line` on every entry, per-shot `action`, `onScreen` and `transition`, and the `unforced-transition` note and fix (ADR-0041).
+- [ ] **Required shot tags:** a warning on an untagged `SHOT:` (and on content before a scene's first `SHOT:`), with a "Tag all shots" quick fix that writes permanent IDs such as `1x03-04-02`.
+- [ ] **`SUPER:`, `TITLE CARD:`, `CHYRON:`** prefix lines with an optional `[tag]`.
+- [ ] **`LOOK: CHARACTER label`** lines, checked against the character's `looks`, and a generated per-script breakdown file.
+- [ ] **Scene numbers:** lock (writes Fountain `#n#`, new scenes become `4A`), unlock and renumber, writing an old-to-new map.
+- [ ] **Shot-tag renames** write an old-to-new map for the Producer.
+- [ ] **Reference images:** several per character version and look, each with an optional angle label.
+- [ ] **Structured pronunciation** (`{ respelling, ipa }` or a plain string) on entities and glossary terms.
+- [ ] **Read Producer data, read-only and tolerantly:** "covered by an accepted Producer take" instead of "not sourced yet", per-episode production status with coverage sub-shots, and a warning when a deleted or retagged shot has accepted takes.
+- [ ] **`AGENTS.md`:** say that `producer.json` and `producer/` are maintained by the Producer and not hand-edited.
+- [ ] **A demo project with media**, shared by both products as a test case.
+- [ ] **Bug:** `fountain-js` 1.2.4 throws on a `~` lyric directly under a character cue, so the whole script fails to parse. Fix or work around it in Core.
+
 ## Later
 
 - **Shot maps phase 2:** a form-based editor for `shots.json` and hover thumbnails.

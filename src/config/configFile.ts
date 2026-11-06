@@ -7,6 +7,11 @@
  * readable by any tool or AI agent without VS Code API knowledge, matching
  * the files-as-truth principle (Spec §2.1).
  *
+ * Reading (the schema, {@link readLoreFountainConfig} and the section
+ * helpers) lives in LoreFountain-Core (`config/readConfig`, ADR-0042) and is
+ * re-exported here, so existing imports keep working. Writing stays in the
+ * extension, because Core never writes a LoreFountain file.
+ *
  * Reading is tolerant like the entity/glossary parsers (Spec §23): a missing
  * file is not an error (the extension may also activate off a bare
  * `.fountain` script with no config file yet, per ADR-0006) and malformed
@@ -15,97 +20,10 @@
 
 import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
-import { z } from 'zod';
-import { DEFAULT_FOLDERS, type FolderSettings } from './folders';
+import { CONFIG_FILE_NAME, readLoreFountainConfig, type LoreFountainConfig } from 'lorefountain-core/config/readConfig';
+import { DEFAULT_FOLDERS } from './folders';
 
-/** Filename of the config file, expected at the workspace root. */
-export const CONFIG_FILE_NAME = 'lorefountain.config.json';
-
-/** Zod schema for `lorefountain.config.json`'s contents. */
-export const loreFountainConfigSchema = z
-  .object({
-    $schema: z.string().optional(),
-    folders: z
-      .object({
-        world: z.string().optional(),
-        scripts: z.string().optional(),
-        imports: z.string().optional(),
-        assets: z.string().optional(),
-      })
-      .optional(),
-    world: z
-      .object({
-        /** World-tree category ids to hide from the World view (e.g. `"faction"`, `"arc"`, `"notes"`) — a project that doesn't use a category can declutter its sidebar without deleting anything. Loose strings, not a shared enum: an unrecognized id here is harmless, matching this file's existing tolerant-parsing posture. */
-        hiddenCategories: z.array(z.string()).optional(),
-      })
-      .optional(),
-  })
-  .catchall(z.unknown());
-
-export type LoreFountainConfig = z.infer<typeof loreFountainConfigSchema>;
-
-/** Outcome of {@link readLoreFountainConfig}. */
-export type ReadConfigResult =
-  | { ok: true; config: LoreFountainConfig; found: boolean }
-  | { ok: false; reason: 'malformed-json' | 'invalid-schema'; message: string };
-
-/**
- * Read and validate `lorefountain.config.json` from a workspace root.
- *
- * A missing file is not an error: it's reported as `{ ok: true, found: false,
- * config: {} }` so callers fall back to full defaults — a workspace may be
- * activated by a bare `.fountain` script before anyone has created a config
- * file (Spec ADR-0006).
- *
- * @param workspaceRoot - Absolute path to the workspace root.
- * @returns The parsed config (or defaults), or a described non-throwing failure.
- */
-export async function readLoreFountainConfig(workspaceRoot: string): Promise<ReadConfigResult> {
-  const filePath = path.join(workspaceRoot, CONFIG_FILE_NAME);
-
-  let text: string;
-  try {
-    text = await fsp.readFile(filePath, 'utf8');
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-      return { ok: true, config: {}, found: false };
-    }
-    return { ok: false, reason: 'malformed-json', message: errorMessage(err) };
-  }
-
-  let parsedJson: unknown;
-  try {
-    parsedJson = JSON.parse(text);
-  } catch (err) {
-    return { ok: false, reason: 'malformed-json', message: `Invalid JSON: ${errorMessage(err)}` };
-  }
-
-  const parsed = loreFountainConfigSchema.safeParse(parsedJson);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      reason: 'invalid-schema',
-      message: parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; '),
-    };
-  }
-
-  return { ok: true, config: parsed.data, found: true };
-}
-
-/** Extract the `folders` section as a plain {@link FolderSettings} for {@link resolveWorkspaceFolders}. */
-export function folderSettingsFromConfig(config: LoreFountainConfig): FolderSettings {
-  return {
-    world: config.folders?.world,
-    scripts: config.folders?.scripts,
-    imports: config.folders?.imports,
-    assets: config.folders?.assets,
-  };
-}
-
-/** Extract `world.hiddenCategories` from a parsed config, defaulting to none hidden. */
-export function hiddenCategoriesFromConfig(config: LoreFountainConfig): string[] {
-  return config.world?.hiddenCategories ?? [];
-}
+export * from 'lorefountain-core/config/readConfig';
 
 /**
  * Write a default `lorefountain.config.json` to a workspace root, unless one
@@ -168,9 +86,4 @@ export async function writeLoreFountainConfig(
 function mergeSection<T extends object>(base: T | undefined, update: T | undefined): T | undefined {
   if (!base && !update) return undefined;
   return { ...base, ...update } as T;
-}
-
-/** Extract a message from an unknown thrown value. */
-function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
 }
