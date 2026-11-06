@@ -1,14 +1,6 @@
 /**
- * Public surface of the LoreFountain model layer.
- *
- * Re-exports the entity/glossary schemas, their parse/serialize functions, the
- * frontmatter primitives, slug derivation, and shared error/result types. This
- * layer has no `vscode` dependency and is pure-unit-testable.
+ * Re-export of `lorefountain-core/model/index`. The code lives in LoreFountain-Core
+ * (ADR-0042); this file keeps existing imports, including Pro's, working.
  */
 
-export * from './errors';
-export * from './slug';
-export * from './frontmatter';
-export * from './entity';
-export * from './glossary';
-export * from './timeline';
+export * from 'lorefountain-core/model/index';

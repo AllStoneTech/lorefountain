@@ -6,6 +6,22 @@ revisit.
 
 ---
 
+## ADR-0042 — The parsing core moves to LoreFountain-Core, a separate repo
+
+**Date:** 2026-11-06 · **Status:** Accepted (local branch, not yet pushed)
+
+LoreFountain-Producer must read a project exactly as LoreFountain does, so the parsing code becomes a shared package. The project owner chose its own repo, `AllStoneTech/lorefountain-core` (public, MIT), beside this one and the Producer, over a package inside this repo.
+
+1. **What moved:** `fountain/` (parse, conventions, boneyard), `shots/` (scanScript, shotMap, parseShots, sceneHeading), `cues/parseCues`, all of `model/`, `index/mentions`, and the `assets/` manifest schemas and reader, with the 18 test files that cover only those modules. None of them imported `vscode`.
+2. **Read and parse only.** Code that writes LoreFountain files stays here: the `.shots.json`/`.cues.json` sidecar writers and `entities/service.ts`. The Producer must never write LoreFountain's files, and a shared package that offered writers would make that easy to get wrong. A read-only project loader (from `index/build.ts`) can move later, when the Producer needs one.
+3. **Each moved file is now a one-line re-export** (`export * from 'lorefountain-core/<path>'`), so this repo's imports and Pro's `../../src/...` imports work unchanged.
+4. **A dev dependency.** esbuild bundles Core into `dist/extension.js`, `dist/pro.js` and `agents/validate.js`, so nothing ships as a runtime `node_modules` package. As a regular dependency, `vsce package` followed the link and failed.
+5. **Linked locally for now:** `"lorefountain-core": "file:../LoreFountain-Core"`, on a local branch, until Core and the Producer work end to end. CI can't resolve that path, so this branch isn't pushed. Before it is, the dependency switches to a pinned Core release. `github:` dependencies fail to install on npm 11.12 (it passes `--prefer-offline=false` and `--prefer-online=false` together when preparing a git dependency), so the likely form is a prebuilt `npm pack` tarball attached to each Core GitHub release.
+
+Core's history starts fresh; its first commit names the source commit (30c1f74).
+
+---
+
 ## ADR-0041 — The shot sidecar's first release carries what LoreFountain-Producer needs
 
 **Date:** 2026-11-06 · **Status:** Accepted
