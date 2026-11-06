@@ -49,9 +49,12 @@ can untick any you don't want; nothing changes until you apply it.
 
 ## Also
 
-- **Check for LoreFountain Updates** is now in the Command Palette.
+- **Check for LoreFountain Updates** is now in the Command Palette, and at
+  the bottom of the World view's **…** menu with the other update items.
 - Line numbers after long action blocks are now correct, which also fixes
   where cues land in the Pro Cue Sheet and BBC Radio Script exports.
-- You can turn these notices off in Settings: **LoreFountain › Notifications**.
+- This page opens by itself once after each feature update. You can turn
+  that off in Settings: **LoreFountain › Notifications**.
 
-Reopen this page any time with **LoreFountain: What's New**.
+Reopen this page any time from the World view's **…** menu → **What's New**,
+or with **LoreFountain: What's New** in the Command Palette.

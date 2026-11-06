@@ -1,10 +1,11 @@
 /**
  * Pure decisions behind the two upgrade notices (ADR-0039):
- * - the **what's-new notice**, once per user per minor/major release; and
+ * - the **What's New page**, opened by itself once per user per minor/major
+ *   release; and
  * - the **post-upgrade project summary**, once per project per minor/major
  *   release, when the project has script formatting issues Fix All can fix.
  *
- * Exports {@link decideWhatsNew}, {@link whatsNewHeadline},
+ * Exports {@link decideWhatsNew}, {@link isFeatureRelease},
  * {@link projectSummaryCounts}, {@link decideProjectSummary} and
  * {@link projectSummaryMessage}. No `vscode` dependency; the glue is
  * `commands/upgradeNotices.ts`.
@@ -61,24 +62,6 @@ export function isFeatureRelease(previous: string, current: string): boolean {
   const after = parseVersion(current);
   if (!before || !after || (compareVersions(current, previous) ?? 0) <= 0) return false;
   return after[0] > before[0] || (after[0] === before[0] && after[1] > before[1]);
-}
-
-/** Headlines for the what's-new notice, keyed by `major.minor`. */
-const WHATS_NEW_HEADLINES: Readonly<Record<string, string>> = {
-  '1.1': 'shot maps, scene pauses, and quick fixes for script formatting.',
-};
-
-/**
- * The what's-new notice text for a version.
- *
- * @param version - The running version.
- * @returns e.g. `LoreFountain 1.1: shot maps, ...`, or a generic line for a version with no headline.
- */
-export function whatsNewHeadline(version: string): string {
-  const parsed = parseVersion(version);
-  const key = parsed ? `${parsed[0]}.${parsed[1]}` : version;
-  const headline = WHATS_NEW_HEADLINES[key];
-  return headline ? `LoreFountain ${key}: ${headline}` : `LoreFountain ${key} is here.`;
 }
 
 /** The counts the project summary reports. */

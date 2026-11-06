@@ -19,11 +19,13 @@ Not yet released.
 - **Fix All Script Formatting Issues** applies every safe fix across the
   project in one refactor preview, where each change can be reviewed and
   unticked before anything is written.
-- **A What's New notice** after a minor or major update (never for patch
-  releases or fresh installs), opening a new **LoreFountain: What's New**
-  page, and a once-per-project summary offering Fix All when a project's
-  scripts have fixable issues. Both can be turned off under
-  `lorefountain.notifications`.
+- **A What's New page** that opens by itself once after a minor or major
+  update (never for patch releases or fresh installs), and a once-per-project
+  summary offering Fix All when a project's scripts have fixable issues. Both
+  can be turned off under `lorefountain.notifications`.
+- The World view's **…** menu is reordered by how often each item is used,
+  with **Check for LoreFountain File Updates**, **Check for LoreFountain
+  Updates** and **What's New** grouped at the bottom.
 
 - **Shot maps.** A `SHOT:` line can now carry an optional `[tag]`
   (`SHOT: [1x01-basement-wide] WIDE, establishing`), the same stable handle

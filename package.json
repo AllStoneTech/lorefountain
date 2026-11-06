@@ -401,7 +401,7 @@
         "lorefountain.notifications.whatsNew": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "After LoreFountain updates to a new minor or major version, show one notification linking to what's new. Never shown for patch releases or on a fresh install. Reopen it any time with `LoreFountain: What's New`."
+          "markdownDescription": "After LoreFountain updates to a new minor or major version, open the What's New page once. Never opened for patch releases or on a fresh install. Reopen it any time from the World view's `...` menu or `LoreFountain: What's New`."
         },
         "lorefountain.notifications.projectSummary": {
           "type": "boolean",
@@ -471,37 +471,47 @@
         {
           "command": "lorefountain.showBrokenReferences",
           "when": "view == lorefountain.worldView",
-          "group": "9_lorefountain"
+          "group": "1_lorefountain@2"
         },
         {
           "command": "lorefountain.structuredSearch",
           "when": "view == lorefountain.worldView",
-          "group": "9_lorefountain"
+          "group": "1_lorefountain@1"
         },
         {
           "command": "lorefountain.exportStoryBible",
           "when": "view == lorefountain.worldView",
-          "group": "9_lorefountain"
+          "group": "1_lorefountain@3"
         },
         {
           "command": "lorefountain.showEntityGraphHelp",
           "when": "view == lorefountain.worldView",
-          "group": "9_lorefountain"
+          "group": "1_lorefountain@5"
         },
         {
           "command": "lorefountain.showStoryBibleHelp",
           "when": "view == lorefountain.worldView",
-          "group": "9_lorefountain"
+          "group": "1_lorefountain@6"
         },
         {
           "command": "lorefountain.checkFileUpdates",
           "when": "view == lorefountain.worldView",
-          "group": "9_lorefountain"
+          "group": "9_updates@1"
+        },
+        {
+          "command": "lorefountain.checkForUpdates",
+          "when": "view == lorefountain.worldView",
+          "group": "9_updates@2"
+        },
+        {
+          "command": "lorefountain.showWhatsNew",
+          "when": "view == lorefountain.worldView",
+          "group": "9_updates@3"
         },
         {
           "command": "lorefountain.migrateExistingLore",
           "when": "view == lorefountain.worldView",
-          "group": "9_lorefountain"
+          "group": "1_lorefountain@4"
         },
         {
           "command": "lorefountain.newScript",

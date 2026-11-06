@@ -10,7 +10,6 @@ import {
   isFeatureRelease,
   projectSummaryCounts,
   projectSummaryMessage,
-  whatsNewHeadline,
 } from '../../src/upgrade/upgradeNotices';
 
 describe('isFeatureRelease', () => {
@@ -43,16 +42,6 @@ describe('decideWhatsNew', () => {
   it('stays silent for a patch release and for the same version', () => {
     expect(decideWhatsNew({ current: '1.1.1', lastSeen: '1.1.0', hadPriorInstall: true }).show).toBe(false);
     expect(decideWhatsNew({ current: '1.1.0', lastSeen: '1.1.0', hadPriorInstall: true }).show).toBe(false);
-  });
-});
-
-describe('whatsNewHeadline', () => {
-  it('uses the headline for a known minor version, ignoring the patch', () => {
-    expect(whatsNewHeadline('1.1.2')).toMatch(/^LoreFountain 1\.1: shot maps/);
-  });
-
-  it('falls back to a generic line', () => {
-    expect(whatsNewHeadline('7.3.0')).toBe('LoreFountain 7.3 is here.');
   });
 });
 

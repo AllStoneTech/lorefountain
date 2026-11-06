@@ -1,8 +1,8 @@
 /**
  * The two upgrade notices (ADR-0039), `vscode` side:
  * - {@link captureInstallState} + {@link maybeShowWhatsNew}: once per user per
- *   minor/major release, a non-modal "What's New" notification. The button
- *   opens the What's New help panel (`lorefountain.showWhatsNew`).
+ *   minor/major release, the What's New help panel (`lorefountain.showWhatsNew`)
+ *   opens by itself. It's also on the World view's "..." menu.
  * - {@link maybeShowProjectSummary}: once per project per minor/major
  *   release, after that folder's first index build, when it has script
  *   formatting issues Fix All can fix. Its buttons run Fix All, show the
@@ -24,7 +24,6 @@ import {
   decideWhatsNew,
   projectSummaryCounts,
   projectSummaryMessage,
-  whatsNewHeadline,
   type InstallState,
 } from '../upgrade/upgradeNotices';
 import type { IndexBuildSummary } from '../index/build';
@@ -53,12 +52,13 @@ export function captureInstallState(context: vscode.ExtensionContext): InstallSt
 }
 
 /**
- * Show the what's-new notice if this is a minor/major upgrade and the setting
- * allows it, then record the running version either way.
+ * Open the What's New page by itself if this is a minor/major upgrade and the
+ * setting allows it, then record the running version either way, so it opens
+ * once per release.
  *
  * @param context - The extension context.
  * @param state - The facts from {@link captureInstallState}.
- * @returns Resolves once the version is recorded (it doesn't wait for a button click).
+ * @returns Resolves once the version is recorded and the page is opened (or skipped).
  */
 export async function maybeShowWhatsNew(context: vscode.ExtensionContext, state: InstallState): Promise<void> {
   const enabled = vscode.workspace.getConfiguration('lorefountain').get<boolean>('notifications.whatsNew', true);
@@ -66,9 +66,7 @@ export async function maybeShowWhatsNew(context: vscode.ExtensionContext, state:
   await context.globalState.update(LAST_SEEN_VERSION_KEY, state.current);
   if (!enabled || !decision.show) return;
 
-  void vscode.window.showInformationMessage(whatsNewHeadline(state.current), "What's New", 'Dismiss').then((choice) => {
-    if (choice === "What's New") void vscode.commands.executeCommand(SHOW_WHATS_NEW_COMMAND);
-  });
+  await vscode.commands.executeCommand(SHOW_WHATS_NEW_COMMAND);
 }
 
 /**
