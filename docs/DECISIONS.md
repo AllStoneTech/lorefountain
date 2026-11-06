@@ -6,6 +6,30 @@ revisit.
 
 ---
 
+## ADR-0040 — Aligned with Fountain 1.1, stated in user-facing docs
+
+**Date:** 2026-11-05 · **Status:** Accepted
+
+LoreFountain targets **[Fountain](https://fountain.io/) 1.1**, the current
+spec: the [syntax page](https://fountain.io/syntax/)'s changelog lists 1.1 as
+March 14, 2014 (forced Character `@`, forced Action `!`, Lyrics `~`; trailing
+spaces no longer force Action) and 1.0 as February 7, 2012. The parser
+dependency, `fountain-js`, supports up to 1.1 (ADR-0002).
+
+1. **The version is stated where users see it:** the README and the Scripts
+   help page link to fountain.io and its syntax page and name 1.1.
+2. **LoreFountain extends Fountain and never changes it.** Its conventions
+   (`SHOT:`, `PAUSE:`, `SFX:`/`MUSIC:`/`AMB:`, tags) are action lines to any
+   other Fountain tool. Scripts that don't follow the spec are parsed as
+   Fountain parses them, with a validator note, never rescued by heuristics
+   (ADR-0038).
+
+**Revisit if:** fountain.io publishes a new spec version. Check its changelog
+against `fountain-js` support and every LoreFountain convention before
+changing this ADR.
+
+---
+
 ## ADR-0039 — The 1.1 upgrade experience: diagnostics, quick fixes, Fix All, and two notices
 
 **Date:** 2026-11-05 · **Status:** Accepted

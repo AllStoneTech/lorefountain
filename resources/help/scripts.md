@@ -7,6 +7,16 @@ the world work: any entity or glossary term's name appearing anywhere in a
 script (a character cue, an action line, dialogue) is recognized and linked
 automatically, the same as in the World view.
 
+## Fountain version
+
+LoreFountain follows [Fountain](https://fountain.io/) 1.1, the current version
+of the spec. The [Fountain syntax reference](https://fountain.io/syntax/)
+covers everything a script can contain: scene headings, action, characters,
+dialogue, parentheticals, transitions, centered text, notes and more.
+LoreFountain's own conventions, such as `SHOT:`, `PAUSE:` and `SFX:`, are
+ordinary action lines to any other Fountain tool, so your scripts stay
+portable.
+
 ## Layout
 
 Each script lives in its own folder, one level under an optional season
