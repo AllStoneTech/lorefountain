@@ -17,6 +17,12 @@ LoreFountain's own conventions, such as `SHOT:`, `PAUSE:` and `SFX:`, are
 ordinary action lines to any other Fountain tool, so your scripts stay
 portable.
 
+For a tutorial and quick reference covering every Fountain element and every
+LoreFountain convention, with examples, run **LoreFountain: Fountain Syntax:
+Tutorial and Quick Reference** from the Command Palette, or pick **Fountain
+Syntax** from the `...` menu on this view's title bar or on any open
+`.fountain` script.
+
 ## Layout
 
 Each script lives in its own folder, one level under an optional season
@@ -131,57 +137,10 @@ files there beyond the script itself.
 If you're using an AI coding tool in this project, see `agents/script-writer.md`
 at the project root for the exact conventions it should follow.
 
-## Tutorial: Fountain syntax and LoreFountain's defaults
+## Learning Fountain
 
-Fountain is plain text with a handful of formatting conventions inferred
-from context — no markup tags, nothing to click through a toolbar to apply.
-Everything below is 100% standard Fountain; LoreFountain never changes the
-format, only adds linking, hover, and autocomplete on top of it.
-
-### The building blocks
-
-- **Title page** — optional, at the very top of the file, one `Key: value`
-  pair per line, ended by a blank line:
-  `Title:`, `Credit:`, `Author`/`Authors:`, `Source:`, `Draft date:`,
-  `Contact:`, `Copyright:`, `Notes:`, `Revision:`. Keys are case-insensitive.
-- **Scene headings** — a line starting `INT.`, `EXT.`, `EST.`, `INT./EXT.`,
-  or `I/E.` (case-insensitive), e.g. `INT. KITCHEN - NIGHT`. Force any other
-  line to be treated as a scene heading by starting it with a single `.`
-  (e.g. `.LATER`) — useful for a heading that doesn't fit the INT/EXT pattern.
-- **Action** — any plain paragraph that isn't one of the other elements
-  below. This is the default; most of a script is action lines.
-- **Character cues** — a line in ALL CAPS naming who speaks next, e.g.
-  `SANGO`. Add `(V.O.)`, `(O.S.)`, `(CONT'D)`, etc. in parens after the name
-  for an extension, or a trailing `^` for simultaneous/dual dialogue with
-  the character above.
-- **Dialogue** — the plain-text line(s) immediately following a character
-  cue.
-- **Parentheticals** — a line wrapped in `(...)` between a character cue
-  and their dialogue (or mid-dialogue), e.g. `(quietly)`, for a brief
-  performance note.
-- **Transitions** — either an ALL-CAPS line ending in `TO:` (e.g.
-  `CUT TO:`) or a line starting `>` without a matching `<` (e.g. `> Fade out.`).
-- **Centered text** — a line wrapped `>like this<`, for a title card or
-  similar.
-- **Lyrics** — a line starting `~`.
-- **Section headings** — `#`, `##`, up to `######`, purely structural/for
-  navigation (an outline), never printed in a finished script.
-- **Synopsis** — a line starting `=` (not `==`), a short note about the
-  scene/section above it, also never printed.
-- **Page break** — a line of three or more `=` characters on its own
-  (`===`).
-- **Boneyard (comments)** — text wrapped `/* ... */`, excluded from output
-  entirely.
-- **Notes** — text wrapped `[[ ... ]]`, Fountain's own inline-note
-  convention. LoreFountain reuses this exact bracket syntax for explicit
-  entity/glossary links (see below) — the two roles overlap by design, since
-  `[[Some Character]]` reads naturally as both "a note to self" and "a link."
-- **Emphasis** — `*italic*`, `**bold**`, `***bold italic***`, `_underline_`.
-
-### Further reading
-
-This covers the elements you'll use day to day. For the complete spec —
-indentation rules, forced elements (`@`, `!`, `~`), scene numbering, and
-every edge case — see the official
-[Fountain Syntax Guide](https://fountain.io/syntax/) at fountain.io.
-
+The **Fountain Syntax: Tutorial and Quick Reference** help page (see
+**Fountain version** above for where to open it) walks through every
+element of Fountain 1.1 and every LoreFountain convention, with an example
+of each. The official [Fountain Syntax Guide](https://fountain.io/syntax/)
+at fountain.io has the complete spec.

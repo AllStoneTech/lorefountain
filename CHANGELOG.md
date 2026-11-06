@@ -51,6 +51,14 @@ Not yet released.
 - Updated project docs and agent files (`scripts/README.md`,
   `assets/README.md`, `AGENTS.md`, `agents/script-writer.md`,
   `agents/validate.js`) — existing projects are offered the update.
+- **A Fountain syntax tutorial and quick reference** help page
+  (`resources/help/fountainSyntax.md`): every Fountain 1.1 element and every
+  LoreFountain convention (`SHOT:`/`POSE:`/`LIGHT:`/`DURATION:`, `PAUSE:`,
+  `SFX:`/`MUSIC:`/`AMB:`, tags, `Order:`/`Production Code:`), with an example
+  of each. Open it from the Command Palette, the Scripts view's **…** menu,
+  or the **…** menu of any open `.fountain` script. It replaces the shorter
+  tutorial that was at the end of the Scripts view help. Help pages now
+  render tables with borders.
 - **A license notice for LoreFountain Pro** (`LICENSE-PRO.md`). The free tier
   stays MIT; the compiled Pro module is proprietary and is now described as
   such in the package and the README.
@@ -62,6 +70,13 @@ Not yet released.
 
 ### Fixed
 
+- **Nothing inside a boneyard (`/* ... */`) is read as data any more.**
+  `SFX:`/`MUSIC:`/`AMB:` lines there no longer become cues (so they stay out
+  of the `.cues.json` sidecar, Cue Sheet and BBC Radio Script exports and
+  validator checks), and names there no longer count as mentions, scene
+  presence or Structured Search hits. Boneyard text also no longer throws
+  off the line numbers of identical text after it. Hover, autocomplete and
+  Rename Entity still work inside a boneyard.
 - Script line numbers after a multi-line action block came out too low,
   which also misplaced cues in Cue Sheet and BBC Radio Script exports.
 - Transcript Export no longer shows an all-caps `SHOT:` line (misread by

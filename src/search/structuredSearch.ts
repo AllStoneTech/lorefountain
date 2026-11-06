@@ -8,6 +8,7 @@
  * not `world/` entity or glossary prose.
  */
 
+import { blankBoneyard } from '../fountain/boneyard';
 import { mapTokensToPositions, parseFountain } from '../fountain/parse';
 import { extractMentionTargets, findMentionOccurrences, type MentionCandidate } from '../index/mentions';
 
@@ -59,7 +60,8 @@ export function extractScenePresence(
         }));
 
   return bounds.map((bound, sceneIndex) => {
-    const sceneText = scriptText.slice(bound.start, bound.end);
+    // Boneyard text is cut material: a name in it doesn't put anyone in the scene.
+    const sceneText = blankBoneyard(scriptText).slice(bound.start, bound.end);
     const entityIds = new Set(extractMentionTargets(sceneText, candidates).map((target) => target.id));
     return { scriptPath, sceneIndex, sceneHeading: bound.heading, entityIds };
   });
@@ -96,7 +98,7 @@ export function findMentionLines(
   candidates: readonly MentionCandidate[],
   targetId: string,
 ): MentionLine[] {
-  const occurrences = findMentionOccurrences(scriptText, candidates).filter((occurrence) =>
+  const occurrences = findMentionOccurrences(blankBoneyard(scriptText), candidates).filter((occurrence) =>
     occurrence.targets.some((target) => target.id === targetId),
   );
 

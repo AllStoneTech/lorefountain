@@ -45,6 +45,7 @@
  * `MUSIC:` line, since it always sits closest to the prefix.
  */
 
+import { blankBoneyard } from '../fountain/boneyard';
 import { matchLeadingTag } from '../fountain/conventions';
 
 export type CueType = 'sfx' | 'music' | 'amb';
@@ -99,7 +100,8 @@ const MUSIC_TIMING = /^(IN|OUT)\b[ \t]*-?[ \t]*(.*)$/;
  * @returns Every cue found, in document order.
  */
 export function extractCues(scriptText: string): CueEntry[] {
-  const lines = scriptText.split(/\r\n|\r|\n/);
+  // Lines inside a boneyard are hidden from the script, so never cues (`fountain/boneyard.ts`).
+  const lines = blankBoneyard(scriptText).split(/\r\n|\r|\n/);
   const cues: CueEntry[] = [];
 
   lines.forEach((lineText, line) => {

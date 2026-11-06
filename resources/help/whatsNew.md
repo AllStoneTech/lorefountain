@@ -49,6 +49,10 @@ can untick any you don't want; nothing changes until you apply it.
 
 ## Also
 
+- **A Fountain syntax tutorial and quick reference**: every Fountain
+  element and every LoreFountain convention, with an example of each. Open
+  it with **LoreFountain: Fountain Syntax: Tutorial and Quick Reference**,
+  or from the **…** menu on the Scripts view or any open script.
 - **Check for LoreFountain Updates** is now in the Command Palette, and at
   the bottom of the World view's **…** menu with the other update items.
 - Line numbers after long action blocks are now correct, which also fixes

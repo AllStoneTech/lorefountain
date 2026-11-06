@@ -103,6 +103,7 @@ import {
   type ShotTagWarning,
 } from '../assets/shotManifest';
 import { updateCueSidecar } from '../cues/sidecar';
+import { blankBoneyard } from '../fountain/boneyard';
 import type { ScriptShotIssue, ShotMapEntity, ShotMapResult } from '../shots/shotMap';
 import { updateShotSidecar } from '../shots/sidecar';
 import type { ValidationIssue } from '../model/errors';
@@ -453,7 +454,7 @@ export async function reindexFile(
 
     if (recomputeMentions) {
       const candidates = buildMentionCandidates(store);
-      store.setMentionsForSource({ id, kind: 'script', filePath }, extractMentionTargets(text, candidates));
+      store.setMentionsForSource({ id, kind: 'script', filePath }, extractMentionTargets(blankBoneyard(text), candidates));
     }
     return { ok: true, warnings: allWarnings, notes, danglingRelations: [], danglingEpisodes: [] };
   }
@@ -666,7 +667,8 @@ function recomputeMentionsAndFindIssues(
   for (const [filePath, text] of scriptTexts) {
     store.setMentionsForSource(
       { id: idFromFilePath(filePath), kind: 'script', filePath },
-      extractMentionTargets(text, candidates),
+      // A mention inside a boneyard is cut material, not a reference (`fountain/boneyard.ts`).
+      extractMentionTargets(blankBoneyard(text), candidates),
     );
   }
 

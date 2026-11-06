@@ -22,6 +22,7 @@
  */
 
 import { Fountain, type Token } from 'fountain-js';
+import { blankBoneyard } from './boneyard';
 
 export type { Token as FountainToken };
 
@@ -58,11 +59,17 @@ export function parseFountain(text: string): Token[] {
  * this hasn't been tested against) is skipped rather than mis-positioned —
  * best-effort, not guaranteed-complete.
  *
+ * The search runs over the text with its boneyard blanked out
+ * (`boneyard.ts`), so a token is never matched against identical text
+ * hidden in an earlier boneyard, which would misplace it and every token
+ * after it.
+ *
  * @param text - The same source text that produced `tokens`.
  * @param tokens - The token stream from {@link parseFountain} for that text.
  * @returns Positioned tokens, in document order; a subset if any token's text couldn't be located.
  */
 export function mapTokensToPositions(text: string, tokens: readonly Token[]): PositionedToken[] {
+  const searchable = blankBoneyard(text);
   const positioned: PositionedToken[] = [];
   let cursor = 0;
   let line = 0;
@@ -71,7 +78,7 @@ export function mapTokensToPositions(text: string, tokens: readonly Token[]): Po
     const tokenText = token.text ?? '';
     if (!tokenText) continue;
 
-    const start = text.indexOf(tokenText, cursor);
+    const start = searchable.indexOf(tokenText, cursor);
     if (start === -1) continue;
 
     // Advance the running line count only across the gap we just skipped,

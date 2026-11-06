@@ -37,6 +37,9 @@ LoreFountain needs VS Code 1.125 or newer and works on a local folder (it reads 
   the current spec ([syntax reference](https://fountain.io/syntax/)), and open
   in any other Fountain tool. LoreFountain's own conventions (`SHOT:`,
   `PAUSE:`, `SFX:` and the rest) are plain action lines everywhere else.
+  The [Fountain syntax tutorial and quick reference](resources/help/fountainSyntax.md)
+  covers both, with an example of each element; in VS Code, run
+  **LoreFountain: Fountain Syntax: Tutorial and Quick Reference**.
 - **Files are the source of truth.** Scripts are `.fountain`; entities are `.md`
   with YAML frontmatter. No feature requires data that lives only in a database.
 - **The index is disposable.** A local SQLite database is a rebuildable cache,

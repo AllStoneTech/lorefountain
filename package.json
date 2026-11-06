@@ -321,6 +321,12 @@
         "icon": "$(question)"
       },
       {
+        "command": "lorefountain.showFountainSyntaxHelp",
+        "title": "Fountain Syntax: Tutorial and Quick Reference",
+        "category": "LoreFountain",
+        "icon": "$(question)"
+      },
+      {
         "command": "lorefountain.sendFeedback",
         "title": "Send Feedback",
         "category": "LoreFountain"
@@ -529,6 +535,11 @@
           "group": "navigation@9"
         },
         {
+          "command": "lorefountain.showFountainSyntaxHelp",
+          "when": "view == lorefountain.scriptsView",
+          "group": "1_lorefountain@1"
+        },
+        {
           "command": "lorefountain.showContinuityViewHelp",
           "when": "view == lorefountain.continuityView",
           "group": "navigation@9"
@@ -554,6 +565,11 @@
           "command": "lorefountain.exportShotList",
           "when": "editorLangId == fountain",
           "group": "navigation"
+        },
+        {
+          "command": "lorefountain.showFountainSyntaxHelp",
+          "when": "editorLangId == fountain",
+          "group": "9_lorefountain@0"
         },
         {
           "command": "lorefountain.showBBCRadioScriptHelp",

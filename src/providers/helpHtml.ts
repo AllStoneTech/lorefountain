@@ -65,6 +65,9 @@ export function buildHelpHtml(cspSource: string, title: string, markdown: string
   a { color: var(--vscode-textLink-foreground); }
   a:hover { color: var(--vscode-textLink-activeForeground); }
   strong { font-weight: 600; }
+  table { border-collapse: collapse; margin: 0.75rem 0; font-size: 0.95em; }
+  th, td { border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border)); padding: 0.3rem 0.6rem; text-align: left; vertical-align: top; }
+  th { font-weight: 600; }
   hr { border: none; border-top: 1px solid var(--vscode-widget-border, var(--vscode-panel-border)); margin: 1.5rem 0; }
 </style>
 </head>
