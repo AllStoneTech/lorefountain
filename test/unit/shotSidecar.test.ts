@@ -55,6 +55,8 @@ describe('updateShotSidecar', () => {
         description: 'WIDE',
         lines: { start: 2, end: 2 },
         spoken: [],
+        action: [],
+        onScreen: [],
         entities: [],
         cues: [],
       },

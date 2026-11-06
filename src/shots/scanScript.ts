@@ -4,6 +4,9 @@
  * lines, and dialogue (character cues, parentheticals, spoken lines), each
  * with its 0-based physical line number.
  *
+ * Also scans centered text, transitions and lyrics, which the sidecar
+ * carries as on-screen text, shot transitions and sung lines.
+ *
  * Exports {@link scanScript} and the {@link ScriptItem} union. Consumed by
  * `parseShots.ts` (the shot list) and `shotMap.ts` (the `.shots.json`
  * sidecar) so both walk the script identically.
@@ -90,10 +93,30 @@ export interface DialogueItem {
   speaker: CharacterItem;
 }
 
-/** Visible content with no further meaning to the shot features (centered text, transitions, lyrics). */
-export interface OtherContentItem {
-  kind: 'other';
+/** One line of Fountain centered text (`> THE END <`). */
+export interface CenteredItem {
+  kind: 'centered';
   line: number;
+  /** The text between the markers, trimmed. */
+  text: string;
+}
+
+/** A Fountain transition, detected or forced with `>`. */
+export interface TransitionItem {
+  kind: 'transition';
+  line: number;
+  /** The transition text without a leading `>`, trimmed, e.g. `CUT TO:` or `FADE OUT.`. */
+  text: string;
+  /** True when the line is forced with a leading `>`. */
+  forced: boolean;
+}
+
+/** One physical line of Fountain lyrics (`~`). */
+export interface LyricItem {
+  kind: 'lyric';
+  line: number;
+  /** The lyric line without its `~`, trimmed. */
+  text: string;
 }
 
 /** One scanned item, in document order. */
@@ -104,7 +127,9 @@ export type ScriptItem =
   | CharacterItem
   | ParentheticalItem
   | DialogueItem
-  | OtherContentItem;
+  | CenteredItem
+  | TransitionItem
+  | LyricItem;
 
 /** Token types that belong to the script body (anything before the first one is the title page). */
 const BODY_TOKEN_TYPES = new Set([
@@ -124,9 +149,6 @@ const BODY_TOKEN_TYPES = new Set([
   'boneyard_begin',
   'page_break',
 ]);
-
-/** Token types that are visible content but carry nothing the shot features read. */
-const OTHER_CONTENT_TOKEN_TYPES = new Set(['centered', 'transition', 'lyrics']);
 
 /** `CONT'D` and its common spellings: a continuation marker, not an extension. */
 const CONTINUED_EXTENSION = /^CONT(?:'|’)?D\.?$|^CONT\.?$|^CONTINUED$/i;
@@ -163,6 +185,7 @@ export function scanScript(scriptText: string): ScriptItem[] {
     positions.set(positioned.token, positioned.line);
   }
 
+  const rawLines = scriptText.split(/\r\n|\r|\n/);
   const items: ScriptItem[] = [];
   let inBody = false;
   let nextIsSimultaneous = false;
@@ -184,9 +207,11 @@ export function scanScript(scriptText: string): ScriptItem[] {
       continue;
     }
 
-    const line = positions.get(token);
-    if (line === undefined) continue;
     const physicalLines = (token.text ?? '').split('\n');
+    const line =
+      positions.get(token) ??
+      (token.type === 'lyrics' ? findLyricLine(rawLines, physicalLines[0], items[items.length - 1]?.line ?? -1) : undefined);
+    if (line === undefined) continue;
 
     switch (token.type) {
       case 'scene_heading':
@@ -223,13 +248,51 @@ export function scanScript(scriptText: string): ScriptItem[] {
         }
         break;
 
+      case 'centered':
+        items.push({ kind: 'centered', line, text: (token.text ?? '').trim() });
+        break;
+
+      case 'transition':
+        items.push({
+          kind: 'transition',
+          line,
+          text: (token.text ?? '').trim(),
+          forced: (rawLines[line] ?? '').trimStart().startsWith('>'),
+        });
+        break;
+
+      case 'lyrics':
+        physicalLines.forEach((lineText, index) => {
+          const text = lineText.trim().replace(/^~\s*/, '');
+          if (text) items.push({ kind: 'lyric', line: line + index, text });
+        });
+        break;
+
       default:
-        if (OTHER_CONTENT_TOKEN_TYPES.has(token.type)) items.push({ kind: 'other', line });
         break;
     }
   }
 
   return items;
+}
+
+/**
+ * Locate a lyric token's first line. A multi-line lyric token's text has
+ * the `~` markers stripped from every line, so the generic position search
+ * (which looks for the token text verbatim) can't find it.
+ *
+ * @param rawLines - The script's physical lines.
+ * @param firstLine - The token's first line of text, without its `~`.
+ * @param afterLine - The last line already placed; the search starts after it.
+ * @returns The 0-based line, or `undefined` when no matching `~` line follows.
+ */
+function findLyricLine(rawLines: readonly string[], firstLine: string, afterLine: number): number | undefined {
+  const wanted = firstLine.trim();
+  for (let line = afterLine + 1; line < rawLines.length; line += 1) {
+    const text = rawLines[line].trim();
+    if (text.startsWith('~') && text.slice(1).trim() === wanted) return line;
+  }
+  return undefined;
 }
 
 /** Push each non-blank physical line of an action block as a directive or an action line. */

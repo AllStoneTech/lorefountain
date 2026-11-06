@@ -34,10 +34,14 @@ Not yet released.
   (`{ file, kind: still|clip, motion?, source?, license?, prompt? }`).
   Every script with shots gets a derived `<script>.shots.json` sidecar —
   each shot's line range, what's heard in it (dialogue with speaker and
-  extensions, pauses, overlapping dual dialogue), the entities it mentions,
-  its scene heading broken into INT./EXT., setting, time of day and
-  resolved locations, and pointers to the cues that start in it — so a
-  video pipeline can assemble an episode without parsing Fountain.
+  extensions, parentheticals such as `(exhales)` with their wording kept,
+  pauses, lyrics, overlapping dual dialogue), its action blocks, its
+  on-screen text (Fountain centered text), the transition at its end, the
+  entities it mentions, its scene heading broken into INT./EXT., setting,
+  time of day and resolved locations, and pointers to the cues that start
+  in it — so a video pipeline can assemble an episode without parsing
+  Fountain. Every heard, action and on-screen entry carries its script
+  line, so they merge into one timeline.
 - **`PAUSE:` for scene pauses**, with an optional length (`PAUSE: 2s`). A
   character's own pause stays a `(beat)`-style parenthetical.
 - **New validator checks**, in `node agents/validate.js` and the Output
@@ -45,7 +49,10 @@ Not yet released.
   `orphaned-parenthetical` warnings (the last catches a `(beat)` after a
   blank line, which Fountain reads as action), and a new informational
   **notes** section that never fails a run: `bare-pause-line`,
-  `ambiguous-location`, `unused-shot-tag`.
+  `ambiguous-location`, `unused-shot-tag`, and `unforced-transition` (a
+  transition such as `FADE IN:` or `CUT TO BLACK.` that the Fountain spec
+  only recognizes when it starts with `>`; the quick fix and Fix All add
+  the `>`).
 - Highlighting for cue and shot tags and `PAUSE:`, plus `shot-tag` and
   `pause` snippets.
 - Updated project docs and agent files (`scripts/README.md`,

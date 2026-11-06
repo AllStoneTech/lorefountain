@@ -18,6 +18,15 @@
  *   which stays ordinary action; the scene-pause convention is `PAUSE:`.
  * - `ambiguous-location` (info): a heading setting segment matching more
  *   than one location entity, left unresolved rather than guessed.
+ * - `unforced-transition` (info): a transition that isn't forced with `>`
+ *   but needs it under the Fountain spec, which detects only uppercase
+ *   lines ending in `TO:`. Either a standalone line like `FADE IN:` that
+ *   Fountain reads as action, or `FADE OUT.`/`FADE TO BLACK.`/`CUT TO
+ *   BLACK.`, which `fountain-js` detects but other Fountain apps don't.
+ *
+ * Per shot, `spoken` holds every dialogue line, parenthetical (pauses and
+ * other directions, wording kept), `PAUSE:` and lyric line, each with its
+ * `line`, so `spoken`, `action` and `onScreen` merge into one timeline.
  *
  * Gotchas:
  * - Content before a scene's first `SHOT:` becomes an implicit shot 0 (no
@@ -58,13 +67,27 @@ export interface SpokenLine {
   text: string;
   /** True for the second speaker of Fountain dual dialogue (`^`): this line overlaps the entry just before it. */
   simultaneous?: true;
+  /** 0-based line the text starts on. */
+  line: number;
+}
+
+/** A parenthetical inside a character's dialogue that isn't a pause: a direction to the speaker, such as `(exhales)`. */
+export interface SpeakerDirection {
+  /** The parenthetical exactly as written, trimmed, parentheses included. */
+  direction: string;
+  speaker: string;
+  speakerEntity?: string;
+  line: number;
 }
 
 /** A pause written as a parenthetical inside a character's dialogue: dialogue coaching, owned by that speaker. */
 export interface SpeakerPause {
   pause: 'speaker';
+  /** The parenthetical exactly as written, trimmed, e.g. `(long beat)`. */
+  direction: string;
   speaker: string;
   speakerEntity?: string;
+  line: number;
 }
 
 /** A `PAUSE:` line: a silence that belongs to the scene, not to any speaker. */
@@ -72,10 +95,38 @@ export interface ScenePause {
   pause: 'scene';
   durationText?: string;
   durationSeconds?: number;
+  line: number;
+}
+
+/** One line of Fountain lyrics (`~`): a sung line. */
+export interface LyricLine {
+  /** The lyric text without its `~`. */
+  lyric: string;
+  line: number;
 }
 
 /** Everything heard in a shot, in script order. */
-export type SpokenEntry = SpokenLine | SpeakerPause | ScenePause;
+export type SpokenEntry = SpokenLine | SpeakerDirection | SpeakerPause | ScenePause | LyricLine;
+
+/** One Fountain action block in a shot (LoreFountain prefix lines excluded). */
+export interface ShotAction {
+  /** The block's lines, trimmed, joined with `\n`. */
+  text: string;
+  /** 0-based line of the block's first line. */
+  line: number;
+}
+
+/** What kind of on-screen text an {@link OnScreenText} is. Only `centered` is written by scripts today; `super`, `titleCard` and `chyron` are reserved for the `SUPER:`/`TITLE CARD:`/`CHYRON:` prefix lines. */
+export type OnScreenKind = 'super' | 'titleCard' | 'chyron' | 'centered';
+
+/** Text meant to be seen on screen. */
+export interface OnScreenText {
+  kind: OnScreenKind;
+  /** A style tag, for the prefix-line kinds. */
+  tag?: string;
+  text: string;
+  line: number;
+}
 
 /** One shot in the `.shots.json` sidecar. */
 export interface ShotMapEntry {
@@ -101,6 +152,12 @@ export interface ShotMapEntry {
   /** 0-based, inclusive line range: from the `SHOT:` line (or scene heading, for shot 0) to the line before the next shot or heading, or the end of the file. */
   lines: { start: number; end: number };
   spoken: SpokenEntry[];
+  /** The shot's action blocks, in script order. */
+  action: ShotAction[];
+  /** On-screen text in the shot, in script order. */
+  onScreen: OnScreenText[];
+  /** The last Fountain transition inside the shot's lines, as Fountain reads it (no leading `>`), e.g. `DISSOLVE TO:`. */
+  transition?: string;
   /** Deduplicated ids of entities mentioned in the shot's own text. */
   entities: string[];
   /** 0-based lines of `SFX:`/`MUSIC:`/`AMB:` cues that start in this shot: pointers into `.cues.json`. */
@@ -109,7 +166,7 @@ export interface ShotMapEntry {
 
 /** A per-script issue found while building the shot map. */
 export interface ScriptShotIssue extends ValidationIssue {
-  code: 'orphaned-parenthetical' | 'bare-pause-line' | 'ambiguous-location';
+  code: 'orphaned-parenthetical' | 'bare-pause-line' | 'ambiguous-location' | 'unforced-transition';
   /** `warning` is reported like every other non-blocking warning; `info` is a note. */
   severity: 'warning' | 'info';
   /** 0-based line the issue is on. */
@@ -158,6 +215,8 @@ interface OpenShot {
   mentionText: string[];
   hasContent: boolean;
   explicit: boolean;
+  /** The line of the action line just applied, while the next item could still continue its block. */
+  lastActionLine?: number;
 }
 
 /** The current scene's heading-derived fields. */
@@ -184,7 +243,7 @@ export function buildShotMap(scriptText: string, entities: readonly ShotMapEntit
   const candidates: MentionCandidate[] = entities.map((entity) => ({ id: entity.id, kind: 'entity', names: entity.names }));
 
   const shots: ShotMapEntry[] = [];
-  const issues: ScriptShotIssue[] = [...findFormatIssues(items)];
+  const issues: ScriptShotIssue[] = [...findFormatIssues(items, scriptText.split(/\r\n|\r|\n/))];
   let hasExplicitShots = false;
   let scene: SceneContext | undefined;
   let shotCounter = 0;
@@ -214,6 +273,8 @@ export function buildShotMap(scriptText: string, entities: readonly ShotMapEntit
       locations: [...context.locations],
       lines: { start: line, end: line },
       spoken: [],
+      action: [],
+      onScreen: [],
       entities: [],
       cues: [],
     };
@@ -280,58 +341,105 @@ function applyItem(open: OpenShot, item: ScriptItem, entities: readonly ShotMapE
         if (seconds === undefined) delete entry.durationSeconds;
         else entry.durationSeconds = seconds;
       } else if (item.keyword === 'PAUSE') {
-        entry.spoken.push(scenePause(value));
+        entry.spoken.push(scenePause(value, item.line));
       }
-      break;
+      open.lastActionLine = undefined;
+      return;
     }
-    case 'action':
+    case 'action': {
       open.mentionText.push(item.text);
-      break;
+      const last = entry.action[entry.action.length - 1];
+      if (!item.blockStart && last !== undefined && open.lastActionLine === item.line - 1) {
+        last.text = `${last.text}\n${item.text}`;
+      } else {
+        entry.action.push({ text: item.text, line: item.line });
+      }
+      open.lastActionLine = item.line;
+      return;
+    }
     case 'character':
       open.mentionText.push(item.name);
       break;
     case 'parenthetical':
-      if (SPEAKER_PAUSES.has(normalize(item.text))) {
-        entry.spoken.push(speakerPause(item.speaker, entities));
-      }
+      entry.spoken.push(
+        SPEAKER_PAUSES.has(normalize(item.text))
+          ? speakerPause(item.speaker, item.text, item.line, entities)
+          : speakerDirection(item.speaker, item.text, item.line, entities),
+      );
       break;
     case 'dialogue':
-      entry.spoken.push(spokenLine(item.speaker, item.text, entities));
+      entry.spoken.push(spokenLine(item.speaker, item.text, item.line, entities));
+      break;
+    case 'lyric':
+      entry.spoken.push({ lyric: item.text, line: item.line });
+      break;
+    case 'centered':
+      entry.onScreen.push({ kind: 'centered', text: item.text, line: item.line });
+      break;
+    case 'transition':
+      entry.transition = item.text;
       break;
     default:
       break;
   }
+  open.lastActionLine = undefined;
 }
 
 /** Build a `{ pause: 'scene' }` entry from a `PAUSE:` line's text. */
-function scenePause(value: string): ScenePause {
-  const pause: ScenePause = { pause: 'scene' };
-  if (value) {
-    pause.durationText = value;
-    const seconds = parseDurationSeconds(value);
-    if (seconds !== undefined) pause.durationSeconds = seconds;
-  }
-  return pause;
+function scenePause(value: string, line: number): ScenePause {
+  const seconds = value ? parseDurationSeconds(value) : undefined;
+  return {
+    pause: 'scene',
+    ...(value ? { durationText: value } : {}),
+    ...(seconds !== undefined ? { durationSeconds: seconds } : {}),
+    line,
+  };
 }
 
 /** Build a `{ pause: 'speaker' }` entry for a pause parenthetical. */
-function speakerPause(speaker: CharacterItem, entities: readonly ShotMapEntity[]): SpeakerPause {
-  const pause: SpeakerPause = { pause: 'speaker', speaker: speaker.name };
+function speakerPause(
+  speaker: CharacterItem,
+  direction: string,
+  line: number,
+  entities: readonly ShotMapEntity[],
+): SpeakerPause {
   const speakerEntity = resolveExactName(speaker.name, entities);
-  if (speakerEntity !== undefined) pause.speakerEntity = speakerEntity;
-  return pause;
+  return {
+    pause: 'speaker',
+    direction,
+    speaker: speaker.name,
+    ...(speakerEntity !== undefined ? { speakerEntity } : {}),
+    line,
+  };
+}
+
+/** Build a `{ direction }` entry for a non-pause parenthetical. */
+function speakerDirection(
+  speaker: CharacterItem,
+  direction: string,
+  line: number,
+  entities: readonly ShotMapEntity[],
+): SpeakerDirection {
+  const speakerEntity = resolveExactName(speaker.name, entities);
+  return {
+    direction,
+    speaker: speaker.name,
+    ...(speakerEntity !== undefined ? { speakerEntity } : {}),
+    line,
+  };
 }
 
 /** Build a spoken-line entry. */
-function spokenLine(speaker: CharacterItem, text: string, entities: readonly ShotMapEntity[]): SpokenLine {
+function spokenLine(speaker: CharacterItem, text: string, line: number, entities: readonly ShotMapEntity[]): SpokenLine {
   const speakerEntity = resolveExactName(speaker.name, entities);
-  // Built in sidecar field order: speaker, speakerEntity, extensions, text, simultaneous.
+  // Built in sidecar field order: speaker, speakerEntity, extensions, text, simultaneous, line.
   return {
     speaker: speaker.name,
     ...(speakerEntity !== undefined ? { speakerEntity } : {}),
     extensions: [...speaker.extensions],
     text,
     ...(speaker.simultaneous ? { simultaneous: true as const } : {}),
+    line,
   };
 }
 
@@ -382,11 +490,48 @@ function resolveLocations(
   return { ids, issues };
 }
 
-/** Find `orphaned-parenthetical` and `bare-pause-line` issues in a scanned script. */
-function findFormatIssues(items: readonly ScriptItem[]): ScriptShotIssue[] {
+/**
+ * True for an uppercase line that reads as a transition but that the
+ * Fountain spec only detects when forced with `>`: `FADE IN:`, `FADE OUT.`,
+ * `CUT TO BLACK.` and the like, plus a `... TO:` line Fountain didn't detect.
+ *
+ * @param text - The line's text, trimmed.
+ * @returns Whether the line looks like a transition.
+ */
+export function looksLikeTransition(text: string): boolean {
+  if (!/[A-Z]/.test(text) || text !== text.toUpperCase()) return false;
+  return TRANSITION_LIKE.test(text);
+}
+
+/** Transition wordings the Fountain spec doesn't detect without `>` (it detects only uppercase lines ending in `TO:`). */
+const TRANSITION_LIKE =
+  /^(?:(?:FADE (?:IN|OUT|UP|TO BLACK|TO WHITE)|CUT TO BLACK|CUT TO WHITE|SMASH TO BLACK|IRIS (?:IN|OUT))[.:]?|.+ TO:)$/;
+
+/** Find `orphaned-parenthetical`, `bare-pause-line` and `unforced-transition` issues in a scanned script. */
+function findFormatIssues(items: readonly ScriptItem[], rawLines: readonly string[]): ScriptShotIssue[] {
   const issues: ScriptShotIssue[] = [];
+  const isBlank = (line: number): boolean => (rawLines[line] ?? '').trim() === '';
   for (const item of items) {
+    if (item.kind === 'transition' && !item.forced && !/ TO:$/.test(item.text)) {
+      issues.push({
+        code: 'unforced-transition',
+        severity: 'info',
+        line: item.line,
+        path: `lines[${item.line}]`,
+        message: `"${item.text}" (line ${item.line + 1}) is read as a transition here, but the Fountain spec only detects transitions that end in TO:, so other Fountain apps read it as action. Start it with > to force the transition.`,
+      });
+      continue;
+    }
     if (item.kind !== 'action') continue;
+    if (item.blockStart && isBlank(item.line - 1) && isBlank(item.line + 1) && looksLikeTransition(item.text)) {
+      issues.push({
+        code: 'unforced-transition',
+        severity: 'info',
+        line: item.line,
+        path: `lines[${item.line}]`,
+        message: `"${item.text}" (line ${item.line + 1}) looks like a transition, but Fountain only detects transitions that end in TO:, so it reads this line as action. Start it with > to force the transition.`,
+      });
+    }
     if (item.blockStart && /^\(.*\)$/.test(item.text)) {
       issues.push({
         code: 'orphaned-parenthetical',
@@ -427,6 +572,9 @@ function inFieldOrder(entry: ShotMapEntry): ShotMapEntry {
     durationSeconds: entry.durationSeconds,
     lines: entry.lines,
     spoken: entry.spoken,
+    action: entry.action,
+    onScreen: entry.onScreen,
+    transition: entry.transition,
     entities: entry.entities,
     cues: entry.cues,
   };

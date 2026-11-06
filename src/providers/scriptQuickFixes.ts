@@ -1,7 +1,8 @@
 /**
  * Quick fixes (code actions) for the script diagnostics (ADR-0039):
  * `orphaned-parenthetical` (join to the previous speech, or re-cue the
- * speaker with `(CONT'D)`) and `bare-pause-line` (replace with `PAUSE:`).
+ * speaker with `(CONT'D)`), `bare-pause-line` (replace with `PAUSE:`) and
+ * `unforced-transition` (add Fountain's `>` force marker).
  * Each applies exactly one standard Fountain correction; the planning is
  * pure and unit-tested in `upgrade/formatFixes.ts`. Every fix also comes
  * with a "fix all in the project" action that runs the Fix All command.

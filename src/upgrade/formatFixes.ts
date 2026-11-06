@@ -14,6 +14,9 @@
  *   `SPEAKER (CONT'D)` (keeping the speaker's cue-line extensions) right
  *   above the parenthetical.
  * - `bare-pause-line`: replace a standalone `Beat.`-style line with `PAUSE:`.
+ * - `unforced-transition`: put Fountain's `>` force marker in front of a
+ *   transition the spec only detects when forced (`FADE IN:`, `CUT TO
+ *   BLACK.`). The words are untouched.
  *
  * Exports {@link planLineFix} (one issue, for a quick fix) and
  * {@link planAllFixes} (a whole script, for Fix All).
@@ -53,7 +56,7 @@ export interface TextEditPlan {
 }
 
 /** The kinds of fix this module plans. */
-export type FormatFixKind = 'join' | 'recue' | 'pause';
+export type FormatFixKind = 'join' | 'recue' | 'pause' | 'force';
 
 /** One planned fix for one issue. */
 export interface FormatFix {
@@ -75,7 +78,7 @@ export interface FixAllPlan {
 }
 
 /** Issue codes this module can fix. */
-export const FIXABLE_CODES: ReadonlySet<string> = new Set(['orphaned-parenthetical', 'bare-pause-line']);
+export const FIXABLE_CODES: ReadonlySet<string> = new Set(['orphaned-parenthetical', 'bare-pause-line', 'unforced-transition']);
 
 /** What occupies each physical line, as far as the planner cares. */
 type LineKind = 'blank' | 'heading' | 'directive' | 'action' | 'dialogue' | 'other';
@@ -92,13 +95,14 @@ interface ScriptContext {
  * Plan the fix for one issue at `line`, for a quick fix.
  *
  * @param text - The script's current text.
- * @param code - The issue code (`orphaned-parenthetical` or `bare-pause-line`).
+ * @param code - The issue code (`orphaned-parenthetical`, `bare-pause-line` or `unforced-transition`).
  * @param line - The issue's 0-based line.
  * @returns The fix, or `undefined` when no single standard fix applies.
  */
 export function planLineFix(text: string, code: string, line: number): FormatFix | undefined {
   const context = analyze(text);
   if (code === 'bare-pause-line') return planPause(context, line);
+  if (code === 'unforced-transition') return planForce(context, line);
   if (code === 'orphaned-parenthetical') return planOrphan(context, line, new Map());
   return undefined;
 }
@@ -122,13 +126,17 @@ export function planAllFixes(text: string): FixAllPlan {
 
   for (const issue of issues) {
     const fix =
-      issue.code === 'bare-pause-line' ? planPause(context, issue.line) : planOrphan(context, issue.line, becomingDialogue);
+      issue.code === 'bare-pause-line'
+        ? planPause(context, issue.line)
+        : issue.code === 'unforced-transition'
+          ? planForce(context, issue.line)
+          : planOrphan(context, issue.line, becomingDialogue);
     if (!fix || !fix.safeForFixAll) {
       skipped += 1;
       continue;
     }
     fixes.push(fix);
-    if (fix.kind !== 'pause') {
+    if (fix.kind === 'join' || fix.kind === 'recue') {
       const speaker = fix.kind === 'recue' ? speakerAbove(context, issue.line, becomingDialogue) : undefined;
       for (const blockLine of actionBlockLines(context, issue.line)) becomingDialogue.set(blockLine, speaker);
     }
@@ -146,6 +154,20 @@ function planPause(context: ScriptContext, line: number): FormatFix | undefined 
     line,
     title: 'Replace with PAUSE:',
     edit: { start: { line, character: indent }, end: { line, character: text.trimEnd().length }, newText: 'PAUSE:' },
+    safeForFixAll: true,
+  };
+}
+
+/** Plan inserting Fountain's `>` force marker in front of an unforced transition. */
+function planForce(context: ScriptContext, line: number): FormatFix | undefined {
+  const text = context.lines[line];
+  if (text === undefined || text.trim() === '' || text.trimStart().startsWith('>')) return undefined;
+  const indent = text.length - text.trimStart().length;
+  return {
+    kind: 'force',
+    line,
+    title: 'Force as a transition (add >)',
+    edit: { start: { line, character: indent }, end: { line, character: indent }, newText: '> ' },
     safeForFixAll: true,
   };
 }

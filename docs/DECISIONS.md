@@ -6,6 +6,22 @@ revisit.
 
 ---
 
+## ADR-0041 — The shot sidecar's first release carries what LoreFountain-Producer needs
+
+**Date:** 2026-11-06 · **Status:** Accepted
+
+LoreFountain-Producer (a separate desktop app, spec in its own repo) builds video, podcast masters and captions from a project, reading `.shots.json` instead of parsing Fountain. A design review on 2026-11-05 listed what the sidecar lacked. Since 1.1.0 hasn't shipped, these fields go in before release and `schema_version` stays `1`: the first published sidecar is complete, and no consumer ever sees a version without them.
+
+1. **Every parenthetical is a `spoken` entry, wording kept.** A non-pause parenthetical becomes `{ direction, speaker, speakerEntity?, line }`; a pause parenthetical keeps `pause: 'speaker'` and adds `direction` with its exact text. Raw and unfiltered, so "(short laugh)" reaches a generated voice and the captions. ADR-0038 had dropped non-pause parentheticals.
+2. **Lyrics are `{ lyric, line }` entries in `spoken`**, one per `~` line, with no speaker, as agreed. Multi-line lyric tokens are located by their first `~` line in `scanScript.ts`, because the generic position search looks for the token text verbatim and the `~` markers are stripped from it.
+3. **`line` on every `spoken` entry**, plus a per-shot `action` list (`{ text, line }`, one per Fountain action block, lines joined with `\n`, split at prefix lines) and an `onScreen` list (`{ kind, tag?, text, line }`), so the three merge into one timeline. Today only Fountain centered text writes `onScreen` (`kind: 'centered'`); `super`, `titleCard` and `chyron` are reserved for the `SUPER:`/`TITLE CARD:`/`CHYRON:` prefix lines agreed for after 1.1.0.
+4. **`transition` on the shot**: the last transition inside the shot's lines, as Fountain reads it (no `>`).
+5. **`unforced-transition` note, with a quick fix and Fix All.** The Fountain spec detects a transition only when it's uppercase, between blank lines and ends in `TO:`; anything else needs `>`. `fountain-js` is looser: it also detects `FADE OUT.`, `FADE TO BLACK.` and `CUT TO BLACK.` unforced. LoreFountain keeps parsing exactly as `fountain-js` does (ADR-0038), and notes both cases: a standalone uppercase line like `FADE IN:` that is read as action, and the three `fountain-js`-only transitions, which other Fountain apps read as action. The fix inserts `> ` and changes no words, so it's safe for Fix All. Lines inside a longer action block aren't noted, since `>` there wouldn't force anything.
+
+Found along the way, not fixed here: `fountain-js` 1.2.4 throws on a `~` lyric directly under a character cue, which fails parsing of the whole script.
+
+---
+
 ## ADR-0040 — Aligned with Fountain 1.1, stated in user-facing docs
 
 **Date:** 2026-11-05 · **Status:** Accepted

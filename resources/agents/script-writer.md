@@ -39,6 +39,10 @@ There are two kinds of pause, and they're written differently:
 - **A character's own pause** is a parenthetical inside their dialogue: `(beat)`, `(a beat)`, `(long beat)`, `(pause)`, `(a pause)`, `(long pause)` or `(silence)`. It's performance direction for that speaker.
 - **A scene pause**, a silence that belongs to the scene rather than to anyone speaking, is a `PAUSE:` line with an optional length: `PAUSE:`, `PAUSE: 2s`, `PAUSE: long`. Don't write a bare `Beat.` action line for this; it stays ordinary action, and the validator notes it as `bare-pause-line`.
 
+### Transitions
+
+Fountain only recognizes a transition on its own when it's uppercase, has a blank line before and after, and ends in `TO:` (`CUT TO:`, `DISSOLVE TO:`). Any other transition, including `FADE IN:`, `FADE OUT.`, `FADE TO BLACK.` and `CUT TO BLACK.`, must start with `>` (`> FADE OUT.`), or other Fountain apps read it as action. The validator notes a missing `>` as `unforced-transition`.
+
 Put extensions such as `V.O.`, `O.S.` or `FILTERED` on the character cue line (`THE ARCHIVE (V.O.) (FILTERED)`), not inside a parenthetical. Only cue-line extensions are recognized as extensions.
 
 ## Folder structure: one folder per script
@@ -145,7 +149,7 @@ Tags are optional, and an untagged shot is never an error. Repeating a tag withi
 
 ### The shot sidecar
 
-Every script with at least one `SHOT:` line gets a `<script-name>.shots.json` sidecar next to it, regenerated on every save and never hand-edited; it's removed again if the script loses all its shots. For each shot it records the scene and shot number, the tag, the scene heading broken into parts (INT./EXT., setting, time of day, and any location entities the setting names exactly), the shot's line range, everything heard in it (dialogue with speaker and cue-line extensions, both kinds of pause, overlapping dual dialogue), the entities its own text mentions, and the line numbers of cues that *start* in it (pointers into `.cues.json`). Text in a scene before its first `SHOT:` is kept as shot 0, so nothing is lost. Downstream tools read this file instead of parsing Fountain.
+Every script with at least one `SHOT:` line gets a `<script-name>.shots.json` sidecar next to it, regenerated on every save and never hand-edited; it's removed again if the script loses all its shots. For each shot it records the scene and shot number, the tag, the scene heading broken into parts (INT./EXT., setting, time of day, and any location entities the setting names exactly), the shot's line range, everything heard in it (dialogue with speaker and cue-line extensions, every parenthetical with its wording, both kinds of pause, lyrics, overlapping dual dialogue), its action blocks, its on-screen text (centered text), the transition at its end, each with its line number, the entities its own text mentions, and the line numbers of cues that *start* in it (pointers into `.cues.json`). Text in a scene before its first `SHOT:` is kept as shot 0, so nothing is lost. Downstream tools read this file instead of parsing Fountain.
 
 If a scene heading's setting matches more than one location entity (two "Basement"s), it's left unresolved and noted as `ambiguous-location`. Give one of them a more specific name or alias rather than guessing.
 

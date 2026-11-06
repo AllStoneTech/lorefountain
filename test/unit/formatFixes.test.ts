@@ -33,6 +33,32 @@ function remainingCodes(text: string): string[] {
     .map((issue) => issue.code);
 }
 
+describe('unforced-transition fixes', () => {
+  it('forces a transition with > and keeps its indentation and words', () => {
+    const text = 'INT. A - DAY\n\nMara leaves.\n\n  CUT TO BLACK.\n';
+    const fix = planLineFix(text, 'unforced-transition', 4);
+    expect(fix).toMatchObject({ kind: 'force', safeForFixAll: true, title: 'Force as a transition (add >)' });
+    expect(apply(text, [fix as FormatFix])).toBe('INT. A - DAY\n\nMara leaves.\n\n  > CUT TO BLACK.\n');
+  });
+
+  it('offers nothing on a line already forced', () => {
+    expect(planLineFix('INT. A - DAY\n\n> FADE OUT.\n', 'unforced-transition', 2)).toBeUndefined();
+  });
+
+  it('Fix All forces every unforced transition, after which none are noted and Fountain detects them', () => {
+    const text = 'FADE IN:\n\nINT. A - DAY\n\nMara leaves.\n\nFADE TO BLACK.\n';
+    const plan = planAllFixes(text);
+    expect(plan.fixes.map((fix) => [fix.kind, fix.line])).toEqual([
+      ['force', 0],
+      ['force', 6],
+    ]);
+    const fixed = apply(text, plan.fixes);
+    expect(fixed).toBe('> FADE IN:\n\nINT. A - DAY\n\nMara leaves.\n\n> FADE TO BLACK.\n');
+    const { issues } = buildShotMap(fixed, []);
+    expect(issues.filter((issue) => issue.code === 'unforced-transition')).toEqual([]);
+  });
+});
+
 describe('planLineFix', () => {
   it('joins an orphaned parenthetical to the speech right above it', () => {
     const text = 'INT. A - DAY\n\nMARA\nYou found us.\n\n(beat)\nYou are ready.\n';
