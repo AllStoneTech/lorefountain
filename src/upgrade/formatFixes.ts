@@ -28,6 +28,12 @@
  *   speech): once an orphan is fixed, its lines count as dialogue for the
  *   next orphan below it.
  * - A re-cue needs a speaker in the same scene; with none, no fix is offered.
+ * - A parenthetical alone between blank lines (`(beat)` with a blank line on
+ *   each side, then a paragraph) gets a join or re-cue that also absorbs the
+ *   paragraph after it; otherwise the speech would end in a bare `(beat)` and
+ *   that paragraph would stay action. Whether the paragraph is the speaker
+ *   continuing or real action can't be known, so Fix All skips this shape
+ *   and counts it as needing a manual fix.
  */
 
 import { buildShotMap } from '../shots/shotMap';
@@ -152,8 +158,28 @@ function planOrphan(
 ): FormatFix | undefined {
   const previous = previousContentLine(context, line);
   if (previous === undefined) return undefined;
+  // A parenthetical alone between blank lines: rejoining only its top would
+  // leave the speech ending in a bare `(beat)` with the next paragraph still
+  // action. Whether that paragraph is the same speaker continuing or real
+  // action can't be known, so the fix that absorbs it is never used by Fix All.
+  const following = isolatedFollowingText(context, line);
+  const parenthetical = context.lines[line];
+  const eol = context.eol;
 
   if (context.lineKinds[previous] === 'dialogue' || becomingDialogue.has(previous)) {
+    if (following !== undefined) {
+      return {
+        kind: 'join',
+        line,
+        title: 'Join to the previous speech, with the line after it (remove the blank lines)',
+        edit: {
+          start: { line: previous, character: context.lines[previous].length },
+          end: { line: following, character: 0 },
+          newText: `${eol}${parenthetical}${eol}`,
+        },
+        safeForFixAll: false,
+      };
+    }
     return {
       kind: 'join',
       line,
@@ -170,13 +196,38 @@ function planOrphan(
   const speaker = speakerAbove(context, line, becomingDialogue);
   if (!speaker) return undefined;
   const cue = [speaker.name, ...speaker.extensions.map((extension) => `(${extension})`), "(CONT'D)"].join(' ');
+  if (following !== undefined) {
+    return {
+      kind: 'recue',
+      line,
+      title: `Re-cue ${cue} above this line, with the line after it`,
+      edit: { start: { line, character: 0 }, end: { line: following, character: 0 }, newText: `${cue}${eol}${parenthetical}${eol}` },
+      safeForFixAll: false,
+    };
+  }
   return {
     kind: 'recue',
     line,
     title: `Re-cue ${cue} above this line`,
-    edit: { start: { line, character: 0 }, end: { line, character: 0 }, newText: `${cue}${context.eol}` },
+    edit: { start: { line, character: 0 }, end: { line, character: 0 }, newText: `${cue}${eol}` },
     safeForFixAll: onlyDirectivesBetween(context, line, becomingDialogue),
   };
+}
+
+/**
+ * When the orphaned parenthetical at `line` is alone in its action block and
+ * the next content after blank lines is plain action text, return that next
+ * block's first line (the text the parenthetical presumably introduces).
+ * Otherwise `undefined`: the parenthetical already has text under it, or
+ * what follows is a cue, heading, prefix line or the end of the script.
+ */
+function isolatedFollowingText(context: ScriptContext, line: number): number | undefined {
+  if (context.lineKinds[line + 1] !== 'blank') return undefined;
+  let next = line + 1;
+  while (next < context.lines.length && context.lineKinds[next] === 'blank') next += 1;
+  if (next >= context.lines.length || context.lineKinds[next] !== 'action') return undefined;
+  // Another parenthetical-led block is its own orphan, fixed separately.
+  return /^\(.*\)$/.test(context.lines[next].trim()) ? undefined : next;
 }
 
 /**

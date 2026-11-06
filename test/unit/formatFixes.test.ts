@@ -71,6 +71,37 @@ describe('planLineFix', () => {
     expect(apply(text, [fix!])).toBe('INT. A - DAY\n\n   PAUSE:\n');
   });
 
+  it('joins a beat alone between blank lines together with the paragraph after it', () => {
+    // The Of_One_Blood 1x07 shape.
+    const text = "INT. A - DAY\n\nAUBREY LIVINGSTON\nI'm ashamed of my own section for it.\n\n(beat)\n\nThere's an English expedition sailing for Meroe.\n\nREUEL BRIGGS\nGo on.\n";
+    const fix = planLineFix(text, 'orphaned-parenthetical', 5);
+    expect(fix).toMatchObject({ kind: 'join', safeForFixAll: false });
+    expect(fix?.title).toContain('with the line after it');
+    const fixed = apply(text, [fix!]);
+    expect(fixed).toBe(
+      "INT. A - DAY\n\nAUBREY LIVINGSTON\nI'm ashamed of my own section for it.\n(beat)\nThere's an English expedition sailing for Meroe.\n\nREUEL BRIGGS\nGo on.\n",
+    );
+    expect(remainingCodes(fixed)).toEqual([]);
+    expect(buildShotMap(fixed, []).shots[0].spoken.map((entry) => ('text' in entry ? entry.text : 'pause'))).toEqual([
+      "I'm ashamed of my own section for it.",
+      'pause',
+      "There's an English expedition sailing for Meroe.",
+      'Go on.',
+    ]);
+  });
+
+  it('re-cues a beat alone between blank lines together with the paragraph after it', () => {
+    const text = 'INT. A - DAY\n\nMARA\nHi.\n\nSHOT: WIDE\n\n(beat)\n\nStill here.\n';
+    const fix = planLineFix(text, 'orphaned-parenthetical', 7);
+    expect(fix).toMatchObject({ kind: 'recue', safeForFixAll: false });
+    expect(apply(text, [fix!])).toBe("INT. A - DAY\n\nMARA\nHi.\n\nSHOT: WIDE\n\nMARA (CONT'D)\n(beat)\nStill here.\n");
+  });
+
+  it('keeps the plain join when an isolated beat is followed by a character cue', () => {
+    const text = 'INT. A - DAY\n\nMARA\nHi.\n\n(beat)\n\nTHEO\nYes?\n';
+    expect(planLineFix(text, 'orphaned-parenthetical', 5)).toMatchObject({ kind: 'join', safeForFixAll: true });
+  });
+
   it('keeps CRLF line endings when inserting a cue', () => {
     const text = 'INT. A - DAY\r\n\r\nMARA\r\nHi.\r\n\r\nSHOT: WIDE\r\n\r\n(beat)\r\nBye.\r\n';
     const fixed = apply(text, [planLineFix(text, 'orphaned-parenthetical', 7)!]);
@@ -117,6 +148,11 @@ describe('planAllFixes', () => {
     const plan = planAllFixes(text);
     expect(plan.fixes).toEqual([]);
     expect(plan.skipped).toBe(2);
+  });
+
+  it('skips a beat alone between blank lines rather than guess about the paragraph after it', () => {
+    const text = "INT. A - DAY\n\nAUBREY LIVINGSTON\nI'm ashamed.\n\n(beat)\n\nThere's an expedition.\n";
+    expect(planAllFixes(text)).toEqual({ fixes: [], skipped: 1 });
   });
 
   it('plans nothing for a clean script', () => {
