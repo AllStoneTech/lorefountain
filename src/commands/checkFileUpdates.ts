@@ -268,16 +268,20 @@ async function reviewAndUpdateFile(
       finding.isNew ? `${finding.relativePath} (not yet created ↔ current template)` : `${finding.relativePath} (yours ↔ current template)`,
     );
 
+    // Deliberately NOT modal: a modal dialog blocks the whole window, so the
+    // diff opened above could not be scrolled or read before deciding. A
+    // notification with buttons stays up until answered or dismissed, and
+    // dismissing it (the X) resolves to undefined, which means "keep mine".
     const confirm = finding.isNew
       ? await vscode.window.showWarningMessage(
-          `Create "${finding.relativePath}" from the current template? Any missing parent folder is created too.`,
-          { modal: true },
+          `Create "${finding.relativePath}" from the current template? Review the diff, then choose. Any missing parent folder is created too.`,
           'Create from Current Template',
+          'Skip',
         )
       : await vscode.window.showWarningMessage(
-          `Replace your copy of "${finding.relativePath}" with the current template? This overwrites the whole file — copy anything you want to keep out of the diff first.`,
-          { modal: true },
+          `Replace your copy of "${finding.relativePath}" with the current template? Review the diff, then choose. This overwrites the whole file — copy anything you want to keep out of the diff first.`,
           'Replace with Current Template',
+          'Keep My Copy',
         );
 
     // Close the diff tab regardless of the user's choice, so nothing lingers
