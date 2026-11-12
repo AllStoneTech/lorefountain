@@ -12,4 +12,4 @@ relations:
     relation_type: centers-on
 ---
 
-Reuel's journey from Boston to the ruins of [[Meroe]] and into the hidden city itself: the leopard attack, the parchment's prophecy, his grief-driven descent into the pyramid, the coronation and betrothal, and the tomb-chamber capture that exposes Aubrey's crimes. Shares its final episode, `1x19`, with [[The Boston Deception]] — both arcs resolve around the same event, Jim Titus's death and confession.
+Reuel's journey from Boston to the ruins of [[Meroe]] and into the hidden city itself: the leopard attack, the parchment and the camel-driver's prophecy, his grief-driven descent into the pyramid, the coronation and betrothal, and the tomb-chamber capture that exposes Aubrey's crimes. Shares its final episode, `1x19`, with [[The Boston Deception]] — both arcs resolve around the same event, Jim Titus's death and confession.

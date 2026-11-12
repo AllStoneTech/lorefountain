@@ -8,4 +8,4 @@ canon_status: established
 tags: [omen]
 ---
 
-Camped near Meroe, Professor Stone reads the party his twenty-five-year-old parchment aloud: hidden mines, a swamp-guarded city, and a prophecy that an heir of the ancient king Ergamenes will one day return to it.
+Camped near Meroe, the party hears Professor Stone's twenty-five-year-old parchment translated aloud: hidden mines, a swamp-guarded city, a sacred crocodile and jewel-crowned serpents. Stone then tells them what the camel-driver added by word of mouth — that a king of ancient line, an offspring of Ergamenes, would one day return from lands beyond the seas — and that every descendant bears a lotus-lily birthmark on his breast, at which Reuel starts.

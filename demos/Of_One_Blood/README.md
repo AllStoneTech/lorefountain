@@ -1,6 +1,8 @@
 <!-- lorefountain-docs-version: 1 -->
 # Of One Blood
 
+> **CONTENT NOTE.** This demo adapts an 1902–03 novel about race, slavery and passing, and keeps the period's language as written — including racial slurs and dialect speech for Black characters — rather than softening it. It also deals with coerced relationships, incest between half-siblings, poisoning, murder and suicide.
+
 This project uses **[LoreFountain](https://github.com/AllStoneTech/lorefountain)** — a worldbuilding methodology for Fountain-format writing. At its core, it's just plain Markdown files (with YAML frontmatter) and standard Fountain scripts, checked by a small validator — no proprietary format, nothing locked to one tool. The [LoreFountain VS Code extension](https://github.com/AllStoneTech/lorefountain) is the richest way to use it (hover previews, a form-based editor for entities, one-click rename, structured search), but every file here is readable and editable in any text editor, and an AI coding agent can work in this project with no VS Code involved at all.
 
 ## What this demo is
@@ -9,7 +11,7 @@ A worked example built from **[*Of One Blood; or, The Hidden Self*](https://www.
 
 The novel gives LoreFountain real material to demonstrate against: a large cast whose relationships aren't what they first appear to be, a plot split between two very different settings (Gilded Age Boston and the hidden city of Telassar), a chronology that isn't told in order (a decades-old secret gets revealed only near the end), and a mystery-driven structure where "who's related to whom" is the entire engine of the story. That's exactly the kind of continuity load this tool exists to carry.
 
-Everything in `world/` and `scripts/` was written from published plot summaries and the novel's own publication facts, not copied from the original text — it's an original adaptation and interpretation, not a reproduction.
+Everything in `world/` and `scripts/` was checked against the novel's full text, which this project keeps in `imports/of-one-blood.md` (plain Markdown, one heading per chapter, Gutenberg license included). The entities and timeline are original write-ups; the scripts dramatize each chapter and reuse many of the novel's own lines, and the full text sits beside them for comparison. See `imports/source-material.md` for how the demo was reviewed against it.
 
 ## What's in each folder
 
@@ -18,7 +20,7 @@ Everything in `world/` and `scripts/` was written from published plot summaries 
 - **`world/notes/`** — a low-stakes scratch space for half-formed ideas. See `world/notes/README.md`.
 - **`world/timeline/`** — in-world events, separate from the entities that participate in them. See `world/timeline/README.md`.
 - **`scripts/`** — a 24-episode Fountain adaptation, one script per chapter of the novel. See `scripts/README.md`.
-- **`imports/`** — source citations for this demo. See `imports/README.md`.
+- **`imports/`** — the novel's full text as Markdown (`imports/of-one-blood.md`) plus source citations for this demo. See `imports/README.md`.
 
 ## Working with an AI
 

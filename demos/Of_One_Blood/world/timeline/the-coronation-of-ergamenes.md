@@ -8,4 +8,4 @@ canon_status: established
 tags: [revelation]
 ---
 
-Shown the lotus-lily birthmark on his own chest, Reuel is crowned before Telassar's assembled people, who hail him as the prophesied King Ergamenes.
+Crowned by Ai in a side chamber of the great temple and shown on a platform to Telassar's assembled people, who shout "Ergamenes! Ergamenes!" under an arch of fire reading "HAIL! ERGAMENES!" That night, at the feast, the singers tell his story and Ai names the lotus lily on his breast as God's mark of his race and descent.

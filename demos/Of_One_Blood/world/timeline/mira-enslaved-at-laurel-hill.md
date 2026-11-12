@@ -8,4 +8,4 @@ canon_status: established
 tags: [backstory]
 ---
 
-Mira, unknowingly the last daughter of the [[House of Telassar]]'s royal line, is enslaved alongside her own mother [[Hannah]] at [[Livingston Plantation]], where the elder Dr. Livingston uses her for mesmeric "parlor tricks and prophecies." Earliest event in the story's internal chronology, withheld from the audience until Hannah tells it in `1x21` — narrative order and chronological order pulling as far apart as this project's timeline ever gets.
+Mira, whose children carry the lotus-lily mark of the [[House of Telassar]], is enslaved alongside her own mother [[Hannah]] at [[Livingston Plantation]], where the elder Dr. Livingston throws her into trances to read minds and prophesy for his guests. Earliest event in the story's internal chronology, withheld from the audience until Hannah tells it in `1x21` — narrative order and chronological order pulling as far apart as this project's timeline ever gets.

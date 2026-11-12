@@ -8,4 +8,4 @@ canon_status: established
 tags: [turning-point]
 ---
 
-Dianthe swaps Aubrey's morning water glass for a poisoned one, meaning to kill him in his sleep. Held motionless by an unseen force, he watches her do it, then catches her before she can leave and forces her to drink the poison herself.
+Dianthe swaps the glass of clear water Aubrey drinks on first waking for a poisoned one. Held motionless by an unseen force at two in the morning, he watches her do it, then catches her before she can leave and forces her to drink the poison herself, down to the last drop.

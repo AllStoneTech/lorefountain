@@ -5,4 +5,4 @@ aliases: [animal magnetism]
 tags: [period-term, telassar-royal-line]
 ---
 
-Reuel's talent for reviving the near-dead — and later, Ai's power to compel Aubrey's confession and death — are both framed as mesmerism, tying a real Gilded Age medical/pseudoscientific fascination to the [[House of Telassar]]'s inherited gift.
+Reuel's talent for reviving the near-dead — and later, Ai's power to compel Aubrey's death — are both framed as mesmerism, tying a real Gilded Age medical/pseudoscientific fascination to the [[House of Telassar]]'s inherited gift.

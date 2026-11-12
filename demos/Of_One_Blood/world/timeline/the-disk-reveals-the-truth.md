@@ -8,4 +8,4 @@ canon_status: established
 tags: [revelation]
 ---
 
-Ai's scrying disk and font show Reuel the canoe accident as it really happened: Molly dead, Dianthe alive but held by Aubrey. That night, Dianthe's spirit reaches him across the ocean to confirm it.
+Ai's scrying disk and font show Reuel the canoe with Aubrey, Molly and Dianthe gliding on the Charles, Molly dead in the river, Dianthe alive in the font, and — on the specially prepared disk — Aubrey and Dianthe together at a window of the Livingston mansion. That night, Dianthe's voice reaches him across the ocean to confirm it.

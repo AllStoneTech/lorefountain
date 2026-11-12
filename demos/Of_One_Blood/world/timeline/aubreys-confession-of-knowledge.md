@@ -8,4 +8,4 @@ canon_status: established
 tags: [revelation]
 ---
 
-Over a private Christmas Eve dinner, Reuel confesses his love for Dianthe and his fear of being found out; Aubrey warns him off marrying her, then admits he has quietly known Reuel's own ancestry since the day they met.
+Over a private Christmas Eve dinner, Reuel confesses that he saw Dianthe's face before ever seeing her "in the flesh," and that he means to marry her before her memory returns; Aubrey warns him off, citing "a Negress," then whispers a sentence that makes Reuel flush a dull red and admits he has known it "since first we met."

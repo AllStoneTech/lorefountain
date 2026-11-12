@@ -8,4 +8,4 @@ canon_status: established
 tags: [omen]
 ---
 
-Alone in his room during a November storm, Reuel sees an unknown woman's face take shape in the twilight — his first, unexplained glimpse of Dianthe Lusk, weeks before he ever meets her.
+Alone in his room during a November storm, Reuel sees an unknown woman's face take shape in the twilight — his first, unexplained glimpse of Dianthe Lusk, hours before he sees her singing on stage at Tremont Temple.

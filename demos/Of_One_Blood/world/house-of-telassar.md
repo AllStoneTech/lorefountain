@@ -6,16 +6,15 @@ tags: [telassar, royalty, prophecy]
 canon_status: established
 significance: main
 physical_description: |
-  Colors: Gold and deep lotus-purple, worn only by the direct line and its household
-  Emblem: A lotus lily — the same mark every true descendant of the line carries as a birthmark
-  Regalia: Ceremonial dress reserved for coronations and the queen's betrothal rites; otherwise the line's members live and dress unremarkably among Telassar's people
+  Emblem: A lotus lily — carried as a birthmark on the breast by every descendant of the line (per Professor Stone's account of the camel-driver's words, and Ai's "upon your breast is a lotus lily")
+  Regalia: A crown whose principal aigrette is a gem-set cross and whose centre ornament is the black diamond of Senechus, white silk robes, and a gold lotus-lily ring
 
-  The line's return was foretold long before anyone in the hidden city knew it still lived — every true heir simply carries the proof under their own skin.
+  The line's return was foretold in a prophecy the camel-driver gave Professor Stone — every true heir carries the proof under their own skin.
 relations:
   - target: telassar
     relation_type: seated-in
 custom_fields:
-  belief: The line's return was foretold in Professor Stone's parchment as the coming of an heir of the ancient king Ergamenes; every descendant carries a lotus-lily birthmark as proof of blood
+  belief: The line's return was foretold, in what the camel-driver told Professor Stone, as the coming of an heir of the ancient king Ergamenes from lands beyond unknown seas, to which many descendants of Ethiopia had been borne as slaves; every descendant carries a lotus-lily birthmark as proof of blood
 ---
 
-The ancient royal bloodline of [[Telassar]], believed extinct for generations after [[Hannah]] and her daughter [[Mira]] were carried into slavery in America without anyone in the hidden city knowing the line still lived. All three of Mira's children — [[Reuel Briggs]], [[Dianthe Lusk]], and unknowingly [[Aubrey Livingston]] — carry the lotus-lily mark. Reuel turns out to be its last heir; [[Ai]] recognizes him before Reuel understands it himself, and [[Queen Candace]] has governed as regent in the line's long absence.
+The ancient royal bloodline of [[Telassar]], whose heir Ai says he has watched since babyhood. Hannah says each of Mira's three children — [[Reuel Briggs]], [[Dianthe Lusk]], and [[Aubrey Livingston]] — carries the lotus-lily mark, and the novel's last chapter treats Aubrey as "in direct line to the throne" under Telassar's law. [[Ai]] recognizes Reuel before Reuel understands it himself, and [[Queen Candace]] waits for him to inaugurate a dynasty of kings.

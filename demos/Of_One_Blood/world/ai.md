@@ -9,8 +9,8 @@ first_appearance: "1x14"
 appears_in: ["1x14", "1x15", "1x16", "1x17", "1x18", "1x19", "1x24"]
 physical_description: |
   Race: Telassar priesthood — the office has passed father to son for six thousand years
-  Build: Aged, a commanding presence built on the weight of unbroken office rather than physical size
-  Eyes: Calm, watchful — has followed Reuel's life from a distance since boyhood
+  Build: "Not being over forty despite his patriarchal bearing," broad of shoulder and chest, with "a kingly countenance combining force, sweetness and dignity"
+  Eyes: Deep and mystic; "the eyes of the leader followed Reuel's every movement" — he says he has followed Reuel's career "from babyhood"
 
   The mesmeric power under that calm is real; the sentence he ultimately pronounces on Aubrey Livingston is not ceremonial.
 relations:
@@ -26,4 +26,4 @@ relations:
     relation_type: member
 ---
 
-Telassar's prime minister and chief priest, whose office has passed father to son for six thousand years, and who has watched Reuel's life from a distance since his boyhood. Ai finds Reuel unconscious inside the pyramid at [[Meroe]], names him King Ergamenes, and teaches him the hidden city's history, its scrying disk and font, and — ultimately — uses his own mesmeric power to pronounce the sentence that ends [[Aubrey Livingston]]'s life under Telassar's ancient law.
+Telassar's prime minister and chief priest, whose priestly office he says has descended father to son for more than six thousand years before Christ, and who has watched Reuel's life since his babyhood. Ai's men take Reuel, unconscious, from the pyramid at [[Meroe]]; Ai names him King Ergamenes and teaches him the hidden city's history, its scrying disk and font, and — ultimately — uses his own mesmeric power to pronounce the sentence that ends [[Aubrey Livingston]]'s life under Telassar's ancient law.

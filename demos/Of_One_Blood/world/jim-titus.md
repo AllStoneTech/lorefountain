@@ -9,9 +9,9 @@ first_appearance: "1x08"
 appears_in: ["1x08", "1x10", "1x11", "1x13", "1x18", "1x19"]
 casting_notes: Plays the obsequious, "old régime" servant for the whole expedition — Reuel and Charlie's growing unease around him should read as paranoia right up until it isn't.
 physical_description: |
-  Race: Black, formerly enslaved, raised as Aubrey's foster brother
-  Build: Deferential bearing, practiced at not being noticed
-  Eyes: Watchful; guilt only ever surfaces in unguarded moments
+  Race: Black — "a Negro of the old régime"; Aubrey's foster brother, by his own account
+  Build: A stalwart man ("the stalwart Negro"), obsequious in manner — "massa," a subservient bearing
+  Eyes: A "furtive black eye" with a gleam Reuel can't quite place
 
   Plays the obsequious "old régime" servant convincingly enough that Reuel and Charlie's growing unease reads as their own paranoia — right up until it isn't.
 relations:
@@ -27,4 +27,4 @@ relations:
     relation_type: died-in
 ---
 
-Aubrey's foster brother and paid agent, planted on the [[Meroe]] expedition to intercept Reuel's mail and, if the chance came, engineer his death — including, it's implied, his slowness to help during a leopard attack. Captured alongside [[Charlie Vance]] by Telassar's guards, he's fatally caught in a serpent trap while the two are escaping through the tomb chambers, and uses his last breath to confess everything to [[Reuel Briggs]]: that Aubrey orchestrated it all, and that Dianthe is Reuel's own half-sister.
+Aubrey's foster brother and paid agent, planted on the [[Meroe]] expedition to intercept Reuel's mail and, if the chance came, engineer his death — including, it's implied, his slowness to help during a leopard attack. Captured alongside [[Charlie Vance]] by Telassar's guards, he's fatally crushed in a serpent pit while the two are escaping through the tomb chambers, and uses his last breath to confess everything to [[Reuel Briggs]]: that Aubrey orchestrated it all (Jim's own sister was to be paid in a Baltimore bank), and that Dianthe is Reuel's "own sister, the half-sister of Aubrey Livingston."

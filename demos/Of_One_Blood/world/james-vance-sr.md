@@ -9,8 +9,7 @@ first_appearance: "1x06"
 appears_in: ["1x06", "1x24"]
 physical_description: |
   Race: White, Boston
-  Build: Wealthy, comfortable bearing
-  Notable: Generous to a fault — funds Dianthe's recovery without ever learning who she really is
+  Notable: Father of Molly and Charlie, "Esq."; takes the annuity the physicians raise for "Felice Adams" into his keeping and houses her at Vance Hall
 relations:
   - target: molly-vance
     relation_type: parent-of
@@ -18,7 +17,7 @@ relations:
     relation_type: parent-of
   - target: dianthe-lusk
     relation_type: guardian-of
-    attitude: funds her care and shelter without ever learning her real story
+    attitude: houses her at Vance Hall and holds her annuity, never learning her real story
 ---
 
-Molly and Charlie's father, whose wealth and generosity house and fund [[Dianthe Lusk]]'s recovery at the [[Vance Estate]] without ever being told the whole truth of who she is. Loses his daughter to the canoe accident and, at the story's end, joins Reuel and Charlie in pressing (unsuccessfully) for [[Aubrey Livingston]] to face legal justice for it.
+Molly and Charlie's father, whose house shelters [[Dianthe Lusk]] — introduced to him as "Felice Adams" — at the [[Vance Estate]], with the annuity the country's physicians raised for her placed in his hands. Loses his daughter to the canoe accident and, at the story's end, joins Charlie and Reuel in bringing charges against [[Aubrey Livingston]]; the novel says Aubrey's lawyers and the lack of lawful testimony defeat them.

@@ -1,6 +1,6 @@
 ---
 term: Of one blood
-gloss: "From Acts 17:26 (\"[God] hath made of one blood all nations of men\") — the novel's title phrase and its explicit answer to the era's racist pseudoscience."
+gloss: "The novel's title phrase, quoted as \"Of one blood have I made all races of men\" (Chapters XVIII and XXIV) and \"Of one blood have I made all nations of men\" (Chapter XXI) — its explicit answer to \"Keep the Negro down!\""
 aliases: []
 tags: [theme, scripture]
 ---

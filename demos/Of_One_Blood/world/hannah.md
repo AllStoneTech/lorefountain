@@ -9,13 +9,12 @@ first_appearance: "1x21"
 appears_in: ["1x21", "1x23", "1x24"]
 casting_notes: Locally known and feared as a "voodoo doctor" — a reputation that's really just a community's way of describing a woman who has quietly carried the truth of this family for two generations.
 physical_description: |
-  Race: Formerly enslaved; elderly by the time she reveals the truth
-  Build: Small, sturdy, moves with the quiet authority of someone long underestimated
-  Hair: Grey, usually kept covered
-  Eyes: Sharp, missing nothing
-  Notable: Feared locally as a "voodoo doctor" — a reputation built on decades of carrying a truth no one else would say aloud
+  Race: Enslaved on the Livingston place; "very aged, but still erect and noble in form"
+  Build: A patched figure, "neat to scrupulousness," in a snowy kerchief
+  Eyes: "The eye still keen and searching"
+  Notable: Called "the most noted 'voodoo' doctor or witch in the country" by the servants; carries a lotus-lily mark "cut, as it were, in shining ebony" on her own breast
 
-  Nothing showy about her; the authority is entirely in how little she has to say to be believed.
+  Dialect-heavy and warm: she calls Dianthe "honey" and "chile," and says what she has to say plainly.
 relations:
   - target: mira
     relation_type: parent-of
@@ -32,4 +31,4 @@ relations:
     relation_type: enslaved-at
 ---
 
-Mira's mother and, unbeknownst to any of them for most of the story, grandmother to Reuel, Dianthe, and Aubrey alike. Enslaved at [[Livingston Plantation]], it was Hannah who — desperate to save at least one of Mira's children from being sold away — swapped her newborn grandson for the Livingstons' own dying infant, raising him unknowingly as [[Aubrey Livingston]], the family's legitimate white heir. Decades later, still living nearby and known locally as "Aunt Hannah," she reveals the whole truth to [[Dianthe Lusk]], and stays at her bedside to the end.
+Mira's mother and, unbeknownst to any of them for most of the story, grandmother to Reuel, Dianthe, and Aubrey alike. Born on the Livingston place and trained in the big house, she bore Mira to "massa" — the old master, father of the elder Dr. Livingston — and "nussed ev'ry Livingston." In the confusion when the doctor's white wife's child was born and died within the hour, at the same time Mira bore a son, it was Hannah who swapped the babies and told Marse Livingston that Mira's boy was the dead one; the boy was raised as [[Aubrey Livingston]], the family's legitimate white heir. She says herself that "de debbil took possession of me body and soul." Decades later, still living near [[Livingston Hall]] and known locally as "Aunt Hannah," she reveals the whole truth to [[Dianthe Lusk]], stays at her bedside to the end, and goes with Reuel to Telassar.

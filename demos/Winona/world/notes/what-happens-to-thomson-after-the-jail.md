@@ -1,0 +1,5 @@
+# What happens to Thomson after the jail break?
+
+In Chapter XIII Judah has Thomson on the floor with a foot on his chest, pistol at his forehead; Brown stops him; Brown and Maybee "secured the officials of the jail and quieted the prisoners" and lock them in Warren's cell. The chapter never says Thomson is locked in with them or tied up and left. In Chapter XIV Maybee brings word of a message from Reynolds that "Thomson says the nex' time he gits you he'll fix you", so he is free within two weeks.
+
+**Open question.** Issue 6 follows the chapter's own picture of Thomson "bound and helpless" at Judah's feet and locks him in the cell with Owens and the other officials (page 8); it then lets Maybee report his threat in the camp (page 13) without saying how he got out. The comic leaves that gap exactly as the novel does and invents nothing. Candidates if the owner wants it closed: the jail changes keepers at dawn and the officials are freed; or a posse that follows frees them. Both would be invented facts and would have to go on the invented list in `imports/source-material.md`.

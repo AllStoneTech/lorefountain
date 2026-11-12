@@ -5,15 +5,13 @@ aliases: [Adonis]
 tags: [comic-relief, loyal]
 canon_status: established
 significance: supporting
-first_appearance: "1x03"
-appears_in: ["1x03", "1x06", "1x07", "1x08", "1x09", "1x10", "1x11", "1x12", "1x13", "1x18", "1x19", "1x24"]
+first_appearance: "1x02"
+appears_in: ["1x02", "1x03", "1x06", "1x08", "1x10", "1x11", "1x12", "1x13", "1x14", "1x18", "1x19", "1x24"]
 casting_notes: Wealthy, glib, and nicknamed "Adonis" by his own circle — his good humor curdles into real grit once he's the one searching Meroe for a missing friend. He is not converted into a solemn man; he stays himself, just tested.
 physical_description: |
   Race: White, Boston's moneyed set
-  Build: Athletic, easy grin — the "Adonis" nickname is earned and self-aware
-  Hair: Fair, fashionably kept, at least until Meroe wears the polish off
-  Eyes: Bright, quick to laugh
-  Notable: Comes home sun-worn and leaner than he left, the polish replaced by real grit
+  Build: Sprawls, lounges and jokes — the "Adonis" nickname is his circle's; he has "a handsome head" and "handsome eyes," and boasts of having "had on the gloves with many a famous ring champion"
+  Notable: In Africa he becomes "a serious-minded man of a taciturn disposition" while searching for Reuel — the polish worn off, the humor still his
 
   Never converted into a solemn man — just tested, and it shows in how he carries himself afterward, not in a personality change.
 relations:
@@ -29,7 +27,7 @@ relations:
     relation_type: travels-with
   - target: cora-scott
     relation_type: courts
-    attitude: dismissive at first, resolves to marry her after Africa
+    attitude: jokes about "girls of the period," then resolves in the cell to marry her
 ---
 
-Molly's brother, nicknamed "Adonis," an easygoing member of Boston's moneyed set who joins Reuel's expedition to [[Meroe]] more for the adventure than the archaeology, and saves Reuel's life during a leopard attack on the journey there. After Reuel's disappearance he refuses to leave Africa without him, is captured alongside [[Jim Titus]] by Telassar's guards, and finds both the hidden city's treasure and Titus's dying confession in the same night. He returns home a steadier man than he left, done with dismissing love as beneath him.
+Molly's brother, nicknamed "Adonis," an easygoing member of Boston's moneyed set who joins Reuel's expedition to [[Meroe]] more for the adventure than the archaeology, and saves Reuel's life during a leopard attack on the journey there. After Reuel's disappearance he refuses to leave Africa without him, is captured alongside [[Jim Titus]] by Telassar's guards, and finds the hidden treasure with Titus — and the serpents — in the same night, waking unconscious before the dying Titus's confession to Reuel. In the cell he resolves to go home and marry Cora Scott, though he'd sworn he'd be "drawn and quartered" first. In the end he stands beside Ai and Ababdis to greet Aubrey with "Welcome, murderer!"

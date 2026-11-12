@@ -14,20 +14,20 @@ casting_notes: >-
   has always half-suspected it and hidden it deliberately. Nothing about
   his casting should telegraph the Telassar reveal before it lands.
 physical_description: |
-  Race: Of unstated ancestry — classmates guess Italian, Japanese, anything but the truth; later revealed as the last heir of the Telassar royal line
-  Build: Tall, spare, restless energy held under careful control
-  Hair: Very dark, worn short
-  Eyes: Dark, unusually intense — noted by classmates as almost hypnotic
-  Notable: A lotus-lily birthmark carried since childhood, concealed the same way he conceals everything else about himself
+  Race: Of unstated ancestry — classmates guess Italian, Japanese, anything but the truth; skin "white, but of a tint suggesting olive," an almost sallow color; later revealed as an heir of the Telassar royal line
+  Build: Vast breadth of shoulder, strong throat, long limbs, sinewy hands — "the head of an athlete"; a plain face that his grave, sweet smile transforms
+  Hair: Black, straight, thick and smooth, closely cut
+  Eyes: A very bright, piercing gray — courageous, keen and shrewd
+  Notable: A lotus-lily birthmark on his breast, carried since childhood, concealed the same way he conceals everything else about himself
 
-  In Telassar, later dressed in the gold and lotus-purple regalia of King Ergamenes.
+  In Telassar, later dressed in white silk like Ai's with golden clasps and belts, a jewelled dagger in place of his revolver, and the crown whose centre stone is the black diamond of Senechus.
 relations:
   - target: dianthe-lusk
-    relation_type: half-sibling
-    attitude: devoted, unaware until Jim Titus's deathbed confession
+    relation_type: sibling
+    attitude: devoted, unaware until Jim Titus's deathbed confession (Jim calls her Reuel's "own sister, the half-sister of Aubrey")
   - target: aubrey-livingston
-    relation_type: half-sibling
-    attitude: unaware for most of the story, both sides
+    relation_type: sibling
+    attitude: unaware for most of the story, both sides; Hannah calls Aubrey Dianthe's "own blood brother," Jim calls him Reuel's "half-brother"
   - target: aubrey-livingston
     relation_type: rival
     attitude: increasingly bitter, on both sides
@@ -42,7 +42,7 @@ relations:
     relation_type: rules
   - target: house-of-telassar
     relation_type: member
-    attitude: last-surviving heir of the direct line, crowned King Ergamenes
+    attitude: hailed as the long-awaited heir, crowned King Ergamenes
 ---
 
-A gifted, friendless Harvard medical student who specializes in brain disease and, privately, in mesmerism — a "hidden self" he keeps as carefully concealed as his own ancestry, which even his closest friend has quietly known about since they met. He revives [[Dianthe Lusk]] after a train wreck leaves her presumed dead, falls in love with her, and marries her before shipping out on an expedition to [[Meroe]] to earn the money their life together needs. In Africa, grief and a lotus-lily birthmark he's carried since childhood lead him into the hidden city of [[Telassar]], where he's crowned King Ergamenes — heir to a royal line whose last unknowing daughter was his own mother, [[Mira]]. He returns to America too late to save Dianthe, sees [[Aubrey Livingston]] answer for it, and goes back to Telassar to rule beside [[Queen Candace]], uneasy to the end about how much of the outside world is closing in on his people's hiding place.
+A gifted, friendless Harvard medical student who specializes in brain disease and, privately, in mesmerism — a "hidden self" he keeps as carefully concealed as his own ancestry, which even his closest friend has quietly known about since they met. He revives [[Dianthe Lusk]] after a train wreck leaves her presumed dead, falls in love with her, and marries her the morning he sails on an expedition to [[Meroe]] to earn the money their life together needs. In Africa, grief drives him into the pyramid, and he wakes in the hidden city of [[Telassar]], where the lotus-lily birthmark he's carried since childhood marks him out and he's crowned King Ergamenes — his mother, [[Mira]], having examined that mark by candlelight when he was a boy. He returns to America too late to save Dianthe, sees [[Aubrey Livingston]] answer for it, and goes back to Telassar to rule beside [[Queen Candace]], uneasy to the end about how much of the outside world is closing in on his people's hiding place.

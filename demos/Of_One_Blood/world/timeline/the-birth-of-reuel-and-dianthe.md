@@ -8,4 +8,4 @@ canon_status: established
 tags: [backstory]
 ---
 
-Mira's first two children by the elder Dr. Livingston are born and, in time, given away or sold off separately — Reuel eventually reaching the North, Dianthe raised to become a touring singer. Neither grows up knowing the other exists.
+Mira's first two children, Reuel and then a daughter, Dianthe, are born while the elder Dr. Livingston "fairly worshipped" the girl. The novel never says how they came to be raised apart: Reuel remembers his mother examining his breast by candlelight and has sent money to his "granny," while Dianthe's schooling was at Fisk, and Hannah says the Doctor kept up Mira until he married a white lady from Charleston.
