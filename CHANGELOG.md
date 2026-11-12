@@ -124,6 +124,11 @@ Not yet released.
   which also misplaced cues in Cue Sheet and BBC Radio Script exports.
 - Transcript Export no longer shows an all-caps `SHOT:` line (misread by
   Fountain as a character cue) as a speaker.
+- **Reviewing a file in Check for LoreFountain File Updates no longer blocks
+  the diff.** The "Replace with Current Template" prompt was a modal dialog
+  that froze the window the moment the diff opened, so the changes couldn't
+  be read before deciding. It is now a notification you answer after
+  reviewing; dismissing it keeps your copy.
 - **Check for LoreFountain Updates** now appears in the Command Palette; it
   shipped in 1.0.0 but was never listed there.
 

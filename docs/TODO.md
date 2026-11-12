@@ -10,10 +10,9 @@ The repository is public (as of 2026-10-02), recreated from the clean history so
 
 ## Before releasing 1.1.0
 
-1.1.0 is marked Unreleased in `CHANGELOG.md`. It carries shot maps and the upgrade experience (ADR-0038, ADR-0039), and it must not ship until the items below are settled.
+1.1.0 is marked Unreleased in `CHANGELOG.md`. Its code is already on `main` (shot-maps was merged). It carries shot maps and the upgrade experience (ADR-0038, ADR-0039), and it must not ship until the items below are settled.
 
 - **Bring ORUN to standard with Fix All.** 310 orphaned `(beat)` warnings across 16 scripts; extensions sit in parentheticals. Do this in a BlerdDimensions-repo session, not from here.
-- **Merge `feature/shot-maps` to `main`.** The branch is pushed to origin with no PR. Open one, review it, merge it.
 - **Live-test what unit tests only cover.** Computer-use sessions at tier "click" can't type or drag, so these were never exercised through the real UI:
   - the creation commands' name prompt (New Character, New Location and the rest);
   - Rename Entity's prompts and New Note's title prompt;
