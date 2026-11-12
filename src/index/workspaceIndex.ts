@@ -24,6 +24,7 @@ import { getWorkspaceFolders } from '../config/workspaceConfig';
 import { removeCueSidecar } from '../cues/sidecar';
 import type { ScriptIssueEntry, ScriptIssueSink } from '../diagnostics/scriptIssues';
 import { removeShotSidecar } from '../shots/sidecar';
+import { removePageSidecar } from '../comics/sidecar';
 import { buildIndexFromDisk, reindexFile, removeFileFromIndex, type IndexBuildSummary, type ProjectAssetManifests } from './build';
 import { createSqlJsIndexStore } from './sqlJsStore';
 import type { IndexStore } from './store';
@@ -144,6 +145,7 @@ export class WorkspaceIndex implements vscode.Disposable {
       removeFileFromIndex(this.store, uri.fsPath, 'script');
       void removeCueSidecar(uri.fsPath);
       void removeShotSidecar(uri.fsPath);
+      void removePageSidecar(uri.fsPath);
       this.issueSink?.removed(uri.fsPath);
       this.changeEmitter.fire();
     });

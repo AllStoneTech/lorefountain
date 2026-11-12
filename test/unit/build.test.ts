@@ -205,6 +205,7 @@ describe('buildIndexFromDisk', () => {
       notes: [],
       shotManifestIssues: [],
       shotStats: { shots: 0, untagged: 0 },
+      pageStats: { scripts: 0, pages: 0, panels: 0, words: 0 },
     });
   });
 
@@ -949,5 +950,75 @@ describe('shot stats in the index build', () => {
       scripts: path.join(tmpRoot, 'scripts'),
     });
     expect(summary.shotStats).toEqual({ shots: 3, untagged: 2 });
+  });
+});
+
+describe('comic pages in the index build', () => {
+  let tmpRoot: string;
+  let store: IndexStore;
+  const folders = (root: string): Parameters<typeof buildIndexFromDisk>[1] => ({
+    world: path.join(root, 'world'),
+    glossary: path.join(root, 'world', 'glossary'),
+    timeline: path.join(root, 'world', 'timeline'),
+    scripts: path.join(root, 'scripts'),
+  });
+  const COMIC = [
+    'INT. THE HARBOR - DAWN',
+    '',
+    'PAGE: 1',
+    '',
+    'PANEL: Wide shot of the harbor.',
+    '',
+    'WINONA',
+    'We should go now.',
+    '',
+    'PAGE: 1',
+    '',
+    'PANEL: Close on her face.',
+    '',
+    'PAGE: 4',
+    '',
+    'PANEL: A late page.',
+    '',
+  ].join('\n');
+
+  beforeEach(async () => {
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'lorefountain-build-pages-test-'));
+    store = await createSqlJsIndexStore();
+  });
+
+  afterEach(async () => {
+    store.dispose();
+    await fs.rm(tmpRoot, { recursive: true, force: true });
+  });
+
+  it('writes the sidecar, counts pages, and reports page issues as warnings and notes', async () => {
+    const scriptPath = await writeFile(tmpRoot, 'scripts/issue1.fountain', COMIC);
+    await writeFile(tmpRoot, 'scripts/plain.fountain', 'INT. A - DAY\n\nMara waits.\n');
+
+    const summary = await buildIndexFromDisk(store, folders(tmpRoot));
+
+    expect(summary.pageStats).toEqual({ scripts: 1, pages: 3, panels: 3, words: 4 });
+    expect(await fs.readFile(scriptPath.replace(/\.fountain$/, '.pages.json'), 'utf8')).toContain('"pages"');
+    await expect(fs.access(path.join(tmpRoot, 'scripts', 'plain.pages.json'))).rejects.toThrow();
+
+    const entry = summary.warnings.find((warning) => warning.filePath === scriptPath);
+    expect(entry?.warnings.map((warning) => (warning as { code?: string }).code)).toContain('duplicate-page-number');
+    const notes = summary.notes.find((note) => note.filePath === scriptPath);
+    expect(notes?.notes.map((note) => note.code)).toContain('page-number-gap');
+    expect(summary.malformed).toEqual([]);
+  });
+
+  it('regenerates the sidecar on save and removes it when the pages are deleted', async () => {
+    const scriptPath = await writeFile(tmpRoot, 'scripts/issue1.fountain', COMIC);
+    const sidecarPath = scriptPath.replace(/\.fountain$/, '.pages.json');
+
+    const saved = await reindexFile(store, scriptPath, 'script');
+    expect(saved.ok && saved.warnings.map((warning) => (warning as { code?: string }).code)).toContain('duplicate-page-number');
+    expect(await fs.readFile(sidecarPath, 'utf8')).toContain('issue1.fountain');
+
+    await fs.writeFile(scriptPath, 'INT. A - DAY\n\nNo pages now.\n', 'utf8');
+    await reindexFile(store, scriptPath, 'script');
+    await expect(fs.access(sidecarPath)).rejects.toThrow();
   });
 });

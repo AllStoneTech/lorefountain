@@ -71,6 +71,13 @@ files there beyond the script itself.
   `<script-name>.shots.json` sidecar (line ranges, what's heard, entities,
   cue pointers per shot) for downstream tools; like the cue sidecar, it's
   regenerated on every save.
+- A comic script adds `PAGE:` and `PANEL:` lines (with ordinary dialogue
+  for balloons, plus `CAPTION:`, `SFX:` and `LAYOUT:`). `PAGE: 7 (SPLASH)`
+  opens a page, `PANEL: Wide shot of the harbor.` a panel. Leave a blank
+  line after `PAGE:` so other Fountain apps don't read it as a character.
+  Every script with a `PAGE:` line gets a `<script-name>.pages.json`
+  sidecar (pages, panels, lettering, word counts), regenerated on every
+  save. The Fountain Syntax help has the details.
 - Write a scene pause as `PAUSE:` (optionally `PAUSE: 2s`); a character's
   own pause stays a `(beat)` parenthetical inside their dialogue. Keep a
   speech and its parentheticals together with no blank lines — a blank

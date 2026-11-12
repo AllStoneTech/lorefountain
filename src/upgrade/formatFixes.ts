@@ -17,6 +17,9 @@
  * - `unforced-transition`: put Fountain's `>` force marker in front of a
  *   transition the spec only detects when forced (`FADE IN:`, `CUT TO
  *   BLACK.`). The words are untouched.
+ * - `misread-as-character` (comic scripts, ADR-0043): insert a blank line
+ *   after an all-caps convention line (`PAGE: 7`) that other Fountain apps
+ *   would read as a character cue. No words change.
  *
  * Exports {@link planLineFix} (one issue, for a quick fix) and
  * {@link planAllFixes} (a whole script, for Fix All).
@@ -39,6 +42,7 @@
  *   and counts it as needing a manual fix.
  */
 
+import { buildPageMap } from 'lorefountain-core/comics/pageMap';
 import { buildShotMap } from '../shots/shotMap';
 import { scanScript, type CharacterItem, type ScriptItem } from '../shots/scanScript';
 
@@ -56,7 +60,7 @@ export interface TextEditPlan {
 }
 
 /** The kinds of fix this module plans. */
-export type FormatFixKind = 'join' | 'recue' | 'pause' | 'force';
+export type FormatFixKind = 'join' | 'recue' | 'pause' | 'force' | 'blank';
 
 /** One planned fix for one issue. */
 export interface FormatFix {
@@ -78,7 +82,34 @@ export interface FixAllPlan {
 }
 
 /** Issue codes this module can fix. */
-export const FIXABLE_CODES: ReadonlySet<string> = new Set(['orphaned-parenthetical', 'bare-pause-line', 'unforced-transition']);
+export const FIXABLE_CODES: ReadonlySet<string> = new Set([
+  'orphaned-parenthetical',
+  'bare-pause-line',
+  'unforced-transition',
+  'misread-as-character',
+]);
+
+/** A fixable issue's code and 0-based line. */
+export interface FixableIssue {
+  code: string;
+  line: number;
+}
+
+/**
+ * Every fixable-code issue in a script: the shot map's, plus (for comic
+ * scripts) the page map's `misread-as-character`. Entities are irrelevant to
+ * format issues, so none are passed.
+ *
+ * @param text - The script's text.
+ * @returns Fixable issues in line order.
+ */
+export function findFixableIssues(text: string): FixableIssue[] {
+  const issues: FixableIssue[] = [...buildShotMap(text, []).issues, ...buildPageMap(text, []).issues];
+  return issues
+    .filter((issue) => FIXABLE_CODES.has(issue.code))
+    .map((issue) => ({ code: issue.code, line: issue.line }))
+    .sort((a, b) => a.line - b.line);
+}
 
 /** What occupies each physical line, as far as the planner cares. */
 type LineKind = 'blank' | 'heading' | 'directive' | 'action' | 'dialogue' | 'other';
@@ -95,7 +126,7 @@ interface ScriptContext {
  * Plan the fix for one issue at `line`, for a quick fix.
  *
  * @param text - The script's current text.
- * @param code - The issue code (`orphaned-parenthetical`, `bare-pause-line` or `unforced-transition`).
+ * @param code - The issue code (`orphaned-parenthetical`, `bare-pause-line`, `unforced-transition` or `misread-as-character`).
  * @param line - The issue's 0-based line.
  * @returns The fix, or `undefined` when no single standard fix applies.
  */
@@ -103,6 +134,7 @@ export function planLineFix(text: string, code: string, line: number): FormatFix
   const context = analyze(text);
   if (code === 'bare-pause-line') return planPause(context, line);
   if (code === 'unforced-transition') return planForce(context, line);
+  if (code === 'misread-as-character') return planBlankAfter(context, line);
   if (code === 'orphaned-parenthetical') return planOrphan(context, line, new Map());
   return undefined;
 }
@@ -115,9 +147,7 @@ export function planLineFix(text: string, code: string, line: number): FormatFix
  */
 export function planAllFixes(text: string): FixAllPlan {
   const context = analyze(text);
-  const issues = buildShotMap(text, [])
-    .issues.filter((issue) => FIXABLE_CODES.has(issue.code))
-    .sort((a, b) => a.line - b.line);
+  const issues = findFixableIssues(text);
 
   /** Lines that will be dialogue once earlier fixes apply, with their speaker. */
   const becomingDialogue = new Map<number, CharacterItem | undefined>();
@@ -130,7 +160,9 @@ export function planAllFixes(text: string): FixAllPlan {
         ? planPause(context, issue.line)
         : issue.code === 'unforced-transition'
           ? planForce(context, issue.line)
-          : planOrphan(context, issue.line, becomingDialogue);
+          : issue.code === 'misread-as-character'
+            ? planBlankAfter(context, issue.line)
+            : planOrphan(context, issue.line, becomingDialogue);
     if (!fix || !fix.safeForFixAll) {
       skipped += 1;
       continue;
@@ -154,6 +186,20 @@ function planPause(context: ScriptContext, line: number): FormatFix | undefined 
     line,
     title: 'Replace with PAUSE:',
     edit: { start: { line, character: indent }, end: { line, character: text.trimEnd().length }, newText: 'PAUSE:' },
+    safeForFixAll: true,
+  };
+}
+
+/** Plan a blank line after an all-caps convention line that Fountain would read as a character cue. */
+function planBlankAfter(context: ScriptContext, line: number): FormatFix | undefined {
+  const text = context.lines[line];
+  const next = context.lines[line + 1];
+  if (text === undefined || next === undefined || next.trim() === '') return undefined;
+  return {
+    kind: 'blank',
+    line,
+    title: 'Add a blank line after this line (so other Fountain apps do not read it as a character)',
+    edit: { start: { line, character: text.length }, end: { line, character: text.length }, newText: context.eol },
     safeForFixAll: true,
   };
 }

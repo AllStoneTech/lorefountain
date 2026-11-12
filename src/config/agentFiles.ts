@@ -70,13 +70,18 @@ import * as path from 'node:path';
  * (shot tags, `PAUSE:`, the shot sidecar, valid dialogue blocks) and
  * `validate.js` to `3` (it now reads `shots.json` and reports the shot
  * checks) — with `esbuild.js`'s banner moved to `3` in the same commit.
+ *
+ * Comic scripts (ADR-0043) bump `AGENTS.md` to `4`, `script-writer.md` to `5`
+ * (the `PAGE:`/`PANEL:` convention, the `.pages.json` sidecar and its checks)
+ * and `validate.js` to `4` (it reports pages and panels) — `esbuild.js`'s
+ * banner moved to `4` in the same commit.
  */
 export const AGENT_FILE_VERSIONS: Record<string, number> = {
-  'AGENTS.md': 3,
+  'AGENTS.md': 4,
   [path.join('agents', 'world-builder.md')]: 3,
-  [path.join('agents', 'script-writer.md')]: 4,
+  [path.join('agents', 'script-writer.md')]: 5,
   [path.join('agents', 'initiator.md')]: 2,
-  [path.join('agents', 'validate.js')]: 3,
+  [path.join('agents', 'validate.js')]: 4,
 };
 
 /**

@@ -58,5 +58,29 @@
     "prefix": "dur",
     "body": "DURATION: ${1:description}",
     "description": "Insert a duration estimate for the current shot (Shot List Export, Pro), e.g. '4s', '~5 seconds'."
+  },
+  "Comic Page": {
+    "prefix": "page",
+    "body": "PAGE: ${1:1}
+
+PANEL: ${2:description}
+",
+    "description": "Open a comic page (and its first panel). Modifiers go in parentheses after the label: PAGE: 7 (SPLASH), PAGE: 2-3 (SPREAD), PAGE: 6 (TURN). Leave a blank line after PAGE: so other Fountain apps don't read it as a character cue."
+  },
+  "Comic Panel": {
+    "prefix": "panel",
+    "body": "PANEL: ${1:description}
+",
+    "description": "Open a comic panel on the current page. Panels are numbered by position; keep a lowercase word in the text so other Fountain apps don't read an all-caps line as a character cue."
+  },
+  "Comic Caption": {
+    "prefix": "caption",
+    "body": "CAPTION: ${1:text}",
+    "description": "A narration box in the current comic panel. Use CAPTION (NAME): text for a character's voice."
+  },
+  "Comic Layout": {
+    "prefix": "layout",
+    "body": "LAYOUT: ${1:description}",
+    "description": "Free-text panel-layout direction for the open comic panel (or the page, before its first panel)."
   }
 }

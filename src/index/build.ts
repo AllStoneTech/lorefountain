@@ -24,6 +24,11 @@
  * (`unmapped-shot-tag`, `shot-kind-mismatch`, `unused-shot-tag`) run on a
  * full build only, like the cue manifest check below.
  *
+ * A comic script's page sidecar (`.pages.json`, `comics/sidecar.ts`, from
+ * Core's page map, ADR-0043) is regenerated the same way, and its issues
+ * (`duplicate-page-number`, `panel-before-page`, the word-budget notes, ...)
+ * join the shot issues as warnings and notes, on save and on a full build.
+ *
  * A full {@link buildIndexFromDisk} additionally checks every tagged cue
  * (`cues/parseCues.ts`'s `[tag]` syntax) against the project's audio manifest
  * (`assets/audioManifest.ts`), reporting a per-script warning for any tag with
@@ -103,6 +108,8 @@ import {
   type ShotTagWarning,
 } from '../assets/shotManifest';
 import { updateCueSidecar } from '../cues/sidecar';
+import { updatePageSidecar } from '../comics/sidecar';
+import type { PageMapResult, ScriptPageIssue } from 'lorefountain-core/comics/pageMap';
 import { blankBoneyard } from '../fountain/boneyard';
 import type { ScriptShotIssue, ShotMapEntity, ShotMapResult } from '../shots/shotMap';
 import { updateShotSidecar } from '../shots/sidecar';
@@ -151,14 +158,15 @@ export type IndexWarning =
   | ScriptDriftWarning
   | CueManifestWarning
   | ShotTagWarning
-  | ScriptShotIssue;
+  | ScriptShotIssue
+  | ScriptPageIssue;
 
 /**
  * A per-file note: informational, softer than a warning, never failing
  * anything (`bare-pause-line`, `ambiguous-location`). Notes are reported in
  * their own section so they don't dilute real warnings.
  */
-export type IndexNote = ScriptShotIssue;
+export type IndexNote = ScriptShotIssue | ScriptPageIssue;
 
 /** One file that parsed successfully but had a non-blocking warning (misplaced field, unusable Order/Production Code, or Production Code drift). */
 export interface IndexBuildWarning {
@@ -219,6 +227,8 @@ export interface IndexBuildSummary {
   shotManifestIssues: ShotManifestIssue[];
   /** Explicit `SHOT:` lines across every script, and how many have no `[tag]` yet (informational, for the post-upgrade project summary). */
   shotStats: { shots: number; untagged: number };
+  /** Comic scripts (those with an explicit `PAGE:`) and their pages, numbered panels and lettered words, for the validator's report. */
+  pageStats: { scripts: number; pages: number; panels: number; words: number };
 }
 
 /**
@@ -294,6 +304,7 @@ export async function buildIndexFromDisk(
     notes: [],
     shotManifestIssues: [],
     shotStats: { shots: 0, untagged: 0 },
+    pageStats: { scripts: 0, pages: 0, panels: 0, words: 0 },
   };
 
   const entityFiles = (await listFilesWithExtension(folders.world, '.md', ENTITY_EXCLUDED_SUBDIRS)).filter(
@@ -352,6 +363,13 @@ export async function buildIndexFromDisk(
       summary.scriptCount += 1;
       const cues = await updateCueSidecar(filePath, text);
       const shotMap = await updateShotSidecar(filePath, text, shotEntities);
+      const pageMap = await updatePageSidecar(filePath, text, shotEntities);
+      if (pageMap.hasPages) {
+        summary.pageStats.scripts += 1;
+        summary.pageStats.pages += pageMap.pages.filter((page) => !page.implicit).length;
+        summary.pageStats.panels += pageMap.totals.panels;
+        summary.pageStats.words += pageMap.totals.words;
+      }
       for (const shot of shotMap.shots) {
         if (shot.tag !== undefined) usedShotTags.add(shot.tag);
         // Implicit shot 0s are never tagged; count only explicit SHOT: lines.
@@ -363,7 +381,7 @@ export async function buildIndexFromDisk(
 
       const { script, warnings } = parseScriptTitlePage(text, { id: idFromFilePath(filePath), filePath });
       store.upsertScript(script);
-      const { warnings: shotWarnings, notes } = splitShotIssues(shotMap);
+      const { warnings: shotWarnings, notes } = splitScriptIssues(shotMap, pageMap);
       const allWarnings: IndexWarning[] = [
         ...warnings,
         ...findUnmappedCueTags(cues, audioManifest),
@@ -433,10 +451,12 @@ export async function reindexFile(
 
   if (kind === 'script') {
     await updateCueSidecar(filePath, text);
-    const shotMap = await updateShotSidecar(filePath, text, shotMapEntitiesFrom(store));
+    const entities = shotMapEntitiesFrom(store);
+    const shotMap = await updateShotSidecar(filePath, text, entities);
+    const pageMap = await updatePageSidecar(filePath, text, entities);
     // Per-script format checks run on save too; manifest cross-checks stay
     // full-build only (see the module doc comment).
-    const { warnings: shotWarnings, notes } = splitShotIssues(shotMap);
+    const { warnings: shotWarnings, notes } = splitScriptIssues(shotMap, pageMap);
 
     const priorProductionCode = store.getScriptByPath(filePath)?.productionCode;
     const { script, warnings } = parseScriptTitlePage(text, { id, filePath });
@@ -537,13 +557,19 @@ function shotMapEntitiesFrom(store: IndexStore): ShotMapEntity[] {
 }
 
 /**
- * Split a shot map's per-script issues into warnings and notes by severity.
+ * Split a script's shot-map and page-map issues into warnings and notes by
+ * severity. Comic page issues (ADR-0043) ride the same channels as shot
+ * issues: warnings in the Output/Problems panel, info as notes, never failing.
  *
  * @param shotMap - The result of `updateShotSidecar` for one script.
+ * @param pageMap - The result of `updatePageSidecar` for the same script.
  * @returns Warning-severity issues and info-severity notes, each in line order.
  */
-function splitShotIssues(shotMap: ShotMapResult): { warnings: ScriptShotIssue[]; notes: IndexNote[] } {
-  const byLine = [...shotMap.issues].sort((a, b) => a.line - b.line);
+function splitScriptIssues(
+  shotMap: ShotMapResult,
+  pageMap: PageMapResult,
+): { warnings: (ScriptShotIssue | ScriptPageIssue)[]; notes: IndexNote[] } {
+  const byLine = [...shotMap.issues, ...pageMap.issues].sort((a, b) => a.line - b.line);
   return {
     warnings: byLine.filter((issue) => issue.severity === 'warning'),
     notes: byLine.filter((issue) => issue.severity === 'info'),

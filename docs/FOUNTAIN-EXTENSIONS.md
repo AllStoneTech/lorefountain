@@ -16,6 +16,8 @@ LoreFountain **extends Fountain and never changes it** (ADR-0040).
 |---|---|---|---|
 | Shot | `SHOT: <description>` | Action line | 0.x (shot list), tags/sidecar in 1.1.0 |
 | Shot details | `POSE:`, `LIGHT:`, `DURATION:` | Action line | 0.x |
+| Comic page and panel | `PAGE: <label> (<modifiers>)`, `PANEL: <description>` | Action line | Unreleased (ADR-0043) |
+| Comic lettering and layout | `CAPTION:`, `LAYOUT:` (with `SFX:`, dialogue, `SHOT:`, `POSE:`, `LIGHT:`) | Action line, dialogue | Unreleased (ADR-0043) |
 | Scene pause | `PAUSE:` or `PAUSE: 2s` | Action line | 1.1.0 |
 | Sound cues | `SFX:`, `MUSIC:`, `AMB:` | Action line | 0.x |
 | Tag | `[tag]` after the colon of `SHOT:`, `SFX:`, `MUSIC:`, `AMB:` | Text within an action line | cues 1.0.0, shots 1.1.0 |
@@ -36,6 +38,18 @@ A convention line is an action line that starts, in capitals and at the start of
 - Shots are numbered within each scene from 1. Material before a scene's first `SHOT:` belongs to an unnumbered shot 0.
 - `DURATION:` is stored exactly as written. If it contains a number of seconds (`4s`, `2.5 sec`, `about 3 seconds`), the shot map also records the number.
 - Output: the derived `<script>.shots.json` sidecar, rebuilt on every save and never hand-edited.
+
+### Comic pages and panels
+
+The full decision record is ADR-0001 in LoreFountain-Core (`docs/DECISIONS.md`); ADR-0043 here covers the extension's side.
+
+- `PAGE: <label> (<modifiers>)` opens a page. The label is a number (`7`), a range (`2-3`, a spread) or free text (`INSIDE FRONT COVER`). Trailing `(...)` holds comma-separated modifiers, case-insensitive: `SPLASH`, `SPREAD`, `TURN`; others are kept and ignored. A bare `PAGE TURN` line is not recognized (it would be a character cue); write `PAGE: 6 (TURN)`.
+- `PANEL: <description>` opens a panel on the current page and is numbered 1.. by position. Panels before any `PAGE:` belong to an implicit page 0.
+- `CAPTION: text` or `CAPTION (SPEAKER): text` is a narration box. `SFX: text` is a lettered effect. A character cue with dialogue is a balloon (`O.P.`/`O.S.` set off-panel, `^` dual dialogue sets simultaneous). `LAYOUT:` is free text on the open panel, or on the page before its first panel. `SHOT:`, `POSE:`, `LIGHT:` and plain action inside a panel are art direction.
+- A page is not a scene: scene headings neither open nor close a page or panel, and each panel records the scene in effect where it opens. A script is a comic when it has at least one `PAGE:` line outside a boneyard.
+- `SFX:` is shared with audio: it is lettering in a panel and still a cue in `.cues.json`, whose `[tag]` is checked against `audio.json`. Leave comic sound effects untagged unless the script also feeds audio.
+- Words count balloons and captions only; sound effects and parentheticals are not counted.
+- Output: the derived `<script>.pages.json` sidecar (`schema_version` 1), rebuilt on every save and never hand-edited, written only for a script with an explicit `PAGE:` and removed when the pages go.
 
 ### Scene pauses
 
@@ -85,12 +99,18 @@ Reported in the Problems panel, the Output channel and `node agents/validate.js`
 | Duplicate `Order` in a season | Warning | Display falls back to file-name order |
 | Production Code drift on save | Warning | A script's code changed between saves |
 | Duplicate Production Code | Error | An identity collision; the validator exits 1 |
+| `duplicate-page-number` | Warning | A page number used twice, an overlapping range, or a repeated text label |
+| `page-out-of-order` | Warning | A page number lower than the one before it |
+| `panel-before-page`, `content-outside-panel`, `missing-page-label` | Warning | A panel with no page, lettering outside a panel, or a `PAGE:` with no label |
 | `bare-pause-line` | Note | Plain action that looks like a scene pause |
 | `ambiguous-location` | Note | A scene heading's place matches more than one entity |
 | `unused-shot-tag` | Note | A manifest entry no script uses |
 | `unforced-transition` | Note | A transition such as `FADE OUT.` that Fountain recognizes only with a leading `>` |
+| `page-number-gap`, `empty-page`, `missing-panel-description`, `splash-multiple-panels`, `spread-without-range` | Note | Page-structure oddities in a comic script |
+| `many-panels`, `many-balloons`, `long-balloon`, `long-panel-dialogue` | Note | Word-budget guidance: over 9 panels on a page, 5 balloons in a panel, 25 words in a balloon, 40 words of dialogue in a panel |
+| `misread-as-character` | Note | An all-caps convention line (`PAGE: 7`) with text directly under it, which other Fountain apps read as a character cue |
 
-Notes never fail a validator run. The quick fixes and **Fix All Script Formatting Issues** handle the orphaned parenthetical, the bare pause line and the unforced transition.
+Notes never fail a validator run. The quick fixes and **Fix All Script Formatting Issues** handle the orphaned parenthetical, the bare pause line, the unforced transition and `misread-as-character` (a blank line is inserted).
 
 ## Keeping this file current
 

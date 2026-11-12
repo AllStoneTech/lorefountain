@@ -18,6 +18,7 @@
     { "include": "#title-page" },
     { "include": "#cue-prefix" },
     { "include": "#shot-prefix" },
+    { "include": "#comic-prefix" },
     { "include": "#emphasis" }
   ],
   "repository": {
@@ -93,6 +94,13 @@
         "1": { "name": "support.function.shot-prefix.lorefountain" },
         "2": { "name": "variable.other.asset-tag.lorefountain" },
         "3": { "name": "support.function.shot-prefix.lorefountain" }
+      }
+    },
+    "comic-prefix": {
+      "match": "^\\s*((?:PAGE|PANEL|CAPTION|LAYOUT):)",
+      "name": "support.function.comic-prefix.lorefountain",
+      "captures": {
+        "1": { "name": "support.function.comic-prefix.lorefountain" }
       }
     },
     "emphasis": {

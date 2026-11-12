@@ -45,6 +45,7 @@ note in the **Problems** panel. It never guesses what you meant.
 | LoreFountain shot | `SHOT:`, then `POSE:`, `LIGHT:`, `DURATION:` | `SHOT: WIDE on the dock` |
 | LoreFountain scene pause | `PAUSE:`, with an optional length | `PAUSE: 2s` |
 | LoreFountain sound cue | `SFX:`, `MUSIC:` or `AMB:` | `SFX: a door slams` |
+| LoreFountain comic page and panel | `PAGE:` and `PANEL:`, with `CAPTION:` and `LAYOUT:` | `PAGE: 7 (SPLASH)` |
 | LoreFountain tag | `[tag]` right after `SHOT:`, `SFX:`, `MUSIC:` or `AMB:` | `SFX: [door-slam] a door slams` |
 | LoreFountain episode keys | `Order:` and `Production Code:` on the title page | `Production Code: 1x03` |
 
@@ -423,6 +424,8 @@ every save:
 - `<script>.shots.json`, the shot map: each shot's lines, what's heard in
   it, the entities it mentions, and the cues that start in it.
 - `<script>.cues.json`: every sound cue.
+- `<script>.pages.json`, for comic scripts: each page and panel (see
+  *Comic scripts* below).
 
 Never edit those files by hand; they are overwritten on the next save.
 Writing the conventions is free in any project. Exporting them as a shot
@@ -622,6 +625,70 @@ Rows of shelves vanish into the dark.
 - LoreFountain warns about a value it can't use and ignores it. Two
   scripts with the same production code are reported as an error.
 
+### Comic scripts: pages and panels
+
+A comic script is written as a Fountain script with two more convention
+lines: `PAGE:` opens a page and `PANEL:` opens a panel on it. Dialogue is
+ordinary Fountain dialogue (each balloon is a character cue and its
+speech), and the rest are more convention lines.
+
+```fountain
+INT. THE HARBOR - DAWN
+
+PAGE: 7 (SPLASH)
+
+PANEL: Wide shot of the harbor. WINONA stands on the pier.
+POSE: Winona, arms folded
+
+CAPTION: Dawn, 1925.
+
+SFX: KRAAAW
+
+WINONA (O.P.)
+(whispering)
+We should go.
+
+PAGE: 8
+
+PANEL: Close on her boots.
+```
+
+- `PAGE: 7` opens a page. The label is a number, a range for a spread
+  (`PAGE: 2-3`) or free text (`PAGE: INSIDE FRONT COVER`). A trailing
+  `(...)` adds comma-separated modifiers: `SPLASH`, `SPREAD`, `TURN` (a
+  page-turn reveal). Others are kept and ignored.
+- `PANEL:` opens a panel on the current page, with the art direction as
+  its text. Panels are numbered 1, 2, 3 on each page by position.
+- `CAPTION: text` is a narration box. `CAPTION (WINONA): text` puts it in
+  a character's voice. `SFX: KRAAAW` is a lettered sound effect.
+- A character cue with its dialogue is a balloon. `(O.P.)`/`(O.S.)` marks
+  it off panel; a parenthetical belongs to the speech it sits in.
+- `LAYOUT:` is free-text panel layout direction. `SHOT:`, `POSE:` and
+  `LIGHT:` inside a panel give the artist camera, pose and lighting.
+  Other action in a panel is more direction for the artist.
+- A page is not a scene. Scene headings (`INT.`/`EXT.`) don't open or
+  close a page or panel, so put one at each change of place or time.
+- **Leave a blank line after `PAGE:`**, and keep a lowercase word in
+  `PANEL:` text. Fountain reads an all-caps line with text directly under
+  it as a character cue, so another app would print `PAGE: 7` as a
+  speaker. LoreFountain reads it correctly either way, adds a note, and
+  the quick fix inserts the blank line. Speakers also need a blank line
+  before them, so put each balloon in its own block.
+- `SFX:` is also a sound cue (`<script>.cues.json`). In a comic panel it
+  is the lettering. Leave comic sound effects without a `[tag]` unless the
+  same script also feeds an audio production.
+
+Every script with a `PAGE:` line gets a `<script>.pages.json` file next to
+it: each page and panel with its line range, balloons, captions, sound
+effects, the entities mentioned and word counts. It is rebuilt on every
+save; never edit it. LoreFountain warns about a page number used twice
+(including overlapping ranges), pages out of order, and a `PANEL:` or
+lettering that isn't inside a page or panel. It adds notes for a gap in
+page numbers, an empty page, a panel with no description, a splash with
+more than one panel, a spread without a range, and an over-long panel
+(more than 9 panels on a page, 5 balloons in a panel, 25 words in a
+balloon or 40 in a panel). Notes never fail anything.
+
 ## Problems LoreFountain reports
 
 Script problems appear in the **Problems** panel and as squiggles on the
@@ -635,6 +702,9 @@ project at once.
   convention line interrupts the speech.
 - **A plain-action pause** such as `Beat.`. The fix replaces it with
   `PAUSE:`.
+- **An all-caps convention line with text under it** (`PAGE: 7` straight
+  above `PANEL:`), which other Fountain apps read as a character. The fix
+  inserts a blank line after it.
 
 ## Further reading
 

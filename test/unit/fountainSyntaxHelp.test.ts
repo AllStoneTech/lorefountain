@@ -12,6 +12,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { buildPageMap } from 'lorefountain-core/comics/pageMap';
 import { extractCues } from '../../src/cues/parseCues';
 import { matchPrefixLine } from '../../src/fountain/conventions';
 import { parseFountain, type FountainToken } from '../../src/fountain/parse';
@@ -371,5 +372,25 @@ describe('fountainSyntax.md examples', () => {
     expect(script.frontmatter).toEqual({ title: 'The Long Night', order: 3, productionCode: '1x03' });
     expect(warnings).toEqual([]);
     expect(parseScriptTitlePage('Title: X\nProduction Code: 12x105\n', { id: 'x', filePath: 'x.fountain' }).script.frontmatter.productionCode).toBe('12x105');
+  });
+
+  it('comic scripts: the page and panel example builds the pages the page describes, with no issues', () => {
+    const text = example('PAGE: 7 (SPLASH)');
+    const map = buildPageMap(text, []);
+    expect(map.hasPages).toBe(true);
+    expect(map.issues).toEqual([]);
+    expect(map.pages.map((page) => [page.label, page.modifiers, page.panels.length])).toEqual([
+      ['7', ['SPLASH'], 1],
+      ['8', [], 1],
+    ]);
+    const lettering = map.pages[0].panels[0].lettering;
+    expect(lettering.map((entry) => entry.kind)).toEqual(['caption', 'sfx', 'balloon']);
+    expect(lettering[2]).toMatchObject({ speaker: 'WINONA', offPanel: true, text: 'We should go.' });
+    expect(map.pages[0].panels[0].pose).toBe('Winona, arms folded');
+  });
+
+  it('comic scripts: stacking PAGE: over PANEL: is the misread-as-character note the page describes', () => {
+    const codes = buildPageMap('PAGE: 7\nPANEL: WIDE of the harbor.\n', []).issues.map((issue) => issue.code);
+    expect(codes).toContain('misread-as-character');
   });
 });

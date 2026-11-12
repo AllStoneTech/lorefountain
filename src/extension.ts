@@ -46,6 +46,7 @@ import { scaffoldStoryOverviewIfAbsent } from './config/storyOverview';
 import { getWorkspaceFolders } from './config/workspaceConfig';
 import { relocateCueSidecar } from './cues/sidecar';
 import { relocateShotSidecar } from './shots/sidecar';
+import { relocatePageSidecar } from './comics/sidecar';
 import { WorkspaceIndex } from './index/workspaceIndex';
 import type { IndexStore } from './index/store';
 import { getLicenseStatus, getOrCreateDeviceId } from './licensing/licenseState';
@@ -170,6 +171,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         if (oldUri.fsPath.toLowerCase().endsWith('.fountain')) {
           void relocateCueSidecar(oldUri.fsPath, newUri.fsPath);
           void relocateShotSidecar(oldUri.fsPath, newUri.fsPath);
+          void relocatePageSidecar(oldUri.fsPath, newUri.fsPath);
         }
       }
     }),

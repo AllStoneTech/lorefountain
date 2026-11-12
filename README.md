@@ -68,7 +68,10 @@ regenerated. `SHOT:` lines can carry a `[tag]` too, mapped to the still or
 clip that fills them in `assets/manifests/shots.json`, and every script
 with shots gets a `.shots.json` sidecar (each shot's line range, narration,
 pauses, entities, and cue pointers) so a video pipeline can assemble an
-episode without parsing Fountain itself.
+episode without parsing Fountain itself. Comic scripts use `PAGE:` and
+`PANEL:` lines (ordinary Fountain action, with dialogue for balloons) and get
+a `.pages.json` sidecar of pages, panels, lettering and word counts, with
+page-number and word-budget checks.
 
 **LoreFountain Pro** adds Continuity Management, an Entity Graph view,
 Story-Bible Export, BBC Radio Drama Export, SFX/Cue-Sheet Export, and Shot

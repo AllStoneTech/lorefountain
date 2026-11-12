@@ -25,6 +25,14 @@
  * ambiguous heading location, an unused shots.json entry) are printed last
  * and never fail the run. A malformed or schema-invalid manifest, shots.json
  * included, is reported as a notice and treated as empty, like the other five.
+ *
+ * Comic scripts (a `PAGE:` line, ADR-0043) are reported with a one-line
+ * pages/panels/words total, and their page checks ride the same channels:
+ * `duplicate-page-number`, `page-out-of-order`, `panel-before-page`,
+ * `content-outside-panel` and `missing-page-label` are warnings; the rest
+ * (`page-number-gap`, `empty-page`, the word-budget notes, ...) are notes.
+ * None of them fail the run. Each such script also gets its `.pages.json`
+ * sidecar written, as the shot checks write `.shots.json`.
  */
 
 import * as path from 'node:path';
@@ -108,6 +116,13 @@ function printReport(root: string, summary: IndexBuildSummary): void {
   console.log(
     `${summary.entityCount} entities, ${summary.glossaryCount} glossary terms, ${summary.eventCount} Timeline events, ${summary.scriptCount} scripts parsed.\n`,
   );
+
+  const { pageStats } = summary;
+  if (pageStats.scripts > 0) {
+    console.log(
+      `${pageStats.scripts} comic script(s): ${pageStats.pages} page(s), ${pageStats.panels} panel(s), ${pageStats.words} lettered word(s).\n`,
+    );
+  }
 
   const nothingToReport =
     summary.malformed.length === 0 &&

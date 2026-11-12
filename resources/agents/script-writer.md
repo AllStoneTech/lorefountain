@@ -1,4 +1,4 @@
-<!-- lorefountain-docs-version: 4 -->
+<!-- lorefountain-docs-version: 5 -->
 # LoreFountain — Script-Writing Reference
 
 Read this before creating or editing any `.fountain` file under `scripts/`.
@@ -9,7 +9,7 @@ Read this before creating or editing any `.fountain` file under `scripts/`.
 
 Scripts are 100% standard Fountain — scene headings, character cues, dialogue, parentheticals, transitions. Nothing LoreFountain-specific is required to make linking to the world work, and scripts stay fully portable to any other Fountain tool.
 
-LoreFountain *extends* Fountain with a few plain-English prefix lines (`SFX:`, `MUSIC:`, `AMB:`, `SHOT:`, `POSE:`, `LIGHT:`, `DURATION:`, `PAUSE:`) written as ordinary action lines, but it never changes how standard Fountain is read. Follow the Fountain spec exactly; when a script breaks it, LoreFountain parses it the way Fountain does and warns, rather than guessing what was meant.
+LoreFountain *extends* Fountain with a few plain-English prefix lines (`SFX:`, `MUSIC:`, `AMB:`, `SHOT:`, `POSE:`, `LIGHT:`, `DURATION:`, `PAUSE:`, and for comics `PAGE:`, `PANEL:`, `CAPTION:`, `LAYOUT:`) written as ordinary action lines, but it never changes how standard Fountain is read. Follow the Fountain spec exactly; when a script breaks it, LoreFountain parses it the way Fountain does and warns, rather than guessing what was meant.
 
 ### Dialogue blocks and pauses
 
@@ -153,6 +153,51 @@ Every script with at least one `SHOT:` line gets a `<script-name>.shots.json` si
 
 If a scene heading's setting matches more than one location entity (two "Basement"s), it's left unresolved and noted as `ambiguous-location`. Give one of them a more specific name or alias rather than guessing.
 
+### Comic scripts (pages and panels)
+
+A comic-book script is still plain Fountain. Two more prefix lines give it structure, and everything else is ordinary Fountain. Use them only when the writer is making a comic or graphic novel; a script with no `PAGE:` line is not a comic and is read exactly as before.
+
+| Line | Meaning |
+|---|---|
+| `PAGE: <label> (<modifiers>)` | Opens a page. The label is a number (`7`), a range for a spread (`2-3`) or free text (`INSIDE FRONT COVER`). Optional trailing `(...)` of comma-separated modifiers, case-insensitive: `SPLASH`, `SPREAD`, `TURN` (a page-turn reveal). Others are kept and ignored. |
+| `PANEL: <description>` | Opens a panel on the current page; the text is the art direction. Panels are numbered 1.. per page by position, so never write the number. |
+| `CAPTION: text` / `CAPTION (SPEAKER): text` | A narration box, optionally in a character's voice. One physical line. |
+| `SFX: text` | A lettered sound effect, where the text is the lettering (`SFX: KRAAAW`). |
+| Character cue + dialogue | A balloon. Cue extensions are kept; `(O.P.)` / `(O.S.)` mark it off panel; a parenthetical belongs to the speech it sits in. |
+| `LAYOUT: text` | Free-text panel layout direction (for the open panel, or the page before its first panel). |
+| `SHOT:`, `POSE:`, `LIGHT:` | Inside a panel: camera framing, pose and lighting for the artist. |
+| plain action | More artist direction inside a panel. |
+
+```fountain
+INT. THE HARBOR - DAWN
+
+PAGE: 7 (SPLASH)
+
+PANEL: Wide shot of the harbor. WINONA stands on the pier.
+POSE: Winona, arms folded
+
+CAPTION: Dawn, 1925.
+
+SFX: KRAAAW
+
+WINONA (O.P.)
+(whispering)
+We should go.
+```
+
+Rules to follow:
+
+- **A page is not a scene.** `PAGE:`/`PANEL:` never replace a scene heading. Keep real `INT.`/`EXT.` headings at each change of place or time (a scene heading does not open or close a page or panel); with none, the whole script is one scene.
+- **Leave a blank line after `PAGE:`, and keep a lowercase word in `PANEL:` text.** Fountain reads an all-caps line with text directly under it as a character cue, so other Fountain apps would print `PAGE: 7` / `PANEL: ...` stacked as a speaker. LoreFountain still reads it correctly and reports the info note `misread-as-character`. Put each speaker in its own block with a blank line before the cue, and keep a speech and its parentheticals together (no blank lines, as above).
+- **Do not write `PAGE TURN` as a line**: an all-caps line is a character cue. Write `PAGE: 6 (TURN)`.
+- **`SFX:` is shared with audio.** In a comic panel it is lettering, but it is also recorded as a sound cue in `.cues.json`, and a `[tag]` on it is checked against `audio.json`. Leave comic `SFX:` lines untagged unless the same script also feeds an audio production.
+- Word budgets are guidance: more than 9 panels on a page, more than 5 balloons in a panel, a balloon over 25 words or more than 40 words of dialogue in a panel each produce an info note. Keep lettering short.
+- No `[tag]` on `PAGE:`/`PANEL:` (panels are identified by position).
+
+Every script with at least one `PAGE:` line gets a `<script-name>.pages.json` sidecar next to it, regenerated on every save and never hand-edited; it is removed again if the script loses all its pages. It holds each page (`index`, `label`, `number`, `modifiers`, `lines`) and each panel (`number`, `description`, `shot`/`pose`/`light`/`layout`, `lettering` in reading order as balloons, captions and sound effects, `scene`, entity ids mentioned in the panel's direction text, and word counts), plus totals and the issues below. Never create or edit it yourself.
+
+`node agents/validate.js` reports a comic script's totals (pages, panels, lettered words) and these checks, none of which fail the run. Warnings: `duplicate-page-number` (also overlapping ranges and repeated text labels), `page-out-of-order`, `panel-before-page`, `content-outside-panel`, `missing-page-label`. Notes: `page-number-gap`, `empty-page`, `missing-panel-description`, `splash-multiple-panels`, `spread-without-range`, `misread-as-character`, `many-panels`, `many-balloons`, `long-balloon`, `long-panel-dialogue`. Fix the warnings before you finish. Renumbering pages is the writer's decision, so do not renumber unasked.
+
 ## Adding cues and shots when asked
 
 If the writer asks you to add SFX/MUSIC/AMB cues, SHOT/POSE/LIGHT/DURATION annotations, or PAUSE: lines to a scene — whether one you're writing fresh or one that's already there — write them directly using the conventions above, in the right place in the action. Choose values that fit what the scene already establishes: a `MUSIC:` cue's Role/Timing should match the moment's dramatic shape (a scene closing softly reads as `MUSIC: OUT`, a reveal reads as `MUSIC: STING`, a scene meant to run tense under dialogue reads as `MUSIC: BED IN`), and a `SHOT:`'s framing should match what the action already describes. This is the same editorial judgment you already use writing the action lines themselves — don't wait to be told the exact keyword for every cue, and don't ask the writer to fill them in themselves unless the scene genuinely doesn't give you enough to go on.
@@ -163,4 +208,4 @@ If the writer asks something like "which scenes have both X and Y in them" or "e
 
 ## Check your own work
 
-After creating or editing any scripts, run `node agents/validate.js` from the project root (this also regenerates every script's cue and shot sidecars). It has no VS Code dependency. Fix anything it reports before telling the writer you're done.
+After creating or editing any scripts, run `node agents/validate.js` from the project root (this also regenerates every script's cue, shot and page sidecars). It has no VS Code dependency. Fix anything it reports before telling the writer you're done.

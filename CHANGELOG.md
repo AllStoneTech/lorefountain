@@ -7,6 +7,30 @@ All notable changes to LoreFountain are documented here. This project follows
 
 On the local branch `feature/lorefountain-core`, not part of 1.1.0.
 
+### Added
+
+- **Comic scripts: `PAGE:` and `PANEL:`** (ADR-0043, built on Core's ADR-0001).
+  A script with a `PAGE: 7 (SPLASH)` line is read as a comic: pages, numbered
+  panels, `CAPTION:`, `SFX:` and `LAYOUT:` lines and ordinary dialogue as
+  balloons, with word counts. It is plain Fountain, so any other app still
+  opens it. Every comic script gets a derived `<script>.pages.json` sidecar
+  next to it, rebuilt on every save and removed when the pages go (it is
+  git-ignored like the other sidecars and follows a renamed script).
+- **Page checks** in the Problems panel, the Output channel and
+  `node agents/validate.js`: duplicate or out-of-order page numbers, a panel
+  with no page and lettering outside a panel are warnings; page-number gaps,
+  empty pages, word-budget notes and `misread-as-character` are notes.
+  None fail a validator run, which also prints the pages, panels and
+  lettered words in the project.
+- **Quick fix for `misread-as-character`**: inserts the blank line after an
+  all-caps `PAGE: 7` that other Fountain apps would read as a character cue;
+  **Fix All Script Formatting Issues** includes it.
+- Syntax colouring and `page`, `panel`, `caption`, `layout` snippets for the
+  new lines; the Fountain Syntax help, the scaffolded scripts README, the AI
+  agent docs (`AGENTS.md` and `agents/script-writer.md`, now version 4 and 5)
+  and `docs/FOUNTAIN-EXTENSIONS.md` describe the convention. Existing projects
+  are offered the updated docs by **Check for LoreFountain File Updates**.
+
 ### Changed
 
 - **The parsing code and config reading now come from LoreFountain-Core**

@@ -26,8 +26,7 @@ import { getWorkspaceFolders } from '../config/workspaceConfig';
 import { listFilesWithExtension } from '../index/build';
 import { FIX_SCRIPT_FORMATTING_COMMAND, toRange } from '../providers/scriptQuickFixes';
 import { registerTrackedCommand } from '../telemetry/trackedCommands';
-import { FIXABLE_CODES, planAllFixes } from '../upgrade/formatFixes';
-import { buildShotMap } from '../shots/shotMap';
+import { findFixableIssues, planAllFixes } from '../upgrade/formatFixes';
 
 /**
  * Register the Fix All command.
@@ -120,5 +119,5 @@ async function readScript(uri: vscode.Uri): Promise<string> {
 
 /** How many fixable-code issues a script still has. */
 function countFixableIssues(text: string): number {
-  return buildShotMap(text, []).issues.filter((issue) => FIXABLE_CODES.has(issue.code)).length;
+  return findFixableIssues(text).length;
 }

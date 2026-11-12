@@ -6,6 +6,23 @@ revisit.
 
 ---
 
+## ADR-0043 — Comic scripts in the extension: `PAGE:`/`PANEL:` adopted from Core
+
+**Date:** 2026-11-11 · **Status:** Accepted for the unreleased branch (the syntax itself is Core ADR-0001, still marked Proposed there)
+
+Core's ADR-0001 (`LoreFountain-Core/docs/DECISIONS.md`) defines the comic convention and builds the page map. This entry records only what the extension does with it. Same ground rule as ADR-0038 and ADR-0040: **extend Fountain, never change it.**
+
+1. **The sidecar is written here, like `.shots.json`.** `comics/sidecar.ts` calls Core's `buildPageMap` and `buildPageSidecar`, writes `<script>.pages.json` on every save and every reindex (`index/build.ts`, the same two call sites as the shot and cue sidecars), removes it when the script has no `PAGE:` line or is deleted (`workspaceIndex.ts`), and moves it with a renamed script (`extension.ts`). It is ignored by git (`*.pages.json`) and hidden from a script's children in the Scripts view. Core never writes (ADR-0042).
+2. **Page issues ride the shot-issue channels.** Warnings and notes from the page map join the shot-map ones per script (`splitScriptIssues`), so they reach the Problems panel, the Output channel and `validate.js` with no new UI. They have a line, so they become diagnostics; none are full-build-only. The validator never fails on them (they are warnings or notes, as shot issues are) and prints one line of pages, panels and lettered words. Word-budget thresholds are Core's `DEFAULT_PAGE_LIMITS`, not configurable here yet.
+3. **One new quick fix: `misread-as-character`.** The only formatting fix the convention needs is a blank line after an all-caps convention line with text under it. It adds no words and is safe for Fix All. `FIXABLE_CODES` now covers page-map issues as well as shot-map ones (`findFixableIssues`). Renumbering pages is out of scope: the writer's call.
+4. **`SFX:` stays shared with audio (the open question in Core's ADR, section 1).** The extension does not filter comic sound effects out of `.cues.json` or the `audio.json` tag check. The docs tell writers to leave comic `SFX:` untagged unless the script also feeds audio. If a project does both, a distinct `LETTER:` keyword would be the cleaner fix; that needs the owner's decision and a Core change.
+5. **Docs and agent files.** `docs/FOUNTAIN-EXTENSIONS.md`, the Fountain Syntax help (its example is parsed by a test), the scaffolded scripts README (version 4), `AGENTS.md` (4) and `agents/script-writer.md` (5) describe the convention; `validate.js`'s banner moves to 4 with them, so existing projects see all of it in **Check for LoreFountain File Updates**. Highlighting scopes `PAGE:`, `PANEL:`, `CAPTION:`, `LAYOUT:`; four snippets.
+6. **Not done.** A Pages/Panels tree in the Scripts view: the Scripts view shows no shot rows today, so there is no parallel to follow, and a new tree level should be designed on its own. Pro exports for comics (a lettering script), hover and completion, and tags on panels (Core defers them too).
+
+Revisit when: the owner confirms or changes Core's ADR-0001 (syntax names, `SFX:` sharing, thresholds); Core publishes a release, which this repo must then pin exactly (the schema is `schema_version` 1 and Core is 0.x).
+
+---
+
 ## ADR-0042 — The parsing core moves to LoreFountain-Core, a separate repo
 
 **Date:** 2026-11-06 · **Status:** Accepted (local branch, not yet pushed)
