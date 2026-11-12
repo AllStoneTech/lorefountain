@@ -37,8 +37,18 @@ export function registerInstallDemoCommand(context: vscode.ExtensionContext): vo
 
 async function installDemoCommand(): Promise<void> {
   const picked = await vscode.window.showQuickPick(
-    DEMO_CATALOG.map((demo) => ({ label: demo.label, description: demo.description, demo })),
-    { title: 'Install a LoreFountain Demo World', placeHolder: 'Choose a demo to download' },
+    DEMO_CATALOG.map((demo) => ({
+      label: demo.label,
+      description: `Best for: ${demo.useCase}`,
+      detail: demo.description,
+      demo,
+    })),
+    {
+      title: 'Install a LoreFountain Demo World',
+      placeHolder: 'Pick the demo closest to the kind of project you want to write',
+      matchOnDescription: true,
+      matchOnDetail: true,
+    },
   );
   if (!picked) return; // cancelled
 
