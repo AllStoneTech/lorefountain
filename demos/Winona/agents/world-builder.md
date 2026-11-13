@@ -1,4 +1,4 @@
-<!-- lorefountain-docs-version: 3 -->
+<!-- lorefountain-docs-version: 6 -->
 # LoreFountain — World-Building Reference
 
 Read this before creating or editing any file under `world/`. It works with any coding agent — no tool-specific syntax required.
@@ -7,7 +7,8 @@ Read this before creating or editing any file under `world/`. It works with any 
 
 ## Where things go
 
-- `world/OVERVIEW.md` is the project's single Story Overview — see "Story Overview format" below. There's only ever one of these per project, unlike every other item in this list.
+- `world/overview.lf.md` is the project's single Story Overview — see "Story Overview format" below. (Older projects had `world/OVERVIEW.md`; LoreFountain renames it to `overview.lf.md` the first time it opens the project. If you find the old name, treat it as the same file and don't create a second one.) There's only ever one of these per project, unlike every other item in this list.
+- `world/style.lf.md` is the project's optional style bible: one file for how the project *looks and feels* in every medium (comic, video, illustrated book). See "Style bible format" below. Also a singleton, and not an entity. Any file ending `.lf.md` is a LoreFountain project document, never an entity, glossary term or note: don't treat it as one, and a real entity named "Style" is the different file `world/style.md`.
 - Characters, locations, factions, objects, concepts, and arcs go directly in `world/` — one file per entity.
 - Terminology/glossary entries go in `world/glossary/`.
 - Half-formed ideas that aren't ready to be a real entity yet go in `world/notes/` — free-form Markdown, no frontmatter, no schema, never validated. If the writer describes something too vague to schema-fy ("what if the ship has a hidden deck"), put it here rather than forcing it into an entity file with guessed fields. Promote it to a real entity later, once there's enough to say.
@@ -102,7 +103,7 @@ Every field except `name` is optional — never guess a `chronological_order`, `
 
 ## Story Overview format
 
-`world/OVERVIEW.md` has a small YAML frontmatter block with four optional, genuinely universal fields — `title`, `pitch` (a one- or two-sentence logline), `tone`, `genre` — followed by plain-prose Markdown, same as an entity file's split. Only the frontmatter fields are schema-validated; the body below is free-form and nothing there is checked:
+`world/overview.lf.md` has a small YAML frontmatter block with four optional, genuinely universal fields — `title`, `pitch` (a one- or two-sentence logline), `tone`, `genre` — followed by plain-prose Markdown, same as an entity file's split. Only the frontmatter fields are schema-validated; the body below is free-form and nothing there is checked:
 
 ```markdown
 ---
@@ -134,6 +135,46 @@ genre: <e.g. speculative drama>
 ```
 
 Feel free to adjust the body's section headers if the project genuinely doesn't fit them (a game world might want "Factions" instead of "Key Characters," for instance) — only the four frontmatter fields above are ever validated; the body is a reference document for humans and AI agents, not a fixed format. Leave a frontmatter field out entirely rather than writing it blank if the writer hasn't told you its value — never guess a pitch, tone, or genre.
+
+## Style bible format
+
+`world/style.lf.md` is optional: one per-project file for visual and tonal style that comics, video and illustrated books all use. Like `overview.lf.md` it is a small YAML frontmatter block plus a free-form Markdown body. Read it before writing or editing anything visual (a comic script's panel descriptions, `SHOT:`/`LIGHT:` lines, a prompt for an image tool), and keep to it. The writer edits it in a guided form in VS Code ("Open as text" shows this raw file). Only the frontmatter is validated; every field is optional and unknown fields are kept:
+
+```markdown
+---
+medium: [comic, video]            # comic, video, illustrated-book, animation, audio; leave out for "all media"
+art_style: Inked 1920s pulp, flat colour, heavy blacks
+palette:                          # names and/or hex; QUOTE hex values, an unquoted # starts a YAML comment
+  - "Harbor teal #2a7f8e"
+  - "#d9a441"
+  - Bone white
+reference_images:                 # paths relative to the project root; a missing file is only a note
+  - assets/style/cover-mood.png
+avoid: [photorealism, 3D render look]     # negative prompts
+format:                           # per-medium hints, keyed by medium
+  comic: { trim_size: 6.625x10.25 in }
+  video: { aspect_ratio: "16:9" }
+lettering: Hand-lettered, all caps, rounded balloons   # comic lettering notes
+era_reference: 1925 pulp magazine covers
+---
+
+## Overall look
+## Characters
+## Color & light
+## Line & rendering
+## Framing & composition
+## Lettering (comic)
+## Motion & pacing (video)
+## Format notes
+## What to avoid
+```
+
+`medium`, `palette`, `reference_images`, `avoid` and `lettering` take either a list or a single string. The body headings are suggestions; a per-medium subsection (`### Comic`, `### Video`) is just a heading, not schema. Two rules:
+
+- **Per-character looks stay in the character's own file** (`physical_description`, and `looks`/`versions` in `assets/manifests/characters.json`). `style.lf.md`'s *Characters* section is only for rules that apply to the whole cast. Don't copy a character's description into it.
+- **`reference_images` are mood and style references**, not character sheets (those are asset manifest entries). You never create or edit the image files: a path the writer hasn't put there is a path that doesn't exist.
+
+Never invent style choices: leave a field out rather than guessing a palette or an art style the writer hasn't told you. `node agents/validate.js` reports a malformed `style.lf.md` as an error and a missing reference image as a note. The extension has no AI features; LoreFountain-Producer is what reads this file when it generates media.
 
 ## Asset manifests
 
