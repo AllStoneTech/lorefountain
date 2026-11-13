@@ -10,6 +10,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { comicSettingsFromConfig } from 'lorefountain-core/comics/limits';
+import { projectTypeFromConfig } from 'lorefountain-core/config/projectType';
 import {
   CONFIG_FILE_NAME,
   folderSettingsFromConfig,
@@ -278,5 +279,28 @@ describe('writeLoreFountainConfig', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect((result.config as Record<string, unknown>).futureFeature).toEqual({ enabled: true });
+  });
+
+  it('adds only project_type to an existing config, leaving every other key as it was', async () => {
+    // A config shaped like a real project's: custom folder names, no comic/export blocks.
+    const original = { folders: { scripts: 'scripts', world: 'world', imports: 'docs' } };
+    await fs.writeFile(path.join(tmpRoot, CONFIG_FILE_NAME), `${JSON.stringify(original, null, 2)}\n`, 'utf8');
+
+    await writeLoreFountainConfig(tmpRoot, { project_type: 'serialized_universe' });
+
+    const written = JSON.parse(await fs.readFile(path.join(tmpRoot, CONFIG_FILE_NAME), 'utf8')) as Record<string, unknown>;
+    expect(written).toEqual({ ...original, project_type: 'serialized_universe' });
+    expect(projectTypeFromConfig(written)).toEqual({ projectType: 'serialized_universe', issues: [] });
+  });
+
+  it('replaces a previous project_type and keeps the comic block', async () => {
+    await writeLoreFountainConfig(tmpRoot, { project_type: 'comic', comic: { preset: 'manga' } });
+    await writeLoreFountainConfig(tmpRoot, { project_type: 'prose' });
+
+    const result = await readLoreFountainConfig(tmpRoot);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.project_type).toBe('prose');
+    expect(result.config.comic).toEqual({ preset: 'manga' });
   });
 });

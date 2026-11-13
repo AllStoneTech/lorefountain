@@ -43,7 +43,7 @@ describe('checkAgentFileVersions', () => {
 
     const results = await checkAgentFileVersions(workspaceDir);
     const agentsMd = results.find((r) => r.relativePath === 'AGENTS.md');
-    expect(agentsMd).toMatchObject({ status: 'untracked', currentVersion: 6 });
+    expect(agentsMd).toMatchObject({ status: 'untracked', currentVersion: 7 });
   });
 
   it('reports a file behind the current version as stale', async () => {
@@ -76,7 +76,7 @@ describe('checkAgentFileVersions', () => {
     expect(results.length).toBeGreaterThan(0);
     expect(results.every((r) => r.status === 'missing')).toBe(true);
     const agentsMd = results.find((r) => r.relativePath === 'AGENTS.md');
-    expect(agentsMd).toMatchObject({ status: 'missing', currentVersion: 6 });
+    expect(agentsMd).toMatchObject({ status: 'missing', currentVersion: 7 });
   });
 
   it('reports validate.js current when its JS-style marker matches', async () => {

@@ -6,6 +6,30 @@ revisit.
 
 ---
 
+## ADR-0051 — `project_type`, and the "What kind of project is this?" prompt
+
+**Date:** 2026-11-13 · **Status:** Accepted (owner approved the design and the steps on 2026-11-13; the name `project_type`, the `serialized_universe` type and the prompt were the owner's calls). Core side: Core ADR-0007.
+
+**Decision.** `lorefountain.config.json` gains an optional `project_type`: `screenplay`, `tv_series`, `serialized_universe`, `audio_drama`, `comic`, `prose`, `tabletop` or `custom`. It names the *writing format*, never the output format, which is the Producer's concern. A type is a label with recommendations: it never switches a convention off and never overrides an explicit setting, and a project with no `project_type`, or `custom`, behaves exactly as before.
+
+**What it drives in this release.** It is recorded and shown in the dropdown, the config schema, the help page (`resources/help/projectType.md`), the demos' configs (a test keeps them in step with the Install Demo catalog) and `AGENTS.md` (version 7), which tells an AI agent to read it. The recommended conventions per type live in Core's `PROJECT_TYPE_PROFILES`. A first draft listed cue, shot and category defaults that the code cannot switch (cues and shots are conventions, and `hiddenCategories` hides entity types, not conventions), and the comic block already defaults to `western` with the user's own default preset needing to win. So this release sets no comic defaults and hides nothing by type.
+
+**The prompt.** A dropdown, "What kind of project is this?", with every type plus "Not sure yet / Skip":
+
+- once per project after an update, for a project with a config file and no `project_type` (after its first index build);
+- straight away when **Initialize Workspace** creates a new config;
+- any time through **LoreFountain: Set Project Type**.
+
+Skipping or dismissing is remembered per project (workspace state) and never re-asked on its own; the setting `lorefountain.notifications.projectType` turns the automatic prompt off. A config with a syntax error is never rewritten. The answer is written through `writeLoreFountainConfig`, so only the `project_type` line is added.
+
+**Why.** The owner's own project, ORUN, is a long-running original series that hosts adapted works as arcs; none of the planned types described it, and it is what `serialized_universe` is for. Recording the type also gives the exports work and the Producer one place to read a project's kind instead of guessing from folder names.
+
+**Consequences.** The extension depends on a Core release that exports `config/projectType` (Core 0.3.0). Until that release exists, the dependency in `package.json` must stay a local link or a prerelease.
+
+**Revisit when** a type should genuinely change behavior (hiding unused views, scaffolding a type's folders, defaulting the Producer's profile), or a type is missing.
+
+---
+
 ## ADR-0050 — Script export: PDF, Fountain, Final Draft, HTML, Word and transcript
 
 **Date:** 2026-11-13 · **Status:** Accepted (owner approved the design, formats, free tier, the Courier Prime and Noto Sans Mono fonts and the `pdfkit` dependency on 2026-11-11 to 2026-11-13). Core side: Core ADR-0006.

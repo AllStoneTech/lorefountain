@@ -68,6 +68,7 @@ import { WorldTreeProvider } from './providers/worldTreeProvider';
 import { ScriptDiagnostics } from './providers/scriptDiagnostics';
 import { registerScriptQuickFixes } from './providers/scriptQuickFixes';
 import { registerFixScriptFormattingCommand } from './commands/fixScriptFormatting';
+import { askProjectType, maybePromptProjectType, registerSetProjectTypeCommand } from './commands/projectType';
 import { captureInstallState, maybeShowProjectSummary, maybeShowWhatsNew } from './commands/upgradeNotices';
 import { checkGitSafety } from './safety/gitSafetyBanner';
 import { maybeShowTelemetryConsentPrompt } from './telemetry/consent';
@@ -127,6 +128,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   registerStructuredSearchCommand(context, outputChannel, pickTargetWorkspaceFolder, findStoreForFolder);
   registerTryLoreFountainCommand(context);
   registerInstallDemoCommand(context);
+  registerSetProjectTypeCommand(context, pickTargetWorkspaceFolder);
   registerMigrateExistingLoreCommand(context, pickTargetWorkspaceFolder);
   registerCheckFileUpdatesCommand(context, outputChannel, pickTargetWorkspaceFolder);
   registerCheckForUpdatesCommand(context);
@@ -500,6 +502,7 @@ async function addIndexFor(folder: vscode.WorkspaceFolder): Promise<void> {
     });
     const summary = await index.rebuild();
     void maybeShowProjectSummary(extensionContext, folder, summary);
+    void maybePromptProjectType(extensionContext, folder);
     void checkGitSafetyForFolder(folder);
   } catch (err) {
     outputChannel.appendLine(
@@ -625,6 +628,10 @@ async function initializeWorkspace(): Promise<void> {
       ? `LoreFountain: initialized "${folder.name}" — created lorefountain.config.json and the standard folders.`
       : `LoreFountain: standard folders ensured for "${folder.name}" (lorefountain.config.json already existed).`,
   );
+
+  // A brand-new project is asked for its type straight away (ADR-0051). An existing config that
+  // already has one is left alone; one without is asked by `maybePromptProjectType` as usual.
+  if (wroteConfig) await askProjectType(extensionContext, folder);
 }
 
 /** Open the settings webview panel for a target workspace folder, refreshing the World tree after a save. */

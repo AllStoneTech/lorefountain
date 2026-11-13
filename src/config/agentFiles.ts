@@ -104,9 +104,13 @@ import * as path from 'node:path';
  * `world-builder.md` to `6` and `initiator.md` to `3` (both name the file) and
  * the world README to `4`. `validate.js` is unchanged (it already skips every
  * `*.lf.md`, and Core still skips the legacy `OVERVIEW.md`).
+ *
+ * Project types (ADR-0051, Core's ADR-0007) bump `AGENTS.md` to `7` (the
+ * "Project type" section). `validate.js` is unchanged: `project_type` is a
+ * plain config key it ignores, so its bundled copy stays at `8`.
  */
 export const AGENT_FILE_VERSIONS: Record<string, number> = {
-  'AGENTS.md': 6,
+  'AGENTS.md': 7,
   [path.join('agents', 'world-builder.md')]: 6,
   [path.join('agents', 'script-writer.md')]: 7,
   [path.join('agents', 'initiator.md')]: 3,

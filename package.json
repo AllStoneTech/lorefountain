@@ -189,6 +189,11 @@
         "category": "LoreFountain"
       },
       {
+        "command": "lorefountain.setProjectType",
+        "title": "Set Project Type...",
+        "category": "LoreFountain"
+      },
+      {
         "command": "lorefountain.checkFileUpdates",
         "title": "Check for LoreFountain File Updates",
         "category": "LoreFountain"
@@ -348,6 +353,12 @@
         "icon": "$(question)"
       },
       {
+        "command": "lorefountain.showProjectTypeHelp",
+        "title": "Project Type: What It Means",
+        "category": "LoreFountain",
+        "icon": "$(question)"
+      },
+      {
         "command": "lorefountain.showFountainSyntaxHelp",
         "title": "Fountain Syntax: Tutorial and Quick Reference",
         "category": "LoreFountain",
@@ -472,6 +483,11 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "When a project is first opened under a new minor or major version, show one notification if its scripts have formatting issues that `LoreFountain: Fix All Script Formatting Issues` can fix."
+        },
+        "lorefountain.notifications.projectType": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Ask \"What kind of project is this?\" once for a project that has a `lorefountain.config.json` but no `project_type`. Skipping or dismissing the question is remembered, and `LoreFountain: Set Project Type` is always available."
         }
       }
     },

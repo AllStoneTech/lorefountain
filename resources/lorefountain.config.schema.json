@@ -8,6 +8,21 @@
       "type": "string",
       "description": "Optional JSON Schema reference, for editors/tools that resolve it independently of VS Code's own schema association."
     },
+    "project_type": {
+      "type": "string",
+      "enum": ["screenplay", "tv_series", "serialized_universe", "audio_drama", "comic", "prose", "tabletop", "custom"],
+      "enumDescriptions": [
+        "Feature screenplay: one self-contained film.",
+        "TV series or anthology: a fixed-run show, or self-contained episodes under one banner.",
+        "Serialized universe: a long-running original series whose arcs and cast carry across seasons.",
+        "Audio drama or podcast: a story told in sound.",
+        "Comic or graphic novel: a Page/Panel script written for an artist.",
+        "Novel or serial prose fiction: prose chapters with the story bible alongside.",
+        "Tabletop RPG campaign: a campaign run by a game master.",
+        "Something else, or leave as is: no recommendation; behaves as before project types existed."
+      ],
+      "description": "What kind of writing project this is. It records and recommends; it never switches a convention off and never overrides an explicit setting. Omit it, or use custom, for no recommendation."
+    },
     "folders": {
       "type": "object",
       "description": "Workspace-relative folder names. Any field left unset uses its documented default.",

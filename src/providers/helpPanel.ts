@@ -53,6 +53,7 @@ const HELP_TOPICS: readonly HelpTopic[] = [
   { command: 'lorefountain.showStoryCardHelp', docFile: 'storyCard.md', title: 'Help: Story Card' },
   { command: 'lorefountain.showStoryOverviewHelp', docFile: 'storyOverview.md', title: 'Help: Story Overview' },
   { command: 'lorefountain.showStyleBibleHelp', docFile: 'styleBible.md', title: 'Help: Style Bible' },
+  { command: 'lorefountain.showProjectTypeHelp', docFile: 'projectType.md', title: 'Help: Project Type' },
   // Not tied to one view: opened from the Scripts view's `...` menu, a `.fountain` editor's `...` menu, or the Command Palette.
   { command: 'lorefountain.showFountainSyntaxHelp', docFile: 'fountainSyntax.md', title: 'Help: Fountain Syntax' },
   // Opened by the what's-new notice (commands/upgradeNotices.ts) and the "What's New" command.

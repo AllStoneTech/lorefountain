@@ -47,6 +47,17 @@ press **Ctrl+.** (**Cmd+.** on a Mac) for a one-click fix:
 across your project at once. You'll see each change in a preview first and
 can untick any you don't want; nothing changes until you apply it.
 
+## What kind of project is this?
+
+LoreFountain now asks, once per project, what you are writing: a feature
+screenplay, a TV series, a **serialized universe** (a long-running series
+whose arcs carry across seasons), an audio drama, a comic, a novel, or a
+tabletop campaign. Your answer is saved as one line, `project_type`, in
+`lorefountain.config.json`; nothing else in the file changes. It records and
+recommends. It never switches anything off. Skip the question and you are not
+asked again on your own. Change it any time with **LoreFountain: Set Project
+Type**, and read what each type means in **Project Type: What It Means**.
+
 ## Also
 
 - **A Fountain syntax tutorial and quick reference**: every Fountain

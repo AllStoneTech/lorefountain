@@ -9,6 +9,22 @@ Merged into `main` on 2026-11-13, after the 1.1.0 work. Parsing comes from LoreF
 
 ### Added
 
+- **Project type** (ADR-0051, built on Core's ADR-0007). `lorefountain.config.json`
+  gains an optional `project_type`: `screenplay`, `tv_series`,
+  `serialized_universe` (a long-running original series whose arcs carry across
+  seasons), `audio_drama`, `comic`, `prose`, `tabletop` or `custom`. It names
+  how a project is written, never how it is rendered, and it only records and
+  recommends: nothing is switched off and no explicit setting is overridden.
+  A **What kind of project is this?** dropdown asks once for an existing
+  project that has a config file but no type (after an update), straight away
+  when **Initialize Workspace** creates a new project, and any time through
+  **LoreFountain: Set Project Type**. Skipping is remembered, a config with a
+  syntax error is never rewritten, and only the `project_type` line is added.
+  `lorefountain.notifications.projectType` turns the automatic prompt off. The
+  demos record their types, the config schema offers the values, **Project
+  Type: What It Means** opens a full help page, and `AGENTS.md` (version 7)
+  tells an AI agent to read it. Needs a Core release that exports
+  `config/projectType` (0.3.0).
 - **Narrated comics: panels as shots** (ADR-0046, built on Core's ADR-0003).
   With the new project setting `comic.panelsAsShots: true` (default false), a
   comic script with no `SHOT:` lines gets a derived `<script>.shots.json` with
