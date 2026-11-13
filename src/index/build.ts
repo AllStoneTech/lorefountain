@@ -109,6 +109,7 @@ import {
 } from '../assets/shotManifest';
 import { updateCueSidecar } from '../cues/sidecar';
 import { updatePageSidecar } from '../comics/sidecar';
+import type { ResolvedComicSettings } from 'lorefountain-core/comics/limits';
 import type { PageMapResult, ScriptPageIssue } from 'lorefountain-core/comics/pageMap';
 import { blankBoneyard } from '../fountain/boneyard';
 import type { ScriptShotIssue, ShotMapEntity, ShotMapResult } from '../shots/shotMap';
@@ -280,12 +281,14 @@ export type ReindexFileResult =
  * @param store - The index to populate.
  * @param folders - Absolute paths to the `world`, `glossary`, `timeline`, and `scripts` folders.
  * @param assetManifests - The project's parsed asset manifests, for the unmapped-cue-tag and dangling-manifest-entry checks below.
+ * @param comic - The project's resolved comic settings (word-budget preset and limits, `sfxAsCue`). Omitted: built-in defaults (`western`, comic SFX is lettering only).
  * @returns Counts of what was indexed, plus any malformed files or warnings.
  */
 export async function buildIndexFromDisk(
   store: IndexStore,
   folders: { world: string; glossary: string; timeline: string; scripts: string },
   assetManifests: ProjectAssetManifests = {},
+  comic?: ResolvedComicSettings,
 ): Promise<IndexBuildSummary> {
   const audioManifest = assetManifests.audio ?? {};
   const shotManifest = assetManifests.shots ?? {};
@@ -361,9 +364,9 @@ export async function buildIndexFromDisk(
       const text = await fsp.readFile(filePath, 'utf8');
       scriptTexts.set(filePath, text);
       summary.scriptCount += 1;
-      const cues = await updateCueSidecar(filePath, text);
-      const shotMap = await updateShotSidecar(filePath, text, shotEntities);
-      const pageMap = await updatePageSidecar(filePath, text, shotEntities);
+      const cues = await updateCueSidecar(filePath, text, { sfxAsCue: comic?.sfxAsCue });
+      const shotMap = await updateShotSidecar(filePath, text, shotEntities, { sfxAsCue: comic?.sfxAsCue });
+      const pageMap = await updatePageSidecar(filePath, text, shotEntities, comic);
       if (pageMap.hasPages) {
         summary.pageStats.scripts += 1;
         summary.pageStats.pages += pageMap.pages.filter((page) => !page.implicit).length;
@@ -430,13 +433,14 @@ export async function buildIndexFromDisk(
  *   file's own outgoing mentions and dangling relations against the store's
  *   current candidates. {@link buildIndexFromDisk} passes `false` per-file and
  *   does one correct pass over the complete set afterward instead.
+ *   `comic` is the project's resolved comic settings, used when `kind` is a script.
  * @returns Success with any warnings/dangling relations, or a described, non-throwing failure.
  */
 export async function reindexFile(
   store: IndexStore,
   filePath: string,
   kind: IndexableFileKind,
-  options: { recomputeMentions?: boolean } = {},
+  options: { recomputeMentions?: boolean; comic?: ResolvedComicSettings } = {},
 ): Promise<ReindexFileResult> {
   const recomputeMentions = options.recomputeMentions ?? true;
 
@@ -450,10 +454,10 @@ export async function reindexFile(
   const id = idFromFilePath(filePath);
 
   if (kind === 'script') {
-    await updateCueSidecar(filePath, text);
+    await updateCueSidecar(filePath, text, { sfxAsCue: options.comic?.sfxAsCue });
     const entities = shotMapEntitiesFrom(store);
-    const shotMap = await updateShotSidecar(filePath, text, entities);
-    const pageMap = await updatePageSidecar(filePath, text, entities);
+    const shotMap = await updateShotSidecar(filePath, text, entities, { sfxAsCue: options.comic?.sfxAsCue });
+    const pageMap = await updatePageSidecar(filePath, text, entities, options.comic);
     // Per-script format checks run on save too; manifest cross-checks stay
     // full-build only (see the module doc comment).
     const { warnings: shotWarnings, notes } = splitScriptIssues(shotMap, pageMap);

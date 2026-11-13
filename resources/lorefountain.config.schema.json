@@ -49,6 +49,52 @@
         }
       },
       "additionalProperties": false
+    },
+    "comic": {
+      "type": "object",
+      "description": "Comic-script settings (scripts with PAGE: and PANEL: lines). The word-budget numbers are guidance from writers' guides and creator handbooks, not standards; they only ever produce informational notes.",
+      "properties": {
+        "preset": {
+          "type": "string",
+          "enum": ["western", "manga", "european", "webtoon", "custom"],
+          "default": "western",
+          "description": "The word-budget preset this project starts from. Overrides the user-level setting lorefountain.comic.defaultPreset. western: up to 9 panels per page, 3 balloons per panel, 25 words per balloon, 35 words per panel. manga: like western but up to 8 panels per page. european: no panels-per-page check. webtoon: no panels-per-page check (a vertical scroll has no pages). custom: no built-in limits; only comic.limits apply.",
+          "markdownDescription": "The word-budget preset this project starts from. Overrides the user-level setting `lorefountain.comic.defaultPreset`.\n\n- `western`: up to 9 panels per page, 3 balloons per panel, 25 words per balloon, 35 words per panel\n- `manga`: like western, but up to 8 panels per page\n- `european`: no panels-per-page check\n- `webtoon`: no panels-per-page check (a vertical scroll has no pages)\n- `custom`: no built-in limits; only `comic.limits` apply"
+        },
+        "limits": {
+          "type": "object",
+          "description": "Per-limit overrides of the preset. Each is a whole number of at least 1, or null to switch that note off.",
+          "properties": {
+            "maxPanelsPerPage": {
+              "type": ["integer", "null"],
+              "minimum": 1,
+              "description": "A page with more numbered panels than this is noted (many-panels). null: not checked."
+            },
+            "maxBalloonsPerPanel": {
+              "type": ["integer", "null"],
+              "minimum": 1,
+              "description": "A panel with more balloons than this is noted (many-balloons). null: not checked."
+            },
+            "maxWordsPerBalloon": {
+              "type": ["integer", "null"],
+              "minimum": 1,
+              "description": "A balloon with more words than this is noted (long-balloon). null: not checked."
+            },
+            "maxWordsPerPanel": {
+              "type": ["integer", "null"],
+              "minimum": 1,
+              "description": "A panel whose balloons and captions hold more words than this is noted (long-panel-dialogue). Sound effects are not counted. null: not checked."
+            }
+          },
+          "additionalProperties": false
+        },
+        "sfxAsCue": {
+          "type": "boolean",
+          "default": false,
+          "description": "When false (the default), an SFX: line inside a comic panel is lettering only: it is not written to the .cues.json audio cue sidecar and is not checked against audio.json. Set true for a narrated or motion comic where an effect is both lettered and heard. MUSIC: and AMB: are always audio cues."
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": true

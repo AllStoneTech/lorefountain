@@ -75,13 +75,19 @@ import * as path from 'node:path';
  * (the `PAGE:`/`PANEL:` convention, the `.pages.json` sidecar and its checks)
  * and `validate.js` to `4` (it reports pages and panels) — `esbuild.js`'s
  * banner moved to `4` in the same commit.
+ *
+ * Comic settings (ADR-0044) bump `AGENTS.md` to `5`, `script-writer.md` to `6`
+ * (comic `SFX:` is lettering only unless `comic.sfxAsCue`; the word-budget
+ * presets and the `comic` block of `lorefountain.config.json`) and
+ * `validate.js` to `5` (it reads the `comic` block, so its limits, notes and
+ * cue sidecars differ) — `esbuild.js`'s banner moved to `5` in the same commit.
  */
 export const AGENT_FILE_VERSIONS: Record<string, number> = {
-  'AGENTS.md': 4,
+  'AGENTS.md': 5,
   [path.join('agents', 'world-builder.md')]: 3,
-  [path.join('agents', 'script-writer.md')]: 5,
+  [path.join('agents', 'script-writer.md')]: 6,
   [path.join('agents', 'initiator.md')]: 2,
-  [path.join('agents', 'validate.js')]: 4,
+  [path.join('agents', 'validate.js')]: 5,
 };
 
 /**

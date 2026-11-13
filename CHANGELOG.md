@@ -16,6 +16,13 @@ On the local branch `feature/lorefountain-core`, not part of 1.1.0.
   opens it. Every comic script gets a derived `<script>.pages.json` sidecar
   next to it, rebuilt on every save and removed when the pages go (it is
   git-ignored like the other sidecars and follows a renamed script).
+- **Pages in the Scripts view** (ADR-0043): expanding a comic script shows a
+  `Pages` section before its other files, with one row per page (`Page 7`,
+  flags such as `SPLASH`, panel and word counts) and its panels beneath
+  (`Panel 1` plus the start of its description, lettering counts). Clicking a
+  row opens the script at that line; pages and panels with warnings get a
+  warning icon and list the issues in the tooltip. Read lazily from the
+  `.pages.json` sidecar; scripts without pages look the same as before.
 - **Page checks** in the Problems panel, the Output channel and
   `node agents/validate.js`: duplicate or out-of-order page numbers, a panel
   with no page and lettering outside a panel are warnings; page-number gaps,
@@ -31,8 +38,28 @@ On the local branch `feature/lorefountain-core`, not part of 1.1.0.
   and `docs/FOUNTAIN-EXTENSIONS.md` describe the convention. Existing projects
   are offered the updated docs by **Check for LoreFountain File Updates**.
 
+- **Comic `SFX:` is lettering by default** (ADR-0044): in a comic panel an
+  `SFX:` line is no longer written to the `.cues.json` audio sidecar or
+  checked against `audio.json`. A project that makes a narrated or motion
+  comic sets `"comic": { "sfxAsCue": true }` in `lorefountain.config.json` and
+  gets both. `MUSIC:` and `AMB:` are always cues; screenplays and audio
+  dramas are unchanged.
+- **Comic word-budget presets** (ADR-0044): the notes for too many panels,
+  balloons or words follow a per-project preset (`western`, `manga`,
+  `european`, `webtoon`, `custom`) set by `comic.preset`, with any single
+  limit overridable (or switched off with `null`) in `comic.limits`. The
+  VS Code setting `lorefountain.comic.defaultPreset` sets your default for
+  projects that don't choose. Each note names the limit and preset that
+  fired. The numbers are guidance, not standards. The `comic` block is in the
+  config file's schema and is read tolerantly (a bad value is reported and
+  dropped, never fatal).
+
 ### Changed
 
+- **Comic default limits are now 3 balloons per panel and 35 words per panel**
+  (were 5 and 40; 9 panels per page and 25 words per balloon are unchanged).
+  The scaffolded `AGENTS.md` (5), `agents/script-writer.md` (6),
+  `agents/validate.js` (5) and scripts README (6) describe the new settings.
 - **The parsing code and config reading now come from LoreFountain-Core**
   ([AllStoneTech/lorefountain-core](https://github.com/AllStoneTech/lorefountain-core)),
   a separate MIT package shared with LoreFountain-Producer, so both read a

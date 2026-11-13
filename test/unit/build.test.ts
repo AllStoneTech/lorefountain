@@ -7,6 +7,7 @@
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { resolveComicSettings } from 'lorefountain-core/comics/limits';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { buildIndexFromDisk, reindexFile, removeFileFromIndex } from '../../src/index/build';
 import { createSqlJsIndexStore } from '../../src/index/sqlJsStore';
@@ -837,6 +838,84 @@ describe('reindexFile and removeFileFromIndex', () => {
 
     removeFileFromIndex(store, scriptPath, 'script');
     expect(store.getScriptByPath(scriptPath)).toBeUndefined();
+  });
+});
+
+describe('comic settings in the index build (ADR-0001 in Core, ADR-0044)', () => {
+  let tmpRoot: string;
+  let store: IndexStore;
+  const folders = (root: string) => ({
+    world: path.join(root, 'world'),
+    glossary: path.join(root, 'world', 'glossary'),
+    timeline: path.join(root, 'world', 'timeline'),
+    scripts: path.join(root, 'scripts'),
+  });
+  const COMIC = [
+    'PAGE: 1',
+    '',
+    'PANEL: Crowd.',
+    '',
+    'SFX: [no-such-audio] THOOM',
+    '',
+    'MUSIC: STING - the reveal',
+    '',
+    ...Array.from({ length: 4 }, () => 'MARA\nHi.\n'),
+  ].join('\n');
+
+  beforeEach(async () => {
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'lorefountain-build-comic-test-'));
+    store = await createSqlJsIndexStore();
+  });
+
+  afterEach(async () => {
+    store.dispose();
+    await fs.rm(tmpRoot, { recursive: true, force: true });
+  });
+
+  const cueTypes = async (scriptPath: string): Promise<string[]> => {
+    const sidecar = JSON.parse(await fs.readFile(scriptPath.replace(/\.fountain$/, '.cues.json'), 'utf8')) as { cues: { type: string }[] };
+    return sidecar.cues.map((cue) => cue.type);
+  };
+
+  it('keeps comic SFX out of the cue sidecar and the audio-manifest check by default', async () => {
+    const scriptPath = await writeFile(tmpRoot, 'scripts/ep.fountain', COMIC);
+
+    const summary = await buildIndexFromDisk(store, folders(tmpRoot), { audio: {} });
+
+    expect(await cueTypes(scriptPath)).toEqual(['music']);
+    const warnings = summary.warnings.find((entry) => entry.filePath === scriptPath)?.warnings ?? [];
+    expect(warnings.map((w) => w.message).join('\n')).not.toContain('no-such-audio');
+  });
+
+  it('keeps comic SFX as a cue, tag checked against audio.json, when sfxAsCue is set', async () => {
+    const scriptPath = await writeFile(tmpRoot, 'scripts/ep.fountain', COMIC);
+
+    const summary = await buildIndexFromDisk(store, folders(tmpRoot), { audio: {} }, resolveComicSettings({ sfxAsCue: true }));
+
+    expect(await cueTypes(scriptPath)).toEqual(['sfx', 'music']);
+    const warnings = summary.warnings.find((entry) => entry.filePath === scriptPath)?.warnings ?? [];
+    expect(warnings.map((w) => w.message).join('\n')).toContain('no-such-audio');
+  });
+
+  it('names the preset in the word-budget notes, and a webtoon preset skips the panels-per-page check', async () => {
+    const scriptPath = await writeFile(tmpRoot, 'scripts/ep.fountain', COMIC);
+    const western = await buildIndexFromDisk(store, folders(tmpRoot));
+    const note = western.notes.find((entry) => entry.filePath === scriptPath)?.notes.find((n) => n.message.includes('balloons'));
+    expect(note?.message).toContain('western preset');
+
+    const webtoon = await buildIndexFromDisk(store, folders(tmpRoot), {}, resolveComicSettings({ preset: 'webtoon', limits: { maxBalloonsPerPanel: 2 } }));
+    const webtoonNote = webtoon.notes.find((entry) => entry.filePath === scriptPath)?.notes.find((n) => n.message.includes('balloons'));
+    expect(webtoonNote?.message).toContain('comic.limits.maxBalloonsPerPanel');
+  });
+
+  it('reindexFile on save uses the settings it is given', async () => {
+    const scriptPath = await writeFile(tmpRoot, 'scripts/ep.fountain', COMIC);
+
+    await reindexFile(store, scriptPath, 'script', { comic: resolveComicSettings({ sfxAsCue: true }) });
+    expect(await cueTypes(scriptPath)).toEqual(['sfx', 'music']);
+
+    await reindexFile(store, scriptPath, 'script');
+    expect(await cueTypes(scriptPath)).toEqual(['music']);
   });
 });
 

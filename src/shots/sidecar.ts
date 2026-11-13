@@ -43,6 +43,7 @@ export function shotSidecarPathFor(scriptPath: string): string {
  * @param scriptPath - Absolute path to the `.fountain` script.
  * @param scriptText - The script's current, already-read text.
  * @param entities - Every known entity, for mention/speaker/location resolution.
+ * @param options - `sfxAsCue`: the project's `comic.sfxAsCue`, so each shot's `cues` list matches `.cues.json`.
  * @returns The full shot map (shots and per-script issues), so the caller can
  *   reuse it for validation instead of re-parsing.
  * @throws Re-throws filesystem errors other than a missing sidecar on removal.
@@ -51,8 +52,9 @@ export async function updateShotSidecar(
   scriptPath: string,
   scriptText: string,
   entities: readonly ShotMapEntity[],
+  options: { sfxAsCue?: boolean } = {},
 ): Promise<ShotMapResult> {
-  const result = buildShotMap(scriptText, entities);
+  const result = buildShotMap(scriptText, entities, options);
 
   if (!result.hasExplicitShots) {
     await removeShotSidecar(scriptPath);

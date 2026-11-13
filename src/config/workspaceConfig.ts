@@ -8,6 +8,7 @@
  */
 
 import * as vscode from 'vscode';
+import { comicSettingsFromConfig, resolveComicSettings, type ResolvedComicSettings } from 'lorefountain-core/comics/limits';
 import { folderSettingsFromConfig, hiddenCategoriesFromConfig, readLoreFountainConfig } from './configFile';
 import { resolveWorkspaceFolders, type WorkspaceFolders } from './folders';
 
@@ -16,6 +17,11 @@ export interface WorkspaceFoldersResult {
   folders: WorkspaceFolders;
   /** World-tree category ids to hide, from `world.hiddenCategories` (empty if unset or the config file is missing/invalid). */
   hiddenCategories: string[];
+  /**
+   * Comic settings in effect: project `comic.limits` over `comic.preset` over the user-level
+   * `lorefountain.comic.defaultPreset` over the built-in `western` default (ADR-0001 in Core, ADR-0044 here).
+   */
+  comic: ResolvedComicSettings;
   /** Set when `lorefountain.config.json` exists but failed to parse/validate; folders still fall back to defaults. */
   configIssue?: string;
 }
@@ -37,17 +43,22 @@ export async function getWorkspaceFolders(
 ): Promise<WorkspaceFoldersResult> {
   const root = workspaceFolder.uri.fsPath;
   const result = await readLoreFountainConfig(root);
+  const userPreset = vscode.workspace.getConfiguration('lorefountain', workspaceFolder.uri).get<string>('comic.defaultPreset');
 
   if (!result.ok) {
     return {
       folders: resolveWorkspaceFolders(root),
       hiddenCategories: [],
+      comic: resolveComicSettings(undefined, userPreset),
       configIssue: `lorefountain.config.json (${result.reason}): ${result.message}`,
     };
   }
 
+  const comicRead = comicSettingsFromConfig(result.config);
   return {
     folders: resolveWorkspaceFolders(root, folderSettingsFromConfig(result.config)),
     hiddenCategories: hiddenCategoriesFromConfig(result.config),
+    comic: resolveComicSettings(comicRead.settings, userPreset),
+    ...(comicRead.issues.length > 0 ? { configIssue: `lorefountain.config.json: ${comicRead.issues.join(' ')}` } : {}),
   };
 }

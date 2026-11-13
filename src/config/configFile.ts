@@ -62,7 +62,7 @@ export async function writeDefaultConfigIfAbsent(workspaceRoot: string): Promise
  * untouched — only the fields present in `updates` change.
  *
  * @param workspaceRoot - Absolute path to the workspace root.
- * @param updates - Fields to merge in; `folders`/`world` are merged one level deep, everything else shallowly at the top level.
+ * @param updates - Fields to merge in; `folders`/`world` are merged one level deep, `comic` two levels (so `comic.limits` keeps its other limits), everything else shallowly at the top level.
  */
 export async function writeLoreFountainConfig(
   workspaceRoot: string,
@@ -77,9 +77,30 @@ export async function writeLoreFountainConfig(
     ...updates,
     folders: mergeSection(base.folders, updates.folders),
     world: mergeSection(base.world, updates.world),
+    comic: mergeComic(base.comic, updates.comic),
   };
 
   await fsp.writeFile(filePath, `${JSON.stringify(merged, null, 2)}\n`, 'utf8');
+}
+
+/** A plain (non-array, non-null) object, or `undefined`. */
+function asPlainObject(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
+}
+
+/**
+ * Merge the `comic` block (`preset`, `sfxAsCue`, `limits`): one level deep, and `limits` one more, so
+ * writing one limit keeps the others. Tolerant: anything that isn't an object counts as absent, and
+ * the existing value is kept if the update isn't an object either. Never throws.
+ */
+function mergeComic(base: unknown, update: unknown): LoreFountainConfig['comic'] {
+  const baseObject = asPlainObject(base);
+  const updateObject = asPlainObject(update);
+  if (!baseObject && !updateObject) return update === undefined ? base : update;
+  const merged: Record<string, unknown> = { ...baseObject, ...updateObject };
+  const limits = { ...asPlainObject(baseObject?.limits), ...asPlainObject(updateObject?.limits) };
+  if (Object.keys(limits).length > 0) merged.limits = limits;
+  return merged;
 }
 
 /** Shallow-merge two optional config sub-objects, or return `undefined` if both are absent (so the merged config doesn't grow an empty `{}` section). */

@@ -68,7 +68,7 @@ export class WorkspaceIndex implements vscode.Disposable {
   /** Clear and fully re-walk this folder's `world/`, `glossary/`, and `scripts/` folders. */
   async rebuild(): Promise<IndexBuildSummary> {
     this.store.clear();
-    const { folders, configIssue } = await getWorkspaceFolders(this.folder);
+    const { folders, configIssue, comic } = await getWorkspaceFolders(this.folder);
     if (configIssue) {
       this.outputChannel.appendLine(`[LoreFountain] ${this.folder.name}: ${configIssue}`);
     }
@@ -106,6 +106,7 @@ export class WorkspaceIndex implements vscode.Disposable {
         scripts: folders.scripts,
       },
       assetManifests,
+      comic,
     );
     this.logSummary(summary);
     this.issueSink?.fullBuild(this.folder.uri.fsPath, scriptIssueEntries(summary));
@@ -166,7 +167,9 @@ export class WorkspaceIndex implements vscode.Disposable {
   }
 
   private async handleReindex(filePath: string, kind: 'entity' | 'glossary' | 'event' | 'script'): Promise<void> {
-    const result = await reindexFile(this.store, filePath, kind);
+    // Re-read the comic settings each time so an edit to the config or the VS Code setting applies on the next save.
+    const { comic } = await getWorkspaceFolders(this.folder);
+    const result = await reindexFile(this.store, filePath, kind, { comic });
     if (!result.ok) {
       this.outputChannel.appendLine(`[LoreFountain] SKIPPED (${result.reason}) ${filePath}: ${result.message}`);
       return;

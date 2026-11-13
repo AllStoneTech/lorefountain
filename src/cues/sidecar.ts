@@ -37,12 +37,19 @@ export function cueSidecarPathFor(scriptPath: string): string {
  *
  * @param scriptPath - Absolute path to the `.fountain` script.
  * @param scriptText - The script's current, already-read text.
+ * @param options - `sfxAsCue`: the project's `comic.sfxAsCue`. In a comic script
+ *   (one with a `PAGE:` line) `SFX:` lines inside a panel are lettering, not
+ *   cues, unless this is true (ADR-0001 in LoreFountain-Core, ADR-0044 here).
  * @returns The cues just written (or `[]` if the sidecar was removed) — the
  *   caller already has these parsed, so e.g. `index/build.ts`'s audio-manifest
  *   cross-check can reuse them instead of re-running `extractCues`.
  */
-export async function updateCueSidecar(scriptPath: string, scriptText: string): Promise<CueEntry[]> {
-  const cues = extractCues(scriptText);
+export async function updateCueSidecar(
+  scriptPath: string,
+  scriptText: string,
+  options: { sfxAsCue?: boolean } = {},
+): Promise<CueEntry[]> {
+  const cues = extractCues(scriptText, options);
   const sidecarPath = cueSidecarPathFor(scriptPath);
 
   if (cues.length === 0) {

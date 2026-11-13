@@ -18,6 +18,7 @@
 
 import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
+import type { ResolvedComicSettings } from 'lorefountain-core/comics/limits';
 import { buildPageMap, type PageMapResult } from 'lorefountain-core/comics/pageMap';
 import { buildPageSidecar, pageSidecarPathFor } from 'lorefountain-core/comics/pageSidecar';
 import type { ShotMapEntity } from '../shots/shotMap';
@@ -31,6 +32,7 @@ export { pageSidecarPathFor };
  * @param scriptPath - Absolute path to the `.fountain` script.
  * @param scriptText - The script's current, already-read text.
  * @param entities - Every known entity, for mention/speaker resolution.
+ * @param comic - The project's resolved comic settings (`preset` and `limits` for the word-budget notes). Omitted: the built-in `western` preset.
  * @returns The full page map (pages and per-script issues), so the caller can
  *   reuse it for validation instead of re-parsing.
  * @throws Re-throws filesystem errors other than a missing sidecar on removal.
@@ -39,8 +41,13 @@ export async function updatePageSidecar(
   scriptPath: string,
   scriptText: string,
   entities: readonly ShotMapEntity[],
+  comic?: ResolvedComicSettings,
 ): Promise<PageMapResult> {
-  const result = buildPageMap(scriptText, entities);
+  const result = buildPageMap(
+    scriptText,
+    entities,
+    comic ? { preset: comic.preset, limits: comic.limits, overriddenLimits: comic.overriddenLimits } : {},
+  );
 
   if (!result.hasPages) {
     await removePageSidecar(scriptPath);

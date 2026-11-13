@@ -674,9 +674,13 @@ PANEL: Close on her boots.
   speaker. LoreFountain reads it correctly either way, adds a note, and
   the quick fix inserts the blank line. Speakers also need a blank line
   before them, so put each balloon in its own block.
-- `SFX:` is also a sound cue (`<script>.cues.json`). In a comic panel it
-  is the lettering. Leave comic sound effects without a `[tag]` unless the
-  same script also feeds an audio production.
+- `SFX:` is also a sound cue (`<script>.cues.json`) in a screenplay or
+  audio drama. In a comic panel it is the lettering only: it is not
+  written to `cues.json` and its `[tag]` is not checked against
+  `audio.json`. If you make a narrated or motion comic where an effect is
+  both lettered and heard, set `"comic": { "sfxAsCue": true }` in
+  `lorefountain.config.json` and comic `SFX:` lines count as both.
+  `MUSIC:` and `AMB:` are always sound cues.
 
 Every script with a `PAGE:` line gets a `<script>.pages.json` file next to
 it: each page and panel with its line range, balloons, captions, sound
@@ -685,9 +689,39 @@ save; never edit it. LoreFountain warns about a page number used twice
 (including overlapping ranges), pages out of order, and a `PANEL:` or
 lettering that isn't inside a page or panel. It adds notes for a gap in
 page numbers, an empty page, a panel with no description, a splash with
-more than one panel, a spread without a range, and an over-long panel
-(more than 9 panels on a page, 5 balloons in a panel, 25 words in a
-balloon or 40 in a panel). Notes never fail anything.
+more than one panel, a spread without a range, and a crowded page or
+panel. Notes never fail anything.
+
+The crowding limits are rules of thumb from writers' guides, not
+standards, and you set them per project. They come from a preset
+(`comic.preset` in `lorefountain.config.json`, or your
+`lorefountain.comic.defaultPreset` setting for projects that don't choose):
+
+| Preset | Panels per page | Balloons per panel | Words per balloon | Words per panel |
+|---|---|---|---|---|
+| `western` (default) | 9 | 3 | 25 | 35 |
+| `manga` | 8 | 3 | 25 | 35 |
+| `european` | not checked | 3 | 25 | 35 |
+| `webtoon` | not checked | 3 | 25 | 35 |
+| `custom` | not checked | not checked | not checked | not checked |
+
+Override any one limit with `comic.limits`, or turn its note off with
+`null`:
+
+```json
+{
+  "comic": {
+    "preset": "manga",
+    "limits": { "maxWordsPerBalloon": 30, "maxPanelsPerPage": null },
+    "sfxAsCue": false
+  }
+}
+```
+
+A project's `comic.limits` beat its `comic.preset`, which beats your
+VS Code setting, which beats the built-in `western` default. Each note
+says which limit and preset fired. Words count balloons and captions, not
+sound effects.
 
 ## Problems LoreFountain reports
 

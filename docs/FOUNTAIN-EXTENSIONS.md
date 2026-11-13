@@ -47,7 +47,7 @@ The full decision record is ADR-0001 in LoreFountain-Core (`docs/DECISIONS.md`);
 - `PANEL: <description>` opens a panel on the current page and is numbered 1.. by position. Panels before any `PAGE:` belong to an implicit page 0.
 - `CAPTION: text` or `CAPTION (SPEAKER): text` is a narration box. `SFX: text` is a lettered effect. A character cue with dialogue is a balloon (`O.P.`/`O.S.` set off-panel, `^` dual dialogue sets simultaneous). `LAYOUT:` is free text on the open panel, or on the page before its first panel. `SHOT:`, `POSE:`, `LIGHT:` and plain action inside a panel are art direction.
 - A page is not a scene: scene headings neither open nor close a page or panel, and each panel records the scene in effect where it opens. A script is a comic when it has at least one `PAGE:` line outside a boneyard.
-- `SFX:` is shared with audio: it is lettering in a panel and still a cue in `.cues.json`, whose `[tag]` is checked against `audio.json`. Leave comic sound effects untagged unless the script also feeds audio.
+- `SFX:` in a comic panel is lettering only by default (ADR-0044): it is not written to `.cues.json` and its `[tag]` is not checked against `audio.json`. The project setting `comic.sfxAsCue: true` makes it both, for a narrated or motion comic. `MUSIC:` and `AMB:` are always cues, and a script with no `PAGE:` line is unaffected.
 - Words count balloons and captions only; sound effects and parentheticals are not counted.
 - Output: the derived `<script>.pages.json` sidecar (`schema_version` 1), rebuilt on every save and never hand-edited, written only for a script with an explicit `PAGE:` and removed when the pages go.
 
@@ -107,7 +107,7 @@ Reported in the Problems panel, the Output channel and `node agents/validate.js`
 | `unused-shot-tag` | Note | A manifest entry no script uses |
 | `unforced-transition` | Note | A transition such as `FADE OUT.` that Fountain recognizes only with a leading `>` |
 | `page-number-gap`, `empty-page`, `missing-panel-description`, `splash-multiple-panels`, `spread-without-range` | Note | Page-structure oddities in a comic script |
-| `many-panels`, `many-balloons`, `long-balloon`, `long-panel-dialogue` | Note | Word-budget guidance: over 9 panels on a page, 5 balloons in a panel, 25 words in a balloon, 40 words of dialogue in a panel |
+| `many-panels`, `many-balloons`, `long-balloon`, `long-panel-dialogue` | Note | Word-budget guidance, set per project by `comic.preset` and `comic.limits` (default `western`: over 9 panels on a page, 3 balloons in a panel, 25 words in a balloon, 35 words of dialogue in a panel; any limit can be off). Each note names the limit and preset that fired |
 | `misread-as-character` | Note | An all-caps convention line (`PAGE: 7`) with text directly under it, which other Fountain apps read as a character cue |
 
 Notes never fail a validator run. The quick fixes and **Fix All Script Formatting Issues** handle the orphaned parenthetical, the bare pause line, the unforced transition and `misread-as-character` (a blank line is inserted).

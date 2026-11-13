@@ -36,7 +36,7 @@ describe('comic-script documentation', () => {
   const scriptWriter = readFileSync(join(RESOURCES, 'agents', 'script-writer.md'), 'utf8');
 
   it('the script-writer agent doc covers the syntax, the blank-line rule, SFX and the sidecar', () => {
-    for (const phrase of ['PAGE: <label>', 'PANEL: <description>', 'CAPTION:', 'LAYOUT:', 'misread-as-character', 'pages.json', 'A page is not a scene', 'SFX:` is shared with audio']) {
+    for (const phrase of ['PAGE: <label>', 'PANEL: <description>', 'CAPTION:', 'LAYOUT:', 'misread-as-character', 'pages.json', 'A page is not a scene', 'SFX:` is shared with audio only by opt-in', 'comic.sfxAsCue', 'maxWordsPerBalloon']) {
       expect(scriptWriter).toContain(phrase);
     }
   });

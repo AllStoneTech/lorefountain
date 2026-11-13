@@ -394,6 +394,19 @@
           "default": true,
           "markdownDescription": "Show a Story Card preview on hover over a recognized entity/glossary mention in `.fountain` scripts. Disable if you'd rather rely on another extension's hover."
         },
+        "lorefountain.comic.defaultPreset": {
+          "type": "string",
+          "enum": ["western", "manga", "european", "webtoon", "custom"],
+          "enumDescriptions": [
+            "Western comics: up to 9 panels per page, 3 balloons per panel, 25 words per balloon, 35 words per panel.",
+            "Manga: like western, but up to 8 panels per page.",
+            "Franco-Belgian and other European albums: no panels-per-page check.",
+            "WEBTOON and other vertical-scroll comics: no panels-per-page check.",
+            "No built-in limits; only a project's comic.limits apply."
+          ],
+          "default": "western",
+          "markdownDescription": "Your default word-budget preset for comic scripts, used by projects that don't set `comic.preset` in `lorefountain.config.json`. A project's `comic.limits` and `comic.preset` always win. The numbers are guidance from writers' guides, not standards, and only ever produce informational notes."
+        },
         "lorefountain.completion.enabled": {
           "type": "boolean",
           "default": true,

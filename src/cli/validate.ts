@@ -32,11 +32,15 @@
  * `content-outside-panel` and `missing-page-label` are warnings; the rest
  * (`page-number-gap`, `empty-page`, the word-budget notes, ...) are notes.
  * None of them fail the run. Each such script also gets its `.pages.json`
- * sidecar written, as the shot checks write `.shots.json`.
+ * sidecar written, as the shot checks write `.shots.json`. The word-budget
+ * limits come from `lorefountain.config.json` (`comic.preset`, `comic.limits`),
+ * else the built-in `western` preset; `comic.sfxAsCue` decides whether comic
+ * `SFX:` lines are also audio cues (ADR-0044).
  */
 
 import * as path from 'node:path';
 import { readAudioManifest } from '../assets/audioManifest';
+import { comicSettingsFromConfig, resolveComicSettings } from 'lorefountain-core/comics/limits';
 import { folderSettingsFromConfig, readLoreFountainConfig } from '../config/configFile';
 import { resolveWorkspaceFolders } from '../config/folders';
 import {
@@ -58,6 +62,11 @@ async function main(): Promise<void> {
   if (!configResult.ok) {
     console.log(`⚠ lorefountain.config.json (${configResult.reason}): ${configResult.message} — using default folder names.\n`);
   }
+
+  // No VS Code here, so no user-level default preset: project config, then the built-in default.
+  const comicRead = configResult.ok ? comicSettingsFromConfig(configResult.config) : undefined;
+  for (const message of comicRead?.issues ?? []) console.log(`⚠ lorefountain.config.json: ${message}\n`);
+  const comic = resolveComicSettings(comicRead?.settings);
 
   const [audio, characters, locations, objects, voice, shots] = await Promise.all([
     readAudioManifest(folders.assets),
@@ -93,6 +102,7 @@ async function main(): Promise<void> {
       scripts: folders.scripts,
     },
     assetManifests,
+    comic,
   );
 
   printReport(root, summary);

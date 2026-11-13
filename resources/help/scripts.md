@@ -77,7 +77,14 @@ files there beyond the script itself.
   line after `PAGE:` so other Fountain apps don't read it as a character.
   Every script with a `PAGE:` line gets a `<script-name>.pages.json`
   sidecar (pages, panels, lettering, word counts), regenerated on every
-  save. The Fountain Syntax help has the details.
+  save. In a comic, `SFX:` is lettering only (not an audio cue) unless the
+  project sets `comic.sfxAsCue`, and the crowding notes follow the
+  project's `comic.preset` (western, manga, european, webtoon, custom).
+  The Fountain Syntax help has the details. In this view, expanding
+  a comic script shows a **Pages** section above its other files: each
+  page (with flags like `SPLASH`, panel and word counts) expands to its
+  panels, and clicking one opens the script at that line. A warning icon
+  marks a page or panel with a script issue.
 - Write a scene pause as `PAUSE:` (optionally `PAUSE: 2s`); a character's
   own pause stays a `(beat)` parenthetical inside their dialogue. Keep a
   speech and its parentheticals together with no blank lines — a blank

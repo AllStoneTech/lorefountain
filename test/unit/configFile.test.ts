@@ -9,6 +9,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { comicSettingsFromConfig } from 'lorefountain-core/comics/limits';
 import {
   CONFIG_FILE_NAME,
   folderSettingsFromConfig,
@@ -217,6 +218,51 @@ describe('writeLoreFountainConfig', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.config.world).toEqual({ hiddenCategories: ['object'] });
+  });
+
+  it('writes and reads back the comic block, merging comic.limits one limit at a time', async () => {
+    await writeLoreFountainConfig(tmpRoot, { comic: { preset: 'manga', limits: { maxWordsPerBalloon: 30 } } });
+    await writeLoreFountainConfig(tmpRoot, { comic: { sfxAsCue: true, limits: { maxPanelsPerPage: null } } });
+
+    const result = await readLoreFountainConfig(tmpRoot);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.comic).toEqual({
+      preset: 'manga',
+      sfxAsCue: true,
+      limits: { maxWordsPerBalloon: 30, maxPanelsPerPage: null },
+    });
+    expect(comicSettingsFromConfig(result.config)).toEqual({
+      settings: { preset: 'manga', sfxAsCue: true, limits: { maxWordsPerBalloon: 30, maxPanelsPerPage: null } },
+      issues: [],
+    });
+  });
+
+  it('leaves the comic block alone when an update does not mention it, and survives a malformed one', async () => {
+    await fs.writeFile(path.join(tmpRoot, CONFIG_FILE_NAME), JSON.stringify({ comic: 'oops' }), 'utf8');
+    await writeLoreFountainConfig(tmpRoot, { world: { hiddenCategories: ['notes'] } });
+
+    const result = await readLoreFountainConfig(tmpRoot);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.comic).toBe('oops');
+    expect(comicSettingsFromConfig(result.config).issues).toHaveLength(1);
+  });
+
+  it('does not invalidate the rest of the config when the comic block has bad values', async () => {
+    await fs.writeFile(
+      path.join(tmpRoot, CONFIG_FILE_NAME),
+      JSON.stringify({ folders: { scripts: 'issues' }, comic: { preset: 'nope', limits: { maxWordsPerPanel: -3 } } }),
+      'utf8',
+    );
+
+    const result = await readLoreFountainConfig(tmpRoot);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(folderSettingsFromConfig(result.config).scripts).toBe('issues');
+    const read = comicSettingsFromConfig(result.config);
+    expect(read.settings).toEqual({});
+    expect(read.issues).toHaveLength(2);
   });
 
   it('preserves unknown top-level keys (forward compatibility)', async () => {
