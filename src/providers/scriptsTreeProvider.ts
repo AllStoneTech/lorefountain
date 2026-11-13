@@ -28,6 +28,8 @@ import { deriveScriptGroup } from '../index/build';
 import type { IndexStore, ScriptRecord } from '../index/store';
 import { getWorkspaceFolders } from '../config/workspaceConfig';
 import { setTitlePageField } from '../model/script';
+import { pageSidecarPathFor } from '../comics/sidecar';
+import { readPagesModel, PAGES_ICONS, type PageNodeModel, type PagesSectionModel, type PanelNodeModel } from '../comics/pagesTree';
 
 const DRAG_MIME_TYPE = 'application/vnd.code.tree.lorefountain.scriptsview';
 
@@ -36,6 +38,9 @@ export type ScriptsTreeNode =
   | { kind: 'folder'; folder: vscode.WorkspaceFolder }
   | { kind: 'group'; folder: vscode.WorkspaceFolder; group: string }
   | { kind: 'script'; folder: vscode.WorkspaceFolder; script: ScriptRecord }
+  | { kind: 'pages'; folder: vscode.WorkspaceFolder; scriptPath: string; model: PagesSectionModel }
+  | { kind: 'page'; folder: vscode.WorkspaceFolder; scriptPath: string; page: PageNodeModel }
+  | { kind: 'panel'; folder: vscode.WorkspaceFolder; scriptPath: string; panel: PanelNodeModel }
   | { kind: 'artifact'; folder: vscode.WorkspaceFolder; filePath: string };
 
 /**
@@ -81,6 +86,36 @@ export class ScriptsTreeProvider
         item.command = { command: 'vscode.open', title: 'Open', arguments: [vscode.Uri.file(node.script.filePath)] };
         return item;
       }
+      case 'pages': {
+        const item = new vscode.TreeItem(node.model.label, vscode.TreeItemCollapsibleState.Collapsed);
+        item.description = node.model.description;
+        item.tooltip = node.model.tooltip;
+        item.contextValue = 'lorefountain.scriptPages';
+        item.iconPath = new vscode.ThemeIcon(PAGES_ICONS.section);
+        return item;
+      }
+      case 'page':
+      case 'panel': {
+        const m = node.kind === 'page' ? node.page : node.panel;
+        const collapsible =
+          node.kind === 'page' && node.page.panels.length > 0
+            ? vscode.TreeItemCollapsibleState.Collapsed
+            : vscode.TreeItemCollapsibleState.None;
+        const item = new vscode.TreeItem(m.label, collapsible);
+        item.description = m.description;
+        item.tooltip = m.tooltip;
+        item.contextValue = node.kind === 'page' ? 'lorefountain.scriptPage' : 'lorefountain.scriptPanel';
+        item.iconPath = m.hasWarning
+          ? new vscode.ThemeIcon(m.iconId, new vscode.ThemeColor('list.warningForeground'))
+          : new vscode.ThemeIcon(m.iconId);
+        const pos = new vscode.Position(m.line, 0);
+        item.command = {
+          command: 'vscode.open',
+          title: 'Open',
+          arguments: [vscode.Uri.file(node.scriptPath), { selection: new vscode.Range(pos, pos) }],
+        };
+        return item;
+      }
       case 'artifact': {
         const item = new vscode.TreeItem(path.basename(node.filePath), vscode.TreeItemCollapsibleState.None);
         item.contextValue = 'lorefountain.scriptArtifact';
@@ -105,7 +140,19 @@ export class ScriptsTreeProvider
     }
     if (node.kind === 'folder') return this.topLevelNodesFor(node.folder);
     if (node.kind === 'group') return this.scriptsInGroup(node.folder, node.group);
-    if (node.kind === 'script') return this.artifactsFor(node.folder, node.script);
+    if (node.kind === 'script') {
+      const artifacts = await this.artifactsFor(node.folder, node.script);
+      const model = await readPagesSidecarModel(node.script.filePath);
+      if (!model) return artifacts;
+      const pagesNode: ScriptsTreeNode = { kind: 'pages', folder: node.folder, scriptPath: node.script.filePath, model };
+      return [pagesNode, ...artifacts];
+    }
+    if (node.kind === 'pages') {
+      return node.model.pages.map((page) => ({ kind: 'page' as const, folder: node.folder, scriptPath: node.scriptPath, page }));
+    }
+    if (node.kind === 'page') {
+      return node.page.panels.map((panel) => ({ kind: 'panel' as const, folder: node.folder, scriptPath: node.scriptPath, panel }));
+    }
     return [];
   }
 
@@ -214,4 +261,13 @@ function sortScripts(scripts: readonly ScriptRecord[]): ScriptRecord[] {
     if (orderA !== orderB) return orderA - orderB;
     return path.basename(a.filePath).localeCompare(path.basename(b.filePath));
   });
+}
+
+/** Lazily read a script's page sidecar; missing, unreadable or invalid means no Pages section. */
+async function readPagesSidecarModel(scriptPath: string): Promise<PagesSectionModel | undefined> {
+  try {
+    return readPagesModel(await fsp.readFile(pageSidecarPathFor(scriptPath), 'utf8'));
+  } catch {
+    return undefined;
+  }
 }
