@@ -26,7 +26,8 @@ export const STORY_OVERVIEW_VIEW_TYPE = 'lorefountain.storyOverview';
  * @returns The guided editor's view type for a known document, otherwise `default` (the text editor).
  */
 export function editorViewTypeForProjectDocument(filePath: string): string {
-  const name = path.basename(filePath).toLowerCase();
+  // win32.basename splits on both `/` and `\`, so a path routes the same on every OS.
+  const name = path.win32.basename(filePath).toLowerCase();
   if (name === STYLE_BIBLE_FILE_NAME) return STYLE_BIBLE_VIEW_TYPE;
   if (name === OVERVIEW_FILE_NAME) return STORY_OVERVIEW_VIEW_TYPE;
   return 'default';
