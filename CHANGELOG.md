@@ -19,17 +19,38 @@ On the local branch `feature/lorefountain-core`, not part of 1.1.0.
 - **Page checks** in the Problems panel, the Output channel and
   `node agents/validate.js`: duplicate or out-of-order page numbers, a panel
   with no page and lettering outside a panel are warnings; page-number gaps,
-  empty pages, word-budget notes and `misread-as-character` are notes.
+  empty pages and word-budget notes are notes (`misread-as-character` is a
+  warning, below).
   None fail a validator run, which also prints the pages, panels and
   lettered words in the project.
-- **Quick fix for `misread-as-character`**: inserts the blank line after an
-  all-caps `PAGE: 7` that other Fountain apps would read as a character cue;
-  **Fix All Script Formatting Issues** includes it.
+- **Quick fixes for `misread-as-character`** on an all-caps `PAGE: 7` that
+  other Fountain apps would read as a character cue; **Fix All Script
+  Formatting Issues** includes it (see the `!` entry below).
 - Syntax colouring and `page`, `panel`, `caption`, `layout` snippets for the
   new lines; the Fountain Syntax help, the scaffolded scripts README, the AI
   agent docs (`AGENTS.md` and `agents/script-writer.md`, now version 4 and 5)
   and `docs/FOUNTAIN-EXTENSIONS.md` describe the convention. Existing projects
   are offered the updated docs by **Check for LoreFountain File Updates**.
+- **Convention lines can start with Fountain's `!`** (ADR-0044), Fountain
+  1.1's way to force a line to be action: `!SHOT: CLOSE-UP` keeps a stacked
+  all-caps shot block from printing as a character speaking in other Fountain
+  apps, and they don't print the `!`. Shots, cues, pages and the validator
+  all read it.
+- **`misread-as-character` now warns on every script**, not only comics: an
+  all-caps convention line with text directly under it. Its quick fixes add
+  the `!` (preferred, and what Fix All uses) or insert a blank line after it.
+
+### Fixed
+
+- **A script with a lyric directly under a character name no longer fails to
+  load.** The Fountain parser crashed on it; LoreFountain now reads it as a
+  lyric (Core ADR-0002).
+- **Lines the Fountain parser rewrites are no longer dropped** from shot maps
+  and cues: forced lines, backslash escapes, tab-indented action, two-space
+  lines inside dialogue, and multi-line blocks in files with Windows line
+  endings.
+- Syntax colouring no longer shows backslash-escaped `\*` or `\_` as emphasis,
+  and colours every title-page key the parser knows (`Date`, `Revisions`).
 
 ### Changed
 

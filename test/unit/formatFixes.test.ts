@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildShotMap } from '../../src/shots/shotMap';
 import { buildPageMap } from 'lorefountain-core/comics/pageMap';
-import { FIXABLE_CODES, findFixableIssues, planAllFixes, planLineFix, type FormatFix } from '../../src/upgrade/formatFixes';
+import { FIXABLE_CODES, findFixableIssues, planAllFixes, planLineFix, planLineFixes, type FormatFix } from '../../src/upgrade/formatFixes';
 
 /** Apply planned fixes to `text`, last first so earlier offsets stay valid. */
 function apply(text: string, fixes: readonly FormatFix[]): string {
@@ -187,43 +187,65 @@ describe('planAllFixes', () => {
   });
 });
 
-describe('misread-as-character fixes (comic scripts)', () => {
+describe('misread-as-character fixes (ADR-0044)', () => {
   const stacked = 'INT. A - DAY\n\nPAGE: 7\nPANEL: WIDE of the harbor.\n';
+  const shotStack = 'INT. A - DAY\n\nSHOT: CLOSE-UP\nPOSE: MARA KNEELS\n\nShe waits.\n';
 
-  it('is a fixable code and is found in a comic script', () => {
+  it('is a fixable code, found in a comic script and in any script with a stacked prefix line', () => {
     expect(FIXABLE_CODES.has('misread-as-character')).toBe(true);
     expect(findFixableIssues(stacked)).toEqual([{ code: 'misread-as-character', line: 2 }]);
+    expect(findFixableIssues(shotStack)).toEqual([{ code: 'misread-as-character', line: 2 }]);
   });
 
-  it('inserts a blank line after the line and changes no words', () => {
-    const fix = planLineFix(stacked, 'misread-as-character', 2);
-    expect(fix).toMatchObject({ kind: 'blank', safeForFixAll: true });
-    expect(apply(stacked, [fix!])).toBe('INT. A - DAY\n\nPAGE: 7\n\nPANEL: WIDE of the harbor.\n');
+  it('offers "add !" first and "add a blank line" second, changing no words', () => {
+    const fixes = planLineFixes(shotStack, 'misread-as-character', 2);
+    expect(fixes.map((fix) => [fix.kind, fix.safeForFixAll])).toEqual([
+      ['force-action', true],
+      ['blank', true],
+    ]);
+    expect(apply(shotStack, [fixes[0]])).toBe('INT. A - DAY\n\n!SHOT: CLOSE-UP\nPOSE: MARA KNEELS\n\nShe waits.\n');
+    expect(apply(shotStack, [fixes[1]])).toBe('INT. A - DAY\n\nSHOT: CLOSE-UP\n\nPOSE: MARA KNEELS\n\nShe waits.\n');
+    expect(planLineFix(shotStack, 'misread-as-character', 2)).toEqual(fixes[0]);
+  });
+
+  it('puts the ! after any indentation', () => {
+    const text = 'INT. A - DAY\n\n  SFX: BOOM\n  MARA\n';
+    expect(apply(text, [planLineFix(text, 'misread-as-character', 2)!])).toBe('INT. A - DAY\n\n  !SFX: BOOM\n  MARA\n');
+  });
+
+  it('either fix leaves nothing to report, and the shot reads the same', () => {
+    for (const fix of planLineFixes(shotStack, 'misread-as-character', 2)) {
+      const fixed = apply(shotStack, [fix]);
+      expect(findFixableIssues(fixed)).toEqual([]);
+      expect(buildShotMap(fixed, []).shots.find((shot) => shot.shot === 1)).toMatchObject({ description: 'CLOSE-UP', pose: 'MARA KNEELS' });
+    }
   });
 
   it('keeps CRLF line endings', () => {
     const text = stacked.replaceAll('\n', '\r\n');
-    expect(apply(text, [planLineFix(text, 'misread-as-character', 2)!])).toBe(
-      'INT. A - DAY\r\n\r\nPAGE: 7\r\n\r\nPANEL: WIDE of the harbor.\r\n',
-    );
+    const [force, blank] = planLineFixes(text, 'misread-as-character', 2);
+    expect(apply(text, [force])).toBe('INT. A - DAY\r\n\r\n!PAGE: 7\r\nPANEL: WIDE of the harbor.\r\n');
+    expect(apply(text, [blank])).toBe('INT. A - DAY\r\n\r\nPAGE: 7\r\n\r\nPANEL: WIDE of the harbor.\r\n');
   });
 
-  it('offers no fix when a blank line already follows, or the line does not exist', () => {
-    expect(planLineFix('PAGE: 7\n\nPANEL: x\n', 'misread-as-character', 0)).toBeUndefined();
-    expect(planLineFix('PAGE: 7', 'misread-as-character', 0)).toBeUndefined();
-    expect(planLineFix('PAGE: 7\nx\n', 'misread-as-character', 9)).toBeUndefined();
+  it('offers no "add !" on a line already forced, no blank line where one follows, and nothing for a missing line', () => {
+    expect(planLineFixes('!PAGE: 7\nPANEL: x\n', 'misread-as-character', 0).map((fix) => fix.kind)).toEqual(['blank']);
+    expect(planLineFixes('PAGE: 7\n\nPANEL: x\n', 'misread-as-character', 0).map((fix) => fix.kind)).toEqual(['force-action']);
+    expect(planLineFixes('PAGE: 7\nx\n', 'misread-as-character', 9)).toEqual([]);
   });
 
-  it('Fix All repairs it, after which the page map no longer reports it', () => {
+  it('Fix All adds the !, after which neither map reports it', () => {
     const plan = planAllFixes(stacked);
     expect(plan.skipped).toBe(0);
-    expect(plan.fixes).toHaveLength(1);
+    expect(plan.fixes.map((fix) => fix.kind)).toEqual(['force-action']);
     const fixed = apply(stacked, plan.fixes);
+    expect(fixed).toBe('INT. A - DAY\n\n!PAGE: 7\nPANEL: WIDE of the harbor.\n');
     expect(buildPageMap(fixed, []).issues.map((issue) => issue.code)).not.toContain('misread-as-character');
     expect(planAllFixes(fixed)).toEqual({ fixes: [], skipped: 0 });
   });
 
-  it('does not touch a script without pages', () => {
+  it('does not touch a script with no stacked all-caps convention line', () => {
     expect(findFixableIssues('INT. A - DAY\n\nMara waits.\n')).toEqual([]);
+    expect(findFixableIssues('INT. A - DAY\n\nSHOT: WIDE on the dock\nPOSE: MARA KNEELS\n')).toEqual([]);
   });
 });

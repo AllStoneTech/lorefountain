@@ -19,6 +19,7 @@ import { parseFountain, type FountainToken } from '../../src/fountain/parse';
 import { parseScriptTitlePage } from '../../src/model/script';
 import { extractShots } from '../../src/shots/parseShots';
 import { scanScript } from '../../src/shots/scanScript';
+import { findFixableIssues } from '../../src/upgrade/formatFixes';
 import { parseSceneHeading } from '../../src/shots/sceneHeading';
 import { buildShotMap } from '../../src/shots/shotMap';
 
@@ -271,13 +272,15 @@ describe('fountainSyntax.md examples', () => {
     expect(items.map((item) => item.kind)).toEqual(['character', 'dialogue', 'directive', 'character', 'dialogue']);
   });
 
-  it('convention lines: a lowercase word or a blank line keeps all-caps shots as action', () => {
-    const text = example("POSE: Sango's hands, shaking");
+  it('convention lines: a leading !, a lowercase word or a blank line keeps all-caps shots as action', () => {
+    const text = example('!SHOT: CLOSE-UP');
     expect(typesOf(text).every((type) => type === 'action')).toBe(true);
     expect(extractShots(text).map((shot) => [shot.description, shot.pose])).toEqual([
+      ['CLOSE-UP', "Sango's hands, shaking"],
       ['WIDE on the dock', 'Sango kneels by the water'],
       ['CLOSE-UP', "Sango's hands, shaking"],
     ]);
+    expect(findFixableIssues(text)).toEqual([]);
   });
 
   it('convention lines: the counter-example really is a character cue in plain Fountain', () => {

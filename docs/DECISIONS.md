@@ -6,6 +6,24 @@ revisit.
 
 ---
 
+## ADR-0044 — `misread-as-character` on every script, fixed with Fountain's forced-action `!`
+
+**Date:** 2026-11-12 · **Status:** Accepted (owner approved on 2026-11-11 and 2026-11-12). Core side: Core ADR-0002.
+
+Same ground rule as ADR-0038 and ADR-0040: **extend Fountain, never change it.**
+
+1. **A warning on every script, not a comic-only note.** An all-caps convention line with a blank line above and text directly under it (`SHOT: CLOSE-UP` over `POSE: SANGO KNEELS`) prints in every other Fountain app as a character speaking. That is a portability defect, so it is a warning, like `orphaned-parenthetical`. The shot map reports prefix lines; the page map reports comic lines; a line is reported once. LoreFountain itself keeps reading the line as a convention line, so shot maps and cues stay correct until it is fixed.
+2. **Two quick fixes, `!` first.** Fountain 1.1's forced-action `!` makes any line action in every 1.1 app, which strips it before printing. It keeps a shot block together, so it is the preferred fix and the one Fix All applies. Inserting a blank line after the line stays available as the second quick fix. Neither changes a word. Nothing is rewritten on save.
+3. **Convention lines accept a leading `!` everywhere** (Core): matching, cues, shot maps, page maps, the validator and syntax colouring. The `!` gets its own scope (`keyword.operator.forced-action.fountain`).
+4. **Highlighting follows the parser more closely.** Backslash-escaped `\*` and `\_` no longer colour as emphasis, and the title-page keys match `fountain-js` (`Date`, `Draft date`, `Revisions`).
+5. **Docs.** The Fountain Syntax help, `agents/script-writer.md`, the scaffolded scripts README and `docs/FOUNTAIN-EXTENSIONS.md` recommend `!`. Their version markers were already raised on this unreleased branch (ADR-0043), so they are not raised again.
+
+Rejected: rewriting the line automatically on save (the writer's file is theirs), and accepting a lowercase keyword (`Shot:`), which would change the convention.
+
+Revisit when: a Fountain app the owner relies on is found not to honour `!` (Final Draft's Fountain import is unverified), or Fountain's spec changes how forced action works.
+
+---
+
 ## ADR-0043 — Comic scripts in the extension: `PAGE:`/`PANEL:` adopted from Core
 
 **Date:** 2026-11-11 · **Status:** Accepted for the unreleased branch (the syntax itself is Core ADR-0001, still marked Proposed there)

@@ -34,6 +34,8 @@ MARA (CONT'D)
 It was down here the whole time.
 ```
 
+An all-caps convention line with a blank line above it and text directly under it (`SHOT: CLOSE-UP` with `POSE: MARA KNEELS` under it) is read by every other Fountain app as a character cue, with the lines under it as dialogue. LoreFountain still reads it correctly, but `node agents/validate.js` warns about it as `misread-as-character`. Start such a line with Fountain's forced-action `!` (`!SHOT: CLOSE-UP`): every Fountain app then reads it as action and doesn't print the `!`. A lowercase word in the line, or a blank line after it, also works. Don't add `!` to lines that don't need it.
+
 There are two kinds of pause, and they're written differently:
 
 - **A character's own pause** is a parenthetical inside their dialogue: `(beat)`, `(a beat)`, `(long beat)`, `(pause)`, `(a pause)`, `(long pause)` or `(silence)`. It's performance direction for that speaker.
@@ -188,7 +190,7 @@ We should go.
 Rules to follow:
 
 - **A page is not a scene.** `PAGE:`/`PANEL:` never replace a scene heading. Keep real `INT.`/`EXT.` headings at each change of place or time (a scene heading does not open or close a page or panel); with none, the whole script is one scene.
-- **Leave a blank line after `PAGE:`, and keep a lowercase word in `PANEL:` text.** Fountain reads an all-caps line with text directly under it as a character cue, so other Fountain apps would print `PAGE: 7` / `PANEL: ...` stacked as a speaker. LoreFountain still reads it correctly and reports the info note `misread-as-character`. Put each speaker in its own block with a blank line before the cue, and keep a speech and its parentheticals together (no blank lines, as above).
+- **Start `PAGE:` with `!` (or leave a blank line after it), and keep a lowercase word in `PANEL:` text.** Fountain reads an all-caps line with text directly under it as a character cue, so other Fountain apps would print `PAGE: 7` / `PANEL: ...` stacked as a speaker. LoreFountain still reads it correctly and warns: `misread-as-character`. `!PAGE: 7` forces the line as action in every Fountain app. Put each speaker in its own block with a blank line before the cue, and keep a speech and its parentheticals together (no blank lines, as above).
 - **Do not write `PAGE TURN` as a line**: an all-caps line is a character cue. Write `PAGE: 6 (TURN)`.
 - **`SFX:` is shared with audio.** In a comic panel it is lettering, but it is also recorded as a sound cue in `.cues.json`, and a `[tag]` on it is checked against `audio.json`. Leave comic `SFX:` lines untagged unless the same script also feeds an audio production.
 - Word budgets are guidance: more than 9 panels on a page, more than 5 balloons in a panel, a balloon over 25 words or more than 40 words of dialogue in a panel each produce an info note. Keep lettering short.
@@ -196,7 +198,7 @@ Rules to follow:
 
 Every script with at least one `PAGE:` line gets a `<script-name>.pages.json` sidecar next to it, regenerated on every save and never hand-edited; it is removed again if the script loses all its pages. It holds each page (`index`, `label`, `number`, `modifiers`, `lines`) and each panel (`number`, `description`, `shot`/`pose`/`light`/`layout`, `lettering` in reading order as balloons, captions and sound effects, `scene`, entity ids mentioned in the panel's direction text, and word counts), plus totals and the issues below. Never create or edit it yourself.
 
-`node agents/validate.js` reports a comic script's totals (pages, panels, lettered words) and these checks, none of which fail the run. Warnings: `duplicate-page-number` (also overlapping ranges and repeated text labels), `page-out-of-order`, `panel-before-page`, `content-outside-panel`, `missing-page-label`. Notes: `page-number-gap`, `empty-page`, `missing-panel-description`, `splash-multiple-panels`, `spread-without-range`, `misread-as-character`, `many-panels`, `many-balloons`, `long-balloon`, `long-panel-dialogue`. Fix the warnings before you finish. Renumbering pages is the writer's decision, so do not renumber unasked.
+`node agents/validate.js` reports a comic script's totals (pages, panels, lettered words) and these checks, none of which fail the run. Warnings: `duplicate-page-number` (also overlapping ranges and repeated text labels), `page-out-of-order`, `panel-before-page`, `content-outside-panel`, `missing-page-label`, `misread-as-character`. Notes: `page-number-gap`, `empty-page`, `missing-panel-description`, `splash-multiple-panels`, `spread-without-range`, `many-panels`, `many-balloons`, `long-balloon`, `long-panel-dialogue`. Fix the warnings before you finish. Renumbering pages is the writer's decision, so do not renumber unasked.
 
 ## Adding cues and shots when asked
 

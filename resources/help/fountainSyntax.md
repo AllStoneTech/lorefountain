@@ -435,7 +435,8 @@ list, cue sheet or BBC-style radio script is LoreFountain Pro.
 
 - Write the keyword in capitals, at the start of the line, followed
   directly by a colon: `SHOT:`, not `Shot:` or `SHOT :`. Anything else is
-  ordinary action to LoreFountain too.
+  ordinary action to LoreFountain too. The one thing allowed in front of
+  the keyword is Fountain's `!` (see below).
 - Keep convention lines in the action, never in the middle of a speech.
   Finish the speech, leave a blank line, write the convention line, leave
   another blank line, then repeat the character cue with `(CONT'D)`:
@@ -450,12 +451,18 @@ SANGO (CONT'D)
 Every single one.
 ```
 
-- **Keep a lowercase word in an all-caps convention line**, or leave a
-  blank line after it. Fountain reads an all-caps line with text directly
-  under it as a character cue. LoreFountain still understands the lines
-  correctly, but other apps would print them as a character speaking:
+- **Start an all-caps convention line with `!` when text sits directly
+  under it.** Fountain reads an all-caps line with a blank line above and
+  text directly under it as a character cue. LoreFountain still understands
+  the lines correctly, but other apps would print them as a character
+  speaking. A leading `!` is Fountain's own way to force a line to be
+  action: every Fountain app reads it that way and doesn't print the `!`.
+  A lowercase word in the line, or a blank line after it, works too:
 
 ```fountain
+!SHOT: CLOSE-UP
+POSE: Sango's hands, shaking
+
 SHOT: WIDE on the dock
 POSE: Sango kneels by the water
 
@@ -464,8 +471,9 @@ SHOT: CLOSE-UP
 POSE: Sango's hands, shaking
 ```
 
-Both shots above are action in every app. Writing `SHOT: CLOSE-UP` with
-`POSE: SANGO KNEELS` directly under it would not be.
+All three shots above are action in every app. Writing `SHOT: CLOSE-UP`
+with `POSE: SANGO KNEELS` directly under it would not be, and LoreFountain
+warns about it; the quick fix adds the `!`.
 
 Snippets save typing: type `shot`, `pose`, `light`, `dur`, `pause`, `sfx`,
 `amb` or `mus` and press Tab. `shot-tag`, `sfx-tag`, `amb-tag` and
@@ -668,12 +676,12 @@ PANEL: Close on her boots.
   Other action in a panel is more direction for the artist.
 - A page is not a scene. Scene headings (`INT.`/`EXT.`) don't open or
   close a page or panel, so put one at each change of place or time.
-- **Leave a blank line after `PAGE:`**, and keep a lowercase word in
-  `PANEL:` text. Fountain reads an all-caps line with text directly under
-  it as a character cue, so another app would print `PAGE: 7` as a
-  speaker. LoreFountain reads it correctly either way, adds a note, and
-  the quick fix inserts the blank line. Speakers also need a blank line
-  before them, so put each balloon in its own block.
+- **Start `PAGE:` with `!`, or leave a blank line after it**, and keep a
+  lowercase word in `PANEL:` text. Fountain reads an all-caps line with
+  text directly under it as a character cue, so another app would print
+  `PAGE: 7` as a speaker. LoreFountain reads it correctly either way, warns,
+  and the quick fix adds the `!` (`!PAGE: 7`). Speakers also need a blank
+  line before them, so put each balloon in its own block.
 - `SFX:` is also a sound cue (`<script>.cues.json`). In a comic panel it
   is the lettering. Leave comic sound effects without a `[tag]` unless the
   same script also feeds an audio production.
@@ -702,9 +710,11 @@ project at once.
   convention line interrupts the speech.
 - **A plain-action pause** such as `Beat.`. The fix replaces it with
   `PAUSE:`.
-- **An all-caps convention line with text under it** (`PAGE: 7` straight
-  above `PANEL:`), which other Fountain apps read as a character. The fix
-  inserts a blank line after it.
+- **An all-caps convention line with text under it** (`SHOT: CLOSE-UP`
+  straight above `POSE:`, or `PAGE: 7` above `PANEL:`), which other
+  Fountain apps read as a character. The preferred fix starts the line with
+  Fountain's `!` so it is forced as action; the other inserts a blank line
+  after it. Fix All uses the `!`.
 
 ## Further reading
 

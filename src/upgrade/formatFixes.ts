@@ -17,12 +17,16 @@
  * - `unforced-transition`: put Fountain's `>` force marker in front of a
  *   transition the spec only detects when forced (`FADE IN:`, `CUT TO
  *   BLACK.`). The words are untouched.
- * - `misread-as-character` (comic scripts, ADR-0043): insert a blank line
- *   after an all-caps convention line (`PAGE: 7`) that other Fountain apps
- *   would read as a character cue. No words change.
+ * - `misread-as-character` (every script, ADR-0044; Core ADR-0002): an
+ *   all-caps convention line (`SHOT: CLOSE-UP`, `PAGE: 7`) that other
+ *   Fountain apps would read as a character cue. Two fixes, neither changing
+ *   a word: put Fountain 1.1's forced-action `!` in front of it (preferred,
+ *   and the one Fix All uses, since the block stays together), or insert a
+ *   blank line after it.
  *
- * Exports {@link planLineFix} (one issue, for a quick fix) and
- * {@link planAllFixes} (a whole script, for Fix All).
+ * Exports {@link planLineFixes} (every fix for one issue, for quick fixes),
+ * {@link planLineFix} (the preferred one) and {@link planAllFixes} (a whole
+ * script, for Fix All).
  *
  * Gotchas:
  * - Fix All only re-cues when nothing but LoreFountain prefix lines
@@ -60,7 +64,7 @@ export interface TextEditPlan {
 }
 
 /** The kinds of fix this module plans. */
-export type FormatFixKind = 'join' | 'recue' | 'pause' | 'force' | 'blank';
+export type FormatFixKind = 'join' | 'recue' | 'pause' | 'force' | 'force-action' | 'blank';
 
 /** One planned fix for one issue. */
 export interface FormatFix {
@@ -96,9 +100,10 @@ export interface FixableIssue {
 }
 
 /**
- * Every fixable-code issue in a script: the shot map's, plus (for comic
- * scripts) the page map's `misread-as-character`. Entities are irrelevant to
- * format issues, so none are passed.
+ * Every fixable-code issue in a script: the shot map's (including
+ * `misread-as-character` for prefix lines), plus the page map's
+ * `misread-as-character` for comic lines. Each line is reported by only one
+ * of them. Entities are irrelevant to format issues, so none are passed.
  *
  * @param text - The script's text.
  * @returns Fixable issues in line order.
@@ -123,20 +128,39 @@ interface ScriptContext {
 }
 
 /**
- * Plan the fix for one issue at `line`, for a quick fix.
+ * Plan every fix offered for one issue at `line`, preferred first, for the
+ * quick-fix menu.
  *
  * @param text - The script's current text.
  * @param code - The issue code (`orphaned-parenthetical`, `bare-pause-line`, `unforced-transition` or `misread-as-character`).
  * @param line - The issue's 0-based line.
- * @returns The fix, or `undefined` when no single standard fix applies.
+ * @returns The fixes, preferred first; empty when no standard fix applies.
+ */
+export function planLineFixes(text: string, code: string, line: number): FormatFix[] {
+  const context = analyze(text);
+  const fixes =
+    code === 'bare-pause-line'
+      ? [planPause(context, line)]
+      : code === 'unforced-transition'
+        ? [planForce(context, line)]
+        : code === 'misread-as-character'
+          ? [planForceAction(context, line), planBlankAfter(context, line)]
+          : code === 'orphaned-parenthetical'
+            ? [planOrphan(context, line, new Map())]
+            : [];
+  return fixes.filter((fix): fix is FormatFix => fix !== undefined);
+}
+
+/**
+ * Plan the preferred fix for one issue at `line`.
+ *
+ * @param text - The script's current text.
+ * @param code - The issue code (`orphaned-parenthetical`, `bare-pause-line`, `unforced-transition` or `misread-as-character`).
+ * @param line - The issue's 0-based line.
+ * @returns The preferred fix, or `undefined` when no standard fix applies.
  */
 export function planLineFix(text: string, code: string, line: number): FormatFix | undefined {
-  const context = analyze(text);
-  if (code === 'bare-pause-line') return planPause(context, line);
-  if (code === 'unforced-transition') return planForce(context, line);
-  if (code === 'misread-as-character') return planBlankAfter(context, line);
-  if (code === 'orphaned-parenthetical') return planOrphan(context, line, new Map());
-  return undefined;
+  return planLineFixes(text, code, line)[0];
 }
 
 /**
@@ -161,7 +185,7 @@ export function planAllFixes(text: string): FixAllPlan {
         : issue.code === 'unforced-transition'
           ? planForce(context, issue.line)
           : issue.code === 'misread-as-character'
-            ? planBlankAfter(context, issue.line)
+            ? planForceAction(context, issue.line)
             : planOrphan(context, issue.line, becomingDialogue);
     if (!fix || !fix.safeForFixAll) {
       skipped += 1;
@@ -190,6 +214,24 @@ function planPause(context: ScriptContext, line: number): FormatFix | undefined 
   };
 }
 
+/**
+ * Plan Fountain's forced-action `!` in front of an all-caps convention line
+ * that Fountain would read as a character cue. The block stays together and
+ * every Fountain 1.1 app reads it as action, with the `!` not printed.
+ */
+function planForceAction(context: ScriptContext, line: number): FormatFix | undefined {
+  const text = context.lines[line];
+  if (text === undefined || text.trim() === '' || text.trimStart().startsWith('!')) return undefined;
+  const indent = text.length - text.trimStart().length;
+  return {
+    kind: 'force-action',
+    line,
+    title: 'Force as action (add !) so other Fountain apps do not read it as a character',
+    edit: { start: { line, character: indent }, end: { line, character: indent }, newText: '!' },
+    safeForFixAll: true,
+  };
+}
+
 /** Plan a blank line after an all-caps convention line that Fountain would read as a character cue. */
 function planBlankAfter(context: ScriptContext, line: number): FormatFix | undefined {
   const text = context.lines[line];
@@ -198,7 +240,7 @@ function planBlankAfter(context: ScriptContext, line: number): FormatFix | undef
   return {
     kind: 'blank',
     line,
-    title: 'Add a blank line after this line (so other Fountain apps do not read it as a character)',
+    title: 'Add a blank line after this line so other Fountain apps do not read it as a character',
     edit: { start: { line, character: text.length }, end: { line, character: text.length }, newText: context.eol },
     safeForFixAll: true,
   };
