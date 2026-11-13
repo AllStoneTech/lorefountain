@@ -10,7 +10,7 @@ The repository is public (as of 2026-10-02), recreated from the clean history so
 
 ## Before releasing 1.1.0
 
-1.1.0 is marked Unreleased in `CHANGELOG.md`. Its code is already on `main` (shot-maps was merged). It carries shot maps and the upgrade experience (ADR-0038, ADR-0039), and it must not ship until the items below are settled.
+1.1.0 is dated 2026-11-13 in `CHANGELOG.md` and its code is on `main`, but it is not published yet. It carries shot maps and the upgrade experience (ADR-0038, ADR-0039), the Core split, project types and script export, and it must not be published until the items below are settled.
 
 - **Bring ORUN to standard with Fix All.** 310 orphaned `(beat)` warnings across 16 scripts; extensions sit in parentheticals. Do this in a BlerdDimensions-repo session, not from here.
 - **Live-test what unit tests only cover.** Computer-use sessions at tier "click" can't type or drag, so these were never exercised through the real UI:
@@ -24,10 +24,10 @@ The repository is public (as of 2026-10-02), recreated from the clean history so
 
 ADR-0042 moves the parsing code to the separate LoreFountain-Core repo. Merged into `main` on 2026-11-13.
 
-- [x] Switch the `lorefountain-core` dependency to a pinned Core release: the prebuilt package on Core's v0.2.0 GitHub release.
+- [x] Switch the `lorefountain-core` dependency to a pinned Core release: the prebuilt package on Core's v0.2.0 GitHub release, now v0.3.0.
 - [x] Merge `feature/lorefountain-core` into `main`.
-- [ ] Push `main` and let CI confirm a fresh install.
-- [ ] Release. Producer-side changes ship in the same release. Core's own changelog and docs, and any follow-up to the Producer spec, are handled in those repositories.
+- [x] Push `main` and let CI confirm a fresh install.
+- [ ] Release, as part of 1.1.0 (above). Producer-side changes ship in the same release. Core's own changelog and docs, and any follow-up to the Producer spec, are handled in those repositories.
 
 ## LoreFountain-Producer support
 
@@ -44,13 +44,13 @@ Agreed with the Producer spec on 2026-11-05 (`LoreFountain-Producer/docs/LOREFOU
 - [ ] **Read Producer data, read-only and tolerantly:** "covered by an accepted Producer take" instead of "not sourced yet", per-episode production status with coverage sub-shots, and a warning when a deleted or retagged shot has accepted takes.
 - [ ] **`AGENTS.md`:** say that `producer.json` and `producer/` are maintained by the Producer and not hand-edited.
 - [ ] **A demo project with media**, shared by both products as a test case.
-- [ ] **Bug:** `fountain-js` 1.2.4 throws on a `~` lyric directly under a character cue, so the whole script fails to parse. Fix or work around it in Core.
+- [x] **Bug:** `fountain-js` 1.2.4 throws on a `~` lyric directly under a character cue, so the whole script fails to parse. Worked around in Core (ADR-0005).
 
 ## Later
 
 - **Shot maps phase 2:** a form-based editor for `shots.json` and hover thumbnails.
 - **Shot maps phase 3:** the vidkit video pipeline.
-- **PDF export** (free tier, spec §16). Deferred in ADR-0002 because it needs the heavier `aw-parser`/`pdfkit` dependencies, and confirmed as "later" on 2026-07-24. The free tier is feature-complete without it.
+- **Exports still to come:** an audio drama (radio script) layout, one combined file for a whole season, and checking the `.fdx` in Final Draft and the `.docx` in Word.
 - **Cross-season drag-and-drop in the Scripts view.** It would mean moving the file rather than rewriting `Order`, so it was left out of ADR-0023 on purpose.
 - **Entity subfolders and the Story Card editor.** The editor's selector is `**/world/*.md`, so nested entity files index correctly but don't open in the editor by default (ADR-0009).
 - **Duplicate ADR numbers.** `DECISIONS.md` has two ADR-0028 entries and lists ADR-0029 after ADR-0030. Renumbering was judged risky because other documents cite these numbers, so it is left alone for now.

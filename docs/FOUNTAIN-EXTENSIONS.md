@@ -16,9 +16,9 @@ LoreFountain **extends Fountain and never changes it** (ADR-0040).
 |---|---|---|---|
 | Shot | `SHOT: <description>` | Action line | 0.x (shot list), tags/sidecar in 1.1.0 |
 | Shot details | `POSE:`, `LIGHT:`, `DURATION:` | Action line | 0.x |
-| Comic page and panel | `PAGE: <label> (<modifiers>)`, `PANEL: [tag] <description>` | Action line | Unreleased (ADR-0043; the panel `[tag]` ADR-0046) |
-| Comic lettering and layout | `CAPTION:`, `LAYOUT:` (with `SFX:`, dialogue, `SHOT:`, `POSE:`, `LIGHT:`) | Action line, dialogue | Unreleased (ADR-0043) |
-| Comic camera move | `MOVE: slow zoom in` (and `DURATION:` inside a panel) | Action line | Unreleased (ADR-0046) |
+| Comic page and panel | `PAGE: <label> (<modifiers>)`, `PANEL: [tag] <description>` | Action line | 1.1.0 (ADR-0043; the panel `[tag]` ADR-0046) |
+| Comic lettering and layout | `CAPTION:`, `LAYOUT:` (with `SFX:`, dialogue, `SHOT:`, `POSE:`, `LIGHT:`) | Action line, dialogue | 1.1.0 (ADR-0043) |
+| Comic camera move | `MOVE: slow zoom in` (and `DURATION:` inside a panel) | Action line | 1.1.0 (ADR-0046) |
 | Scene pause | `PAUSE:` or `PAUSE: 2s` | Action line | 1.1.0 |
 | Sound cues | `SFX:`, `MUSIC:`, `AMB:` | Action line | 0.x |
 | Tag | `[tag]` after the colon of `SHOT:`, `SFX:`, `MUSIC:`, `AMB:` | Text within an action line | cues 1.0.0, shots 1.1.0 |
