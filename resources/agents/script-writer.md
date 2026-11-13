@@ -1,4 +1,4 @@
-<!-- lorefountain-docs-version: 6 -->
+<!-- lorefountain-docs-version: 7 -->
 # LoreFountain — Script-Writing Reference
 
 Read this before creating or editing any `.fountain` file under `scripts/`.
@@ -9,7 +9,7 @@ Read this before creating or editing any `.fountain` file under `scripts/`.
 
 Scripts are 100% standard Fountain — scene headings, character cues, dialogue, parentheticals, transitions. Nothing LoreFountain-specific is required to make linking to the world work, and scripts stay fully portable to any other Fountain tool.
 
-LoreFountain *extends* Fountain with a few plain-English prefix lines (`SFX:`, `MUSIC:`, `AMB:`, `SHOT:`, `POSE:`, `LIGHT:`, `DURATION:`, `PAUSE:`, and for comics `PAGE:`, `PANEL:`, `CAPTION:`, `LAYOUT:`) written as ordinary action lines, but it never changes how standard Fountain is read. Follow the Fountain spec exactly; when a script breaks it, LoreFountain parses it the way Fountain does and warns, rather than guessing what was meant.
+LoreFountain *extends* Fountain with a few plain-English prefix lines (`SFX:`, `MUSIC:`, `AMB:`, `SHOT:`, `POSE:`, `LIGHT:`, `DURATION:`, `PAUSE:`, and for comics `PAGE:`, `PANEL:`, `CAPTION:`, `LAYOUT:`, `MOVE:`) written as ordinary action lines, but it never changes how standard Fountain is read. Follow the Fountain spec exactly; when a script breaks it, LoreFountain parses it the way Fountain does and warns, rather than guessing what was meant.
 
 ### Dialogue blocks and pauses
 
@@ -160,12 +160,14 @@ A comic-book script is still plain Fountain. Two more prefix lines give it struc
 | Line | Meaning |
 |---|---|
 | `PAGE: <label> (<modifiers>)` | Opens a page. The label is a number (`7`), a range for a spread (`2-3`) or free text (`INSIDE FRONT COVER`). Optional trailing `(...)` of comma-separated modifiers, case-insensitive: `SPLASH`, `SPREAD`, `TURN` (a page-turn reveal). Others are kept and ignored. |
-| `PANEL: <description>` | Opens a panel on the current page; the text is the art direction. Panels are numbered 1.. per page by position, so never write the number. |
+| `PANEL: [tag] <description>` | Opens a panel on the current page; the text is the art direction. Panels are numbered 1.. per page by position, so never write the number. The optional `[tag]` is a lowercase slug in brackets, written exactly like a `SHOT:` tag (see "Narrated and motion comics" below). |
 | `CAPTION: text` / `CAPTION (SPEAKER): text` | A narration box, optionally in a character's voice. One physical line. |
 | `SFX: text` | A lettered sound effect, where the text is the lettering (`SFX: KRAAAW`). |
 | Character cue + dialogue | A balloon. Cue extensions are kept; `(O.P.)` / `(O.S.)` mark it off panel; a parenthetical belongs to the speech it sits in. |
 | `LAYOUT: text` | Free-text panel layout direction (for the open panel, or the page before its first panel). |
 | `SHOT:`, `POSE:`, `LIGHT:` | Inside a panel: camera framing, pose and lighting for the artist. |
+| `DURATION: 4s` | Inside a panel: how long the panel is held when the comic is narrated (same lenient parser as for shots). |
+| `MOVE: slow zoom in` | Inside a panel: a camera-move hint for the art when it is shown as a still (`slow zoom in`, `slow zoom out`, `slow pan left`, `slow pan right`, `drift`, `held`). Only read in comic scripts. |
 | plain action | More artist direction inside a panel. |
 
 ```fountain
@@ -192,11 +194,37 @@ Rules to follow:
 - **Do not write `PAGE TURN` as a line**: an all-caps line is a character cue. Write `PAGE: 6 (TURN)`.
 - **`SFX:` is shared with audio only by opt-in.** In a comic panel (from a `PAGE:`/`PANEL:` forward) an `SFX:` line is lettering only: it goes in `.pages.json`, not in `.cues.json`, and a `[tag]` on it is not checked against `audio.json`. A project that makes a narrated or motion comic, where an effect is lettered and heard, sets `comic.sfxAsCue` to `true` in `lorefountain.config.json`; then comic `SFX:` lines are both. `MUSIC:` and `AMB:` are always audio cues. An `SFX:` before any `PAGE:`/`PANEL:`, and in any script with no `PAGE:` line, is an ordinary audio cue.
 - **Word budgets are guidance, set per project.** The number of panels per page, balloons per panel, words per balloon and words per panel each produce an info note past a limit, and each note says which limit and preset fired. The limits come from a preset: `western` (the default: 9 panels per page, 3 balloons per panel, 25 words per balloon, 35 words per panel), `manga` (8 panels per page), `european` and `webtoon` (no panels-per-page check), or `custom` (no built-in limits). A project picks one in `lorefountain.config.json` and can override any single limit, or switch it off with `null`: `{"comic": {"preset": "manga", "limits": {"maxWordsPerBalloon": 30, "maxPanelsPerPage": null}}}`. The numbers are rules of thumb from writers' guides, not standards; follow the project's setting and keep lettering short. Do not edit `comic` settings unasked.
-- No `[tag]` on `PAGE:`/`PANEL:` (panels are identified by position).
+- `PAGE:` takes no `[tag]` (pages are identified by number). A `PANEL:` may take one, and should when the panel has art or recorded takes, because the default tag is positional (see below).
 
-Every script with at least one `PAGE:` line gets a `<script-name>.pages.json` sidecar next to it, regenerated on every save and never hand-edited; it is removed again if the script loses all its pages. It holds each page (`index`, `label`, `number`, `modifiers`, `lines`) and each panel (`number`, `description`, `shot`/`pose`/`light`/`layout`, `lettering` in reading order as balloons, captions and sound effects, `scene`, entity ids mentioned in the panel's direction text, and word counts), plus totals and the issues below. Never create or edit it yourself.
+Every script with at least one `PAGE:` line gets a `<script-name>.pages.json` sidecar next to it, regenerated on every save and never hand-edited; it is removed again if the script loses all its pages. It holds each page (`index`, `label`, `number`, `modifiers`, `lines`) and each panel (`number`, `description`, `tag`, `durationText`/`durationSeconds`, `moveText`/`motion`, `pageTurn`, `shot`/`pose`/`light`/`layout`, `lettering` in reading order as balloons, captions and sound effects, `scene`, entity ids mentioned in the panel's direction text, and word counts), plus totals and the issues below. Never create or edit it yourself.
 
-`node agents/validate.js` reports a comic script's totals (pages, panels, lettered words) and these checks, none of which fail the run. Warnings: `duplicate-page-number` (also overlapping ranges and repeated text labels), `page-out-of-order`, `panel-before-page`, `content-outside-panel`, `missing-page-label`. Notes: `page-number-gap`, `empty-page`, `missing-panel-description`, `splash-multiple-panels`, `spread-without-range`, `misread-as-character`, `many-panels`, `many-balloons`, `long-balloon`, `long-panel-dialogue`. Fix the warnings before you finish. Renumbering pages is the writer's decision, so do not renumber unasked.
+`node agents/validate.js` reports a comic script's totals (pages, panels, lettered words) and these checks, none of which fail the run. Warnings: `duplicate-panel-tag`, `duplicate-page-number` (also overlapping ranges and repeated text labels), `page-out-of-order`, `panel-before-page`, `content-outside-panel`, `missing-page-label`. Notes: `page-number-gap`, `empty-page`, `missing-panel-description`, `splash-multiple-panels`, `spread-without-range`, `misread-as-character`, `many-panels`, `many-balloons`, `long-balloon`, `long-panel-dialogue`. Fix the warnings before you finish. Renumbering pages is the writer's decision, so do not renumber unasked.
+
+#### Narrated and motion comics (`comic.panelsAsShots`)
+
+A narrated comic ("motion comic": panel art slides with voice and sound over it) goes to LoreFountain-Producer as a shot map **derived from the panels**. It is off by default; a project turns it on with `"comic": {"panelsAsShots": true}` in `lorefountain.config.json` (do not change `comic` settings unasked). When on, a comic script with **no `SHOT:` lines** gets a `<script-name>.shots.json` with one shot per panel; a script that has any `SHOT:` line keeps its own shots and its panels are not derived (info note `panels-not-derived`). A script with no `PAGE:` line is unaffected.
+
+```fountain
+PAGE: 7 (TURN)
+
+PANEL: [harbor-wide] Wide shot of the harbor. WINONA stands on the pier.
+DURATION: 5s
+MOVE: slow zoom in
+MUSIC: [dawn-theme] IN
+
+CAPTION: Dawn, 1925.
+
+WINONA (O.P.)
+(whispering)
+We should go.
+```
+
+- **Tag:** an explicit `PANEL: [harbor-wide]` names the shot. Without one the tag is derived from the production code, page and panel (`1x03-p7-2`, page 7 panel 2), unique within the script; inserting a panel renumbers the later default tags, so tag any panel that has art or takes.
+- **Duration and move:** `DURATION:` becomes the shot's `durationText`/`durationSeconds`; `MOVE:` becomes its `motion` (a recognized move becomes `ken-burns-in`, `ken-burns-out`, `pan-left`, `pan-right`, `drift`, `parallax` or `none`; other text passes through as written). Both are ignored outside a panel.
+- **Page turn:** the `TURN` modifier sets `pageTurn` on the first panel of that page (the reveal), a hold hint for the Producer.
+- **Voice:** each balloon is a spoken line (speaker, extensions, text; parentheticals as directions). A `CAPTION:` is a voice-over line (`V.O.`) with `caption: true`, spoken by its `CAPTION (SPEAKER):` character, or by the speaker `NARRATOR` when plain.
+- **Sound:** `MUSIC:` and `AMB:` inside a panel are the shot's cues. A lettered `SFX:` is a cue only when `comic.sfxAsCue` is true.
+- A panel with no description is an info note (`missing-panel-description`) saying its derived shot has no picture description. Never edit the sidecar; it is regenerated.
 
 ## Adding cues and shots when asked
 

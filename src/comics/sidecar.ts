@@ -22,6 +22,7 @@ import type { ResolvedComicSettings } from 'lorefountain-core/comics/limits';
 import { buildPageMap, type PageMapResult } from 'lorefountain-core/comics/pageMap';
 import { buildPageSidecar, pageSidecarPathFor } from 'lorefountain-core/comics/pageSidecar';
 import type { ShotMapEntity } from '../shots/shotMap';
+import { panelTagPrefixFor } from './tagPrefix';
 
 export { pageSidecarPathFor };
 
@@ -32,7 +33,7 @@ export { pageSidecarPathFor };
  * @param scriptPath - Absolute path to the `.fountain` script.
  * @param scriptText - The script's current, already-read text.
  * @param entities - Every known entity, for mention/speaker resolution.
- * @param comic - The project's resolved comic settings (`preset` and `limits` for the word-budget notes). Omitted: the built-in `western` preset.
+ * @param comic - The project's resolved comic settings (`preset` and `limits` for the word-budget notes, `panelsAsShots` for the panel-tag and missing-description notes). Omitted: the built-in `western` preset, panels not shots.
  * @returns The full page map (pages and per-script issues), so the caller can
  *   reuse it for validation instead of re-parsing.
  * @throws Re-throws filesystem errors other than a missing sidecar on removal.
@@ -46,7 +47,12 @@ export async function updatePageSidecar(
   const result = buildPageMap(
     scriptText,
     entities,
-    comic ? { preset: comic.preset, limits: comic.limits, overriddenLimits: comic.overriddenLimits } : {},
+    {
+      ...(comic ? { preset: comic.preset, limits: comic.limits, overriddenLimits: comic.overriddenLimits } : {}),
+      // Default panel tags are checked for repeats against the same prefix the derived shot map uses.
+      tagPrefix: panelTagPrefixFor(scriptPath, scriptText),
+      panelsAsShots: comic?.panelsAsShots === true,
+    },
   );
 
   if (!result.hasPages) {

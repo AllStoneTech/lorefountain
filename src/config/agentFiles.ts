@@ -81,13 +81,36 @@ import * as path from 'node:path';
  * presets and the `comic` block of `lorefountain.config.json`) and
  * `validate.js` to `5` (it reads the `comic` block, so its limits, notes and
  * cue sidecars differ) — `esbuild.js`'s banner moved to `5` in the same commit.
+ *
+ * The style bible (ADR-0045) bumps `world-builder.md` to `4` (the "Style bible
+ * format" section) and `validate.js` to `6` (it checks `world/style.lf.md`) —
+ * `esbuild.js`'s banner moved to `6` in the same commit.
+ *
+ * Panels as shots (ADR-0046, Core's ADR-0003) bump `AGENTS.md` to `6`,
+ * `script-writer.md` to `7` (`PANEL: [tag]`, panel `DURATION:`/`MOVE:`, the
+ * narrated-comic section, `comic.panelsAsShots`) and `validate.js` to `7` (it
+ * reads `comic.panelsAsShots`, writes the derived `.shots.json` and reports
+ * `duplicate-panel-tag`) — `esbuild.js`'s banner moved to `7` in the same
+ * commit. The style bible's bump to `6` above is uncommitted, so `7` stacks on it.
+ *
+ * The `.lf.md` naming convention and the guided style bible editor (ADR-0047,
+ * Core's ADR-0004) bump `world-builder.md` to `5` (`world/style.lf.md`, the
+ * `.lf.md` rule, the guided form) and `validate.js` to `8` (it looks for
+ * `style.lf.md` and skips every `*.lf.md` as a non-entity) — `esbuild.js`'s
+ * banner moved to `8` in the same change. The world README moved to `3` in
+ * `readmeFiles.ts`.
+ *
+ * Renaming the Story Overview to `overview.lf.md` (ADR-0048) bumps
+ * `world-builder.md` to `6` and `initiator.md` to `3` (both name the file) and
+ * the world README to `4`. `validate.js` is unchanged (it already skips every
+ * `*.lf.md`, and Core still skips the legacy `OVERVIEW.md`).
  */
 export const AGENT_FILE_VERSIONS: Record<string, number> = {
-  'AGENTS.md': 5,
-  [path.join('agents', 'world-builder.md')]: 3,
-  [path.join('agents', 'script-writer.md')]: 6,
-  [path.join('agents', 'initiator.md')]: 2,
-  [path.join('agents', 'validate.js')]: 5,
+  'AGENTS.md': 6,
+  [path.join('agents', 'world-builder.md')]: 6,
+  [path.join('agents', 'script-writer.md')]: 7,
+  [path.join('agents', 'initiator.md')]: 3,
+  [path.join('agents', 'validate.js')]: 8,
 };
 
 /**

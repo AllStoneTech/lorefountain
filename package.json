@@ -74,6 +74,10 @@
     "configurationDefaults": {
       "[fountain]": {
         "editor.wordWrap": "on"
+      },
+      "workbench.editorAssociations": {
+        "style.lf.md": "lorefountain.styleBible",
+        "overview.lf.md": "lorefountain.storyOverview"
       }
     },
     "commands": [
@@ -125,6 +129,11 @@
       {
         "command": "lorefountain.newNote",
         "title": "New Note",
+        "category": "LoreFountain"
+      },
+      {
+        "command": "lorefountain.openStyleBible",
+        "title": "Open Style Bible (Create If Missing)",
         "category": "LoreFountain"
       },
       {
@@ -321,6 +330,12 @@
         "icon": "$(question)"
       },
       {
+        "command": "lorefountain.showStyleBibleHelp",
+        "title": "Style Bible: How to Use This File",
+        "category": "LoreFountain",
+        "icon": "$(question)"
+      },
+      {
         "command": "lorefountain.showFountainSyntaxHelp",
         "title": "Fountain Syntax: Tutorial and Quick Reference",
         "category": "LoreFountain",
@@ -344,9 +359,22 @@
     ],
     "customEditors": [
       {
+        "viewType": "lorefountain.styleBible",
+        "displayName": "LoreFountain Style Bible",
+        "selector": [
+          {
+            "filenamePattern": "**/style.lf.md"
+          }
+        ],
+        "priority": "default"
+      },
+      {
         "viewType": "lorefountain.storyOverview",
         "displayName": "LoreFountain Story Overview",
         "selector": [
+          {
+            "filenamePattern": "**/overview.lf.md"
+          },
           {
             "filenamePattern": "**/world/OVERVIEW.md"
           }
@@ -612,6 +640,11 @@
         {
           "command": "lorefountain.showStoryOverviewHelp",
           "when": "activeCustomEditorId == 'lorefountain.storyOverview'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "lorefountain.showStyleBibleHelp",
+          "when": "activeCustomEditorId == 'lorefountain.styleBible'",
           "group": "navigation@9"
         }
       ],

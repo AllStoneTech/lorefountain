@@ -36,6 +36,11 @@
  * limits come from `lorefountain.config.json` (`comic.preset`, `comic.limits`),
  * else the built-in `western` preset; `comic.sfxAsCue` decides whether comic
  * `SFX:` lines are also audio cues (ADR-0044).
+ *
+ * The optional style bible, `world/style.lf.md` (ADR-0045), is checked too: a
+ * malformed one is reported with the other malformed files and fails the run
+ * (the Producer can't read it), while a `reference_images` entry that doesn't
+ * exist (or points outside the project) is only a note.
  */
 
 import * as path from 'node:path';
@@ -53,6 +58,7 @@ import type { ReadManifestFileResult } from '../assets/manifestFile';
 import { readShotManifest, SHOT_MANIFEST_LABEL } from '../assets/shotManifest';
 import { buildIndexFromDisk, type IndexBuildSummary, type ProjectAssetManifests } from '../index/build';
 import { createMemoryIndexStore } from '../index/memoryStore';
+import { checkStyleBible, type StyleCheckReport } from '../index/styleCheck';
 
 async function main(): Promise<void> {
   const root = path.resolve(process.argv[2] ?? '.');
@@ -105,9 +111,11 @@ async function main(): Promise<void> {
     comic,
   );
 
-  printReport(root, summary);
+  const style = await checkStyleBible(folders.world, root);
+  printReport(root, summary, style);
   process.exitCode =
     summary.malformed.length > 0 ||
+    style.status === 'malformed' ||
     summary.danglingRelations.length > 0 ||
     summary.danglingEpisodes.length > 0 ||
     summary.duplicateProductionCodes.length > 0 ||
@@ -122,7 +130,7 @@ function reportManifestIssue(label: string, result: ReadManifestFileResult<unkno
   console.log(`⚠ ${label} (${result.reason}): ${result.message} — treating it as empty.\n`);
 }
 
-function printReport(root: string, summary: IndexBuildSummary): void {
+function printReport(root: string, summary: IndexBuildSummary, style: StyleCheckReport): void {
   console.log(
     `${summary.entityCount} entities, ${summary.glossaryCount} glossary terms, ${summary.eventCount} Timeline events, ${summary.scriptCount} scripts parsed.\n`,
   );
@@ -134,7 +142,10 @@ function printReport(root: string, summary: IndexBuildSummary): void {
     );
   }
 
+  const styleNotes = style.status === 'ok' ? style.notes : [];
   const nothingToReport =
+    style.status !== 'malformed' &&
+    styleNotes.length === 0 &&
     summary.malformed.length === 0 &&
     summary.warnings.length === 0 &&
     summary.danglingRelations.length === 0 &&
@@ -149,10 +160,14 @@ function printReport(root: string, summary: IndexBuildSummary): void {
     return;
   }
 
-  if (summary.malformed.length > 0) {
-    console.log(`✘ ${summary.malformed.length} malformed file(s):`);
+  const malformedCount = summary.malformed.length + (style.status === 'malformed' ? 1 : 0);
+  if (malformedCount > 0) {
+    console.log(`✘ ${malformedCount} malformed file(s):`);
     for (const issue of summary.malformed) {
       console.log(`  ${path.relative(root, issue.filePath)} — ${issue.reason}: ${issue.message}`);
+    }
+    if (style.status === 'malformed') {
+      console.log(`  ${path.relative(root, style.filePath)} — ${style.reason}: ${style.message}`);
     }
     console.log('');
   }
@@ -227,7 +242,8 @@ function printReport(root: string, summary: IndexBuildSummary): void {
 
   // Notes are informational: printed last, never counted toward the exit code.
   const manifestNotes = summary.shotManifestIssues.filter((issue) => issue.severity === 'info');
-  const noteCount = summary.notes.reduce((count, entry) => count + entry.notes.length, 0) + manifestNotes.length;
+  const noteCount =
+    summary.notes.reduce((count, entry) => count + entry.notes.length, 0) + manifestNotes.length + styleNotes.length;
   if (noteCount > 0) {
     console.log(`ℹ ${noteCount} note(s):`);
     for (const entry of summary.notes) {
@@ -237,6 +253,11 @@ function printReport(root: string, summary: IndexBuildSummary): void {
     }
     for (const issue of manifestNotes) {
       console.log(`  ${issue.message}`);
+    }
+    if (style.status === 'ok') {
+      for (const note of styleNotes) {
+        console.log(`  ${path.relative(root, style.filePath)} — ${note}`);
+      }
     }
   }
 }

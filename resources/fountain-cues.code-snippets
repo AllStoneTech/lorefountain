@@ -61,17 +61,23 @@
   },
   "Comic Page": {
     "prefix": "page",
-    "body": "PAGE: ${1:1}
-
-PANEL: ${2:description}
-",
+    "body": "PAGE: ${1:1}\n\nPANEL: ${2:description}\n",
     "description": "Open a comic page (and its first panel). Modifiers go in parentheses after the label: PAGE: 7 (SPLASH), PAGE: 2-3 (SPREAD), PAGE: 6 (TURN). Leave a blank line after PAGE: so other Fountain apps don't read it as a character cue."
   },
   "Comic Panel": {
     "prefix": "panel",
-    "body": "PANEL: ${1:description}
-",
+    "body": "PANEL: ${1:description}\n",
     "description": "Open a comic panel on the current page. Panels are numbered by position; keep a lowercase word in the text so other Fountain apps don't read an all-caps line as a character cue."
+  },
+  "Comic Panel (tagged)": {
+    "prefix": "paneltag",
+    "body": "PANEL: [${1:panel-tag}] ${2:description}\n",
+    "description": "Open a comic panel with an explicit [tag], the same slug a SHOT: tag uses. The tag names the panel's art in assets/manifests/shots.json and its shot when comic.panelsAsShots is on; without one a tag like 1x03-p7-2 is derived from the page and panel."
+  },
+  "Comic Move": {
+    "prefix": "move",
+    "body": "MOVE: ${1|slow zoom in,slow zoom out,slow pan left,slow pan right,drift,held|}",
+    "description": "A camera-move hint for the open comic panel's art when it is shown as a still in a narrated or motion comic (the Producer's motion vocabulary)."
   },
   "Comic Caption": {
     "prefix": "caption",

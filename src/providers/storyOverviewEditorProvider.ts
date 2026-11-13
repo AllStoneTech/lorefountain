@@ -1,9 +1,9 @@
 /**
  * Story Overview custom editor (ADR-0029): a `CustomTextEditorProvider` over
- * `world/OVERVIEW.md`, mirroring `storyCardEditorProvider.ts`'s pattern
+ * `world/overview.lf.md` (or the legacy `OVERVIEW.md` until it is renamed), mirroring `storyCardEditorProvider.ts`'s pattern
  * (plain `TextDocument` underneath, so file watching/dirty-state/undo/save
  * all go through VS Code's normal machinery). Registered against a selector
- * precise enough (`**\/world/OVERVIEW.md`, package.json) that it doesn't
+ * precise enough (`**\/overview.lf.md`, plus the legacy `**\/world/OVERVIEW.md`, package.json) that it doesn't
  * collide with the Story Card editor's broader `**\/world/*.md` selector.
  *
  * A malformed file (invalid frontmatter) leaves the webview showing its last
@@ -13,13 +13,13 @@
 
 import * as crypto from 'node:crypto';
 import * as vscode from 'vscode';
+import { STORY_OVERVIEW_VIEW_TYPE } from './projectDocumentEditors';
 import { parseStoryOverviewFile, serializeStoryOverview, type StoryOverview } from '../model/storyOverview';
 import { applyFormStateToStoryOverview, storyOverviewToFormState, type StoryOverviewFormState } from './storyOverviewForm';
 import { buildStoryOverviewHtml } from './storyOverviewHtml';
 import { renderStoryOverviewBody } from './storyOverviewRender';
 
-/** The view type this provider registers under (must match package.json's `customEditors` contribution). */
-export const STORY_OVERVIEW_VIEW_TYPE = 'lorefountain.storyOverview';
+export { STORY_OVERVIEW_VIEW_TYPE };
 
 /** Messages the webview's client script sends back to the extension host. */
 type WebviewInboundMessage = { type: 'ready' } | { type: 'edit'; formState: StoryOverviewFormState };

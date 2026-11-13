@@ -92,6 +92,11 @@
           "type": "boolean",
           "default": false,
           "description": "When false (the default), an SFX: line inside a comic panel is lettering only: it is not written to the .cues.json audio cue sidecar and is not checked against audio.json. Set true for a narrated or motion comic where an effect is both lettered and heard. MUSIC: and AMB: are always audio cues."
+        },
+        "panelsAsShots": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, a comic script with no SHOT: lines gets a derived <script>.shots.json with one shot per panel, so a narrated or motion comic (panel art with voice and sound over it) can go to LoreFountain-Producer. Balloons and captions become spoken lines, DURATION: and MOVE: inside a panel set the shot's length and camera move, and PANEL: [tag] names the shot (otherwise a tag like 1x03-p7-2 is derived). A script that has SHOT: lines keeps them and its panels are not derived. Default false: print-comic projects are unaffected."
         }
       },
       "additionalProperties": false

@@ -119,9 +119,10 @@ describe('buildIndexFromDisk', () => {
     expect(summary.malformed).toEqual([]);
   });
 
-  it('excludes world/OVERVIEW.md (any case) from the entity walk', async () => {
+  it('excludes the legacy world/OVERVIEW.md (any case) and world/overview.lf.md from the entity walk', async () => {
     await writeFile(tmpRoot, 'world/sango.md', characterMd('Sango'));
     await writeFile(tmpRoot, 'world/OVERVIEW.md', '# Story Overview\n\n## Premise\n\nFreeform, no frontmatter.\n');
+    await writeFile(tmpRoot, 'world/overview.lf.md', '# Story Overview\n\nNew name.\n');
 
     const summary = await buildIndexFromDisk(store, {
       world: path.join(tmpRoot, 'world'),

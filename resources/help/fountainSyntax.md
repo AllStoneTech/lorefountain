@@ -45,7 +45,7 @@ note in the **Problems** panel. It never guesses what you meant.
 | LoreFountain shot | `SHOT:`, then `POSE:`, `LIGHT:`, `DURATION:` | `SHOT: WIDE on the dock` |
 | LoreFountain scene pause | `PAUSE:`, with an optional length | `PAUSE: 2s` |
 | LoreFountain sound cue | `SFX:`, `MUSIC:` or `AMB:` | `SFX: a door slams` |
-| LoreFountain comic page and panel | `PAGE:` and `PANEL:`, with `CAPTION:` and `LAYOUT:` | `PAGE: 7 (SPLASH)` |
+| LoreFountain comic page and panel | `PAGE:` and `PANEL:`, with `CAPTION:`, `LAYOUT:` and `MOVE:` | `PAGE: 7 (SPLASH)` |
 | LoreFountain tag | `[tag]` right after `SHOT:`, `SFX:`, `MUSIC:` or `AMB:` | `SFX: [door-slam] a door slams` |
 | LoreFountain episode keys | `Order:` and `Production Code:` on the title page | `Production Code: 1x03` |
 
@@ -681,6 +681,38 @@ PANEL: Close on her boots.
   both lettered and heard, set `"comic": { "sfxAsCue": true }` in
   `lorefountain.config.json` and comic `SFX:` lines count as both.
   `MUSIC:` and `AMB:` are always sound cues.
+
+#### Narrated and motion comics
+
+A comic with panel art and a voice over it can go to LoreFountain-Producer
+as a shot map built from its panels. It is off until the project sets
+`"comic": { "panelsAsShots": true }` in `lorefountain.config.json`. These
+lines inside a panel add what the Producer needs:
+
+```fountain
+PAGE: 7 (TURN)
+
+PANEL: [harbor-wide] Wide shot of the harbor. WINONA stands on the pier.
+DURATION: 5s
+MOVE: slow zoom in
+
+CAPTION: Dawn, 1925.
+```
+
+- `PANEL: [harbor-wide] ...` names the panel with a tag, written like a
+  `SHOT:` tag. Without one the tag is worked out from the production code,
+  page and panel (`1x03-p7-2`). Tags must be unique in a script. A worked-out
+  tag changes if you insert a panel, so tag any panel that has art.
+- `DURATION: 5s` is how long the panel is held. `MOVE:` is a camera move for
+  the art (`slow zoom in`, `slow zoom out`, `slow pan left`, `slow pan right`,
+  `drift`, `held`). `PAGE: 7 (TURN)` marks the first panel of that page as a
+  page-turn reveal.
+- With the setting on, a comic script with no `SHOT:` lines gets a
+  `<script>.shots.json`: one shot per panel, each balloon a spoken line,
+  each caption a voice-over line for the caption's speaker (or `NARRATOR`),
+  and `MUSIC:`/`AMB:` as cues. A lettered `SFX:` is a cue only with
+  `sfxAsCue`. A script that has `SHOT:` lines keeps them, and its panels
+  are not turned into shots.
 
 Every script with a `PAGE:` line gets a `<script>.pages.json` file next to
 it: each page and panel with its line range, balloons, captions, sound

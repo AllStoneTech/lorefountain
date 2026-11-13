@@ -16,11 +16,13 @@
 
 import * as crypto from 'node:crypto';
 import * as vscode from 'vscode';
+import { isProjectDocument } from 'lorefountain-core/project/files';
 import { idFromFilePath } from '../model/slug';
 import { parseEntityFile, serializeEntity, type Entity, type EntityType } from '../model/entity';
 import type { IndexStore } from '../index/store';
 import { applyFormStateToEntity, entityToFormState, type EntityFormState } from './storyCardForm';
 import { buildStoryCardHtml } from './storyCardHtml';
+import { editorViewTypeForProjectDocument } from './projectDocumentEditors';
 
 /** The view type this provider registers under (must match package.json's `customEditors` contribution). */
 export const STORY_CARD_VIEW_TYPE = 'lorefountain.storyCard';
@@ -46,6 +48,15 @@ export function createStoryCardEditorProvider(
 ): vscode.CustomTextEditorProvider {
   return {
     resolveCustomTextEditor(document, webviewPanel) {
+      // Defensive (ADR-0047): the selector (`**/world/*.md`) also matches `*.lf.md`
+      // project documents such as `style.lf.md`, which are never entities. If VS
+      // Code hands one to this provider, reopen it in its own guided editor (or as
+      // text if it has none) and close this panel, so no project document ever
+      // opens as an entity form.
+      if (isProjectDocument(document.uri.fsPath)) {
+        void redirectProjectDocument(document.uri, webviewPanel);
+        return;
+      }
       webviewPanel.webview.options = { enableScripts: true };
       const nonce = crypto.randomBytes(16).toString('base64');
       webviewPanel.webview.html = buildStoryCardHtml(webviewPanel.webview.cspSource, nonce);
@@ -80,6 +91,21 @@ export function createStoryCardEditorProvider(
       });
     },
   };
+}
+
+/**
+ * Reopen a project document in the editor meant for it, then dispose the Story
+ * Card panel it was wrongly opened in.
+ *
+ * @param uri - The `*.lf.md` file.
+ * @param webviewPanel - The Story Card panel to close.
+ */
+async function redirectProjectDocument(uri: vscode.Uri, webviewPanel: vscode.WebviewPanel): Promise<void> {
+  try {
+    await vscode.commands.executeCommand('vscode.openWith', uri, editorViewTypeForProjectDocument(uri.fsPath));
+  } finally {
+    webviewPanel.dispose();
+  }
 }
 
 /** Parse the document's current text into an {@link Entity}, or `undefined` if it's currently malformed. */

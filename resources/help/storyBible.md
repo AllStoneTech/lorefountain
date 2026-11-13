@@ -16,7 +16,7 @@ automatically, no second dialog.
 
 ## What's in it, and in what order
 
-1. **Story Overview** (only if `world/OVERVIEW.md` exists) — its pitch,
+1. **Story Overview** (only if `world/overview.lf.md` exists) — its pitch,
    tone, genre, and body.
 2. One section per non-empty entity category, in the same order as the
    World view (Characters, Locations, Factions, Objects, Concepts, Arcs)

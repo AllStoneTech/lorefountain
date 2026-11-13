@@ -21,6 +21,9 @@ import {
 import type { ReadManifestFileResult } from '../assets/manifestFile';
 import { readShotManifest, SHOT_MANIFEST_LABEL } from '../assets/shotManifest';
 import { getWorkspaceFolders } from '../config/workspaceConfig';
+import { isNonEntityDoc } from 'lorefountain-core/project/files';
+import { STYLE_BIBLE_FILE_NAME } from 'lorefountain-core/model/styleBible';
+import { checkStyleBible } from './styleCheck';
 import { removeCueSidecar } from '../cues/sidecar';
 import type { ScriptIssueEntry, ScriptIssueSink } from '../diagnostics/scriptIssues';
 import { removeShotSidecar } from '../shots/sidecar';
@@ -109,6 +112,7 @@ export class WorkspaceIndex implements vscode.Disposable {
       comic,
     );
     this.logSummary(summary);
+    await this.logStyleCheck(folders.world);
     this.issueSink?.fullBuild(this.folder.uri.fsPath, scriptIssueEntries(summary));
     this.changeEmitter.fire();
     return summary;
@@ -154,6 +158,11 @@ export class WorkspaceIndex implements vscode.Disposable {
   }
 
   private async handleWorldChange(uri: vscode.Uri, worldPath: string): Promise<void> {
+    if (isStyleBibleFile(uri.fsPath, worldPath)) {
+      await this.logStyleCheck(worldPath);
+      this.changeEmitter.fire();
+      return;
+    }
     const kind = classifyWorldFile(uri.fsPath, worldPath);
     if (kind === 'skip') return;
     await this.handleReindex(uri.fsPath, kind);
@@ -192,6 +201,18 @@ export class WorkspaceIndex implements vscode.Disposable {
       );
     }
     this.changeEmitter.fire();
+  }
+
+  /** Log the style bible's problems and notes (ADR-0045), if the project has one. Nothing is logged for a healthy file. */
+  private async logStyleCheck(worldFolder: string): Promise<void> {
+    const report = await checkStyleBible(worldFolder, this.folder.uri.fsPath);
+    if (report.status === 'malformed') {
+      this.outputChannel.appendLine(`[LoreFountain] SKIPPED (${report.reason}) ${report.filePath}: ${report.message}`);
+    } else if (report.status === 'ok') {
+      for (const note of report.notes) {
+        this.outputChannel.appendLine(`[LoreFountain] NOTE ${report.filePath}: ${note}`);
+      }
+    }
   }
 
   private logSummary(summary: IndexBuildSummary): void {
@@ -246,17 +267,25 @@ export class WorkspaceIndex implements vscode.Disposable {
   }
 }
 
+/** Whether a path is the style bible: `style.lf.md` (any case) directly inside the world folder. */
+function isStyleBibleFile(filePath: string, worldPath: string): boolean {
+  return (
+    path.basename(filePath).toLowerCase() === STYLE_BIBLE_FILE_NAME &&
+    path.dirname(path.resolve(filePath)) === path.resolve(worldPath)
+  );
+}
+
 /**
  * Classify a changed file path within `world/` as an entity, a glossary
  * term, a Timeline event, or something to skip: the reserved `notes/`
  * subfolder (per Spec §13.4 — notes are deliberately never indexed), any
- * scaffolded `README.md`, and `world/OVERVIEW.md` (the Story Overview,
- * ADR-0029 — see `build.ts`'s module doc comment on why both are excluded
- * everywhere).
+ * scaffolded `README.md`, `world/OVERVIEW.md` (the Story Overview,
+ * ADR-0029) and any `*.lf.md` project document such as `world/style.lf.md`
+ * (ADR-0045/0047) — see `build.ts`'s module doc comment on why all are
+ * excluded everywhere).
  */
 function classifyWorldFile(filePath: string, worldPath: string): WorldFileKind {
-  const baseName = path.basename(filePath).toLowerCase();
-  if (baseName === 'readme.md' || baseName === 'overview.md') return 'skip';
+  if (isNonEntityDoc(filePath)) return 'skip';
   const relative = path.relative(worldPath, filePath);
   const [firstSegment] = relative.split(path.sep);
   if (firstSegment === 'glossary') return 'glossary';

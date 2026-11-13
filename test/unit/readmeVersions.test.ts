@@ -39,7 +39,7 @@ describe('checkReadmeVersions', () => {
 
     const results = await checkReadmeVersions(workspaceDir, folders);
     const worldReadme = results.find((r) => r.relativePath === join('world', 'README.md'));
-    expect(worldReadme).toMatchObject({ templateName: 'world.md', status: 'stale', workspaceVersion: 0, currentVersion: 1 });
+    expect(worldReadme).toMatchObject({ templateName: 'world.md', status: 'stale', workspaceVersion: 0, currentVersion: 4 });
   });
 
   it('reports a README matching the current version as current', async () => {
@@ -55,11 +55,11 @@ describe('checkReadmeVersions', () => {
 
   it('resolves target paths under a custom-configured folder name', async () => {
     mkdirSync(join(workspaceDir, 'lore'), { recursive: true });
-    writeFileSync(join(workspaceDir, 'lore', 'README.md'), '<!-- lorefountain-docs-version: 1 -->\nLore folder.\n');
+    writeFileSync(join(workspaceDir, 'lore', 'README.md'), '<!-- lorefountain-docs-version: 4 -->\nLore folder.\n');
 
     const results = await checkReadmeVersions(workspaceDir, { world: 'lore', scripts: 'scripts', imports: 'imports', assets: 'assets' });
     const worldReadme = results.find((r) => r.templateName === 'world.md');
-    expect(worldReadme).toMatchObject({ relativePath: join('lore', 'README.md'), status: 'current', version: 1 });
+    expect(worldReadme).toMatchObject({ relativePath: join('lore', 'README.md'), status: 'current', version: 4 });
   });
 
   it('reports a tracked README that was never scaffolded into this workspace as missing', async () => {

@@ -1,6 +1,6 @@
 # The Story Overview Editor
 
-The Story Overview editor is the default view for `world/OVERVIEW.md` — the
+The Story Overview editor is the default view for `world/overview.lf.md` — the
 project's single "what is this story actually about" reference. There's
 only ever one per project, unlike every other item in the World view.
 

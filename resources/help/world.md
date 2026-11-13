@@ -24,6 +24,11 @@ Markdown file per item, organized into categories down the sidebar.
   "what is this story actually about" reference: short fields for title,
   pitch, tone, and genre, plus one large freeform section for premise,
   setting, key characters, synopsis, or themes.
+- **Style Bible** (if present): next to the Story Overview. The optional
+  `world/style.lf.md`, one file for how the project should look and feel in
+  every medium (comic, video, illustrated book). It opens in a guided form;
+  create it from **Command Palette → "LoreFountain: Open Style Bible
+  (Create If Missing)"**. See the Style Bible help for the fields.
 
 ## Populating it
 

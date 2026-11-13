@@ -80,6 +80,10 @@ files there beyond the script itself.
   save. In a comic, `SFX:` is lettering only (not an audio cue) unless the
   project sets `comic.sfxAsCue`, and the crowding notes follow the
   project's `comic.preset` (western, manga, european, webtoon, custom).
+  For a narrated or motion comic, the setting `comic.panelsAsShots` turns
+  each panel into a shot in `<script-name>.shots.json` (a `PANEL: [tag]`,
+  `DURATION:` and `MOVE:` inside a panel set its name, length and camera
+  move; see the Fountain syntax help).
   The Fountain Syntax help has the details. In this view, expanding
   a comic script shows a **Pages** section above its other files: each
   page (with flags like `SPLASH`, panel and word counts) expands to its

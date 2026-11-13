@@ -43,7 +43,7 @@ describe('checkAgentFileVersions', () => {
 
     const results = await checkAgentFileVersions(workspaceDir);
     const agentsMd = results.find((r) => r.relativePath === 'AGENTS.md');
-    expect(agentsMd).toMatchObject({ status: 'untracked', currentVersion: 5 });
+    expect(agentsMd).toMatchObject({ status: 'untracked', currentVersion: 6 });
   });
 
   it('reports a file behind the current version as stale', async () => {
@@ -57,18 +57,18 @@ describe('checkAgentFileVersions', () => {
 
     const results = await checkAgentFileVersions(workspaceDir);
     const worldBuilder = results.find((r) => r.relativePath === join('agents', 'world-builder.md'));
-    expect(worldBuilder).toMatchObject({ status: 'stale', workspaceVersion: 0, currentVersion: 3 });
+    expect(worldBuilder).toMatchObject({ status: 'stale', workspaceVersion: 0, currentVersion: 6 });
   });
 
   it('reports a file matching the current version as current', async () => {
     writeFileSync(
       join(workspaceDir, 'agents', 'world-builder.md'),
-      '<!-- lorefountain-docs-version: 3 -->\nEntities live in world/.\n',
+      '<!-- lorefountain-docs-version: 6 -->\nEntities live in world/.\n',
     );
 
     const results = await checkAgentFileVersions(workspaceDir);
     const worldBuilder = results.find((r) => r.relativePath === join('agents', 'world-builder.md'));
-    expect(worldBuilder).toMatchObject({ status: 'current', version: 3 });
+    expect(worldBuilder).toMatchObject({ status: 'current', version: 6 });
   });
 
   it('reports a tracked file that was never scaffolded into this workspace as missing', async () => {
@@ -76,17 +76,17 @@ describe('checkAgentFileVersions', () => {
     expect(results.length).toBeGreaterThan(0);
     expect(results.every((r) => r.status === 'missing')).toBe(true);
     const agentsMd = results.find((r) => r.relativePath === 'AGENTS.md');
-    expect(agentsMd).toMatchObject({ status: 'missing', currentVersion: 5 });
+    expect(agentsMd).toMatchObject({ status: 'missing', currentVersion: 6 });
   });
 
   it('reports validate.js current when its JS-style marker matches', async () => {
     writeFileSync(
       join(workspaceDir, 'agents', 'validate.js'),
-      '// lorefountain-docs-version: 5\nconsole.log("validating");\n',
+      '// lorefountain-docs-version: 8\nconsole.log("validating");\n',
     );
 
     const results = await checkAgentFileVersions(workspaceDir);
     const validateJs = results.find((r) => r.relativePath === join('agents', 'validate.js'));
-    expect(validateJs).toEqual({ relativePath: join('agents', 'validate.js'), status: 'current', version: 5 });
+    expect(validateJs).toEqual({ relativePath: join('agents', 'validate.js'), status: 'current', version: 8 });
   });
 });

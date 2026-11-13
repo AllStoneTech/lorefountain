@@ -3,7 +3,9 @@
  * script that has at least one explicit `SHOT:` line, mirroring the cue
  * sidecar (`cues/sidecar.ts`). Regenerated from the script on every save and
  * every reindex, never hand-edited, safe to delete, and removed when the
- * script no longer has any shots: derived data, like the SQL index.
+ * script no longer has any shots: derived data, like the SQL index. With the
+ * project setting `comic.panelsAsShots` on, a comic with no `SHOT:` lines gets
+ * a sidecar derived from its panels (ADR-0046 here, ADR-0003 in Core).
  *
  * Exports the sidecar's path helper, writer, remover and relocator, plus its
  * on-disk shape. No `vscode` dependency, just `fs`, so it's callable
@@ -17,6 +19,8 @@
 
 import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
+import { buildShotMapFromPages } from 'lorefountain-core/comics/panelShots';
+import { panelTagPrefixFor } from '../comics/tagPrefix';
 import { buildShotMap, type ShotMapEntity, type ShotMapEntry, type ShotMapResult } from './shotMap';
 
 const SCHEMA_VERSION = 1;
@@ -43,7 +47,7 @@ export function shotSidecarPathFor(scriptPath: string): string {
  * @param scriptPath - Absolute path to the `.fountain` script.
  * @param scriptText - The script's current, already-read text.
  * @param entities - Every known entity, for mention/speaker/location resolution.
- * @param options - `sfxAsCue`: the project's `comic.sfxAsCue`, so each shot's `cues` list matches `.cues.json`.
+ * @param options - `sfxAsCue`: the project's `comic.sfxAsCue`, so each shot's `cues` list matches `.cues.json`. `panelsAsShots`: the project's `comic.panelsAsShots`; a comic with no explicit `SHOT:` gets one derived shot per panel.
  * @returns The full shot map (shots and per-script issues), so the caller can
  *   reuse it for validation instead of re-parsing.
  * @throws Re-throws filesystem errors other than a missing sidecar on removal.
@@ -52,11 +56,16 @@ export async function updateShotSidecar(
   scriptPath: string,
   scriptText: string,
   entities: readonly ShotMapEntity[],
-  options: { sfxAsCue?: boolean } = {},
+  options: { sfxAsCue?: boolean; panelsAsShots?: boolean } = {},
 ): Promise<ShotMapResult> {
-  const result = buildShotMap(scriptText, entities, options);
+  const result = options.panelsAsShots
+    ? buildShotMapFromPages(scriptText, entities, {
+        sfxAsCue: options.sfxAsCue,
+        tagPrefix: panelTagPrefixFor(scriptPath, scriptText),
+      })
+    : buildShotMap(scriptText, entities, { sfxAsCue: options.sfxAsCue });
 
-  if (!result.hasExplicitShots) {
+  if (!result.hasExplicitShots && !result.derivedFromPanels) {
     await removeShotSidecar(scriptPath);
     return result;
   }

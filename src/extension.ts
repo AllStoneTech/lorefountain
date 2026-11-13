@@ -35,6 +35,7 @@ import { registerInstallDemoCommand } from './commands/installDemo';
 import { registerLicensingCommands } from './commands/licensing';
 import { registerMigrateExistingLoreCommand } from './commands/migrateExistingLore';
 import { registerNoteCommands } from './commands/notes';
+import { registerStyleBibleCommand } from './commands/styleBible';
 import { registerReferenceCommands } from './commands/renameEntity';
 import { registerStructuredSearchCommand } from './commands/structuredSearch';
 import { registerTryLoreFountainCommand } from './commands/tryLoreFountain';
@@ -42,7 +43,7 @@ import { scaffoldAgentFilesIfAbsent } from './config/agentFiles';
 import { writeDefaultConfigIfAbsent } from './config/configFile';
 import { detectExistingCoreFolders } from './config/existingFolders';
 import { scaffoldReadmesIfAbsent } from './config/readmeFiles';
-import { scaffoldStoryOverviewIfAbsent } from './config/storyOverview';
+import { migrateStoryOverviewName, scaffoldStoryOverviewIfAbsent } from './config/storyOverview';
 import { getWorkspaceFolders } from './config/workspaceConfig';
 import { relocateCueSidecar } from './cues/sidecar';
 import { relocateShotSidecar } from './shots/sidecar';
@@ -61,6 +62,7 @@ import { openSettingsPanel } from './providers/settingsPanel';
 import { createManifestEditorProvider, MANIFEST_EDITOR_VIEW_TYPE } from './providers/manifestEditorProvider';
 import { createStoryCardEditorProvider, STORY_CARD_VIEW_TYPE } from './providers/storyCardEditorProvider';
 import { createStoryOverviewEditorProvider, STORY_OVERVIEW_VIEW_TYPE } from './providers/storyOverviewEditorProvider';
+import { createStyleBibleEditorProvider, STYLE_BIBLE_VIEW_TYPE } from './providers/styleBibleEditorProvider';
 import { WorldTreeProvider } from './providers/worldTreeProvider';
 import { ScriptDiagnostics } from './providers/scriptDiagnostics';
 import { registerScriptQuickFixes } from './providers/scriptQuickFixes';
@@ -117,6 +119,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   registerEntityCreationCommands(context, pickTargetWorkspaceFolder);
   registerCreateScriptCommand(context, pickTargetWorkspaceFolder);
   registerNoteCommands(context, pickTargetWorkspaceFolder);
+  registerStyleBibleCommand(context, pickTargetWorkspaceFolder, () => treeProvider.refresh());
   registerReferenceCommands(context, outputChannel, findStoreForFolder);
   registerExportTranscriptCommand(context);
   registerStructuredSearchCommand(context, outputChannel, pickTargetWorkspaceFolder, findStoreForFolder);
@@ -150,6 +153,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.window.registerCustomEditorProvider(
       STORY_OVERVIEW_VIEW_TYPE,
       createStoryOverviewEditorProvider(),
+      { webviewOptions: { retainContextWhenHidden: true } },
+    ),
+  );
+
+  context.subscriptions.push(
+    vscode.window.registerCustomEditorProvider(
+      STYLE_BIBLE_VIEW_TYPE,
+      createStyleBibleEditorProvider(),
       { webviewOptions: { retainContextWhenHidden: true } },
     ),
   );
@@ -447,7 +458,36 @@ function updateProviderRegistrations(): void {
     : undefined;
 }
 
+/**
+ * Rename a legacy `world/OVERVIEW.md` to `overview.lf.md` (ADR-0048) on the
+ * first run after an update, so existing projects pick up the `.lf.md`
+ * convention without the writer doing anything. Never overwrites; reports a
+ * conflict if both files exist. A failure (for example a read-only folder) is
+ * logged and the legacy name keeps working, since every reader accepts both.
+ *
+ * @param folder - The workspace folder to migrate.
+ */
+async function migrateProjectDocumentNames(folder: vscode.WorkspaceFolder): Promise<void> {
+  try {
+    const { folders } = await getWorkspaceFolders(folder);
+    const result = await migrateStoryOverviewName(folders.world);
+    if (result.status === 'renamed') {
+      outputChannel.appendLine(`[LoreFountain] Renamed ${result.from} to ${result.to} (the .lf.md convention for project documents).`);
+      void vscode.window.showInformationMessage(
+        `LoreFountain: renamed world/${path.basename(result.from)} to ${path.basename(result.to)}. LoreFountain's own project documents now end in .lf.md; nothing else changed.`,
+      );
+    } else if (result.status === 'conflict') {
+      outputChannel.appendLine(
+        `[LoreFountain] WARNING: both ${result.legacyPath} and ${result.currentPath} exist; using the .lf.md one. Merge them and delete the old OVERVIEW.md.`,
+      );
+    }
+  } catch (err) {
+    outputChannel.appendLine(`[LoreFountain] Could not rename OVERVIEW.md: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
 async function addIndexFor(folder: vscode.WorkspaceFolder): Promise<void> {
+  await migrateProjectDocumentNames(folder);
   try {
     const index = await WorkspaceIndex.create(folder, outputChannel, scriptDiagnostics);
     indexes.set(folder.uri.toString(), index);

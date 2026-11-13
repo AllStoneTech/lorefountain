@@ -6,6 +6,145 @@ revisit.
 
 ---
 
+## ADR-0048 — The Story Overview becomes `overview.lf.md`; existing projects are renamed on first run
+
+**Date:** 2026-11-13 · **Status:** Proposed for the unreleased branch (built and unit-tested; the rename on first run and the editor routing are not yet verified in a live VS Code window). Follows Core's ADR-0004 and the impact analysis it cites (`LoreFountain-Core/docs/PROJECT-DOCUMENT-NAMING-IMPACT.md`). The owner approved renaming `OVERVIEW.md` ("no downside") on 2026-11-13, required that an update renames existing files, and chose to leave the folder `README.md` files as they are.
+
+### 1. Decision
+
+The Story Overview is `world/overview.lf.md`. `README.md` files keep their names.
+
+- **New projects** write `overview.lf.md` (Initialize Workspace, Try LoreFountain, the nine demos under `demos/`, whose files were renamed).
+- **Existing projects are renamed automatically.** `migrateStoryOverviewName` (`config/storyOverview.ts`) runs when the extension first indexes a workspace folder (`addIndexFor`), before the index is built. It renames a legacy `OVERVIEW.md` (any case) to `overview.lf.md` with `fs.rename`, so the content is byte for byte the same and git sees a rename. It never overwrites: if both files exist it logs a warning and uses the `.lf.md` one. It is idempotent. The writer sees one information message; a failure (read-only folder) is logged and the legacy name keeps working.
+- **Every reader accepts both names.** Core's `findStoryOverviewFile` (`project/storyOverview`) prefers `overview.lf.md`, then the legacy name. It is used by the scaffold (so no second overview is created next to a legacy one), the World tree, and the Pro Story Bible export. Core's `isNonEntityDoc` still skips the legacy `overview.md`, so an un-migrated project indexes correctly.
+
+### 2. Editor routing
+
+The old selector `**/world/OVERVIEW.md` stays for un-migrated files; `**/overview.lf.md` is added (any folder name, any depth, which fixes the configured-world-folder gap for this editor). The style bible's selector is narrowed to `**/style.lf.md`, and `configurationDefaults` `workbench.editorAssociations` now names each file (`style.lf.md` to the style editor, `overview.lf.md` to the Story Overview editor), because a blanket `*.lf.md` association would have sent the overview to the style editor. `editorViewTypeForProjectDocument` routes both, and the Story Card provider's defensive redirect uses it, so an `overview.lf.md` handed to the Story Card reopens in its own editor.
+
+### 3. Also changed
+
+- The World tree's Notes list no longer shows `world/notes/README.md` (it used to appear as a note called "Readme"): it now filters with `isNonEntityDoc`.
+- Version markers: `agents/world-builder.md` 6 and `agents/initiator.md` 3 (both name the file; the first tells agents to treat a leftover `OVERVIEW.md` as the same file), world README 4. `validate.js` is unchanged at 8. Existing projects are offered the changed docs by Check for LoreFountain File Updates.
+
+### 4. Tests
+
+`storyOverviewMigration.test.ts` (rename keeps bytes including CRLF, no-op when absent or already done, any letter case, conflict leaves both files, an entity named `overview-notes.md` untouched), updated `storyOverview.test.ts` (scaffold under the new name, no second overview next to a legacy one), `build.test.ts` (both names excluded from the index), `projectDocumentEditors.test.ts` (overview routing), Core `storyOverviewFile.test.ts`.
+
+### 5. Not done / not verified
+
+- Not verified in a live window: the first-run rename and its message, the new selector and associations, the redirect.
+- The migration only runs where the extension activates. It activates for a workspace with `.fountain` files or on a command, so a project with no scripts is renamed the first time any LoreFountain command or view activates it; until then the legacy name works everywhere.
+- Prose that mentions `OVERVIEW.md` (seven demo files: three `imports/source-material.md`, `Loomwake/SESSION_ZERO.md`, `Loomwake/world/vhel.md`, `The_Conjure_Woman/world/README.md`, `The_Heroic_Slave/README.md`) was not edited; demo agent copies refresh through Check File Updates.
+- No separate "Rename project documents" command: the rename is automatic.
+
+Revisit when: a live check shows the rename or the routing misbehaves, or a second singleton project document is added (it should get its own entry in `editorViewTypeForProjectDocument`).
+
+---
+
+## ADR-0047 — The `.lf.md` convention in the extension, and the guided style bible editor
+
+**Date:** 2026-11-13 · **Status:** Proposed for the unreleased branch (built and unit-tested; not yet verified in a live VS Code window, see section 7). The naming rule itself is Core's ADR-0004; this entry is the extension's adoption and the editor.
+
+**Owner's decisions this records:** (a) a malformed `style.lf.md` fails the headless validator (kept); (b) an empty `medium` means the style applies to every medium (kept, and shown in the form); (c) the file is created and edited through a guided editor, not free-form text; (d) project documents that are not entities carry a `.lf.md` suffix so they never collide with entity files.
+
+### 1. Naming convention in the extension
+
+`world/style.lf.md` replaces `world/STYLE.md` everywhere (command, template `resources/style.lf.md`, World tree, help, agent docs, scaffold text, validator messages, tests). The old reservation of the name `style.md` is gone. One Core predicate, `isNonEntityDoc` / `isProjectDocument`, replaces the extension's own copies: the index build (`index/build.ts`), the file watcher (`classifyWorldFile`), the validator (through the build), and the World tree's notes list. The extension's local `isNonEntityDoc` was deleted. `OVERVIEW.md` and the `README.md` files are unchanged; renaming them is analysed in Core's `docs/PROJECT-DOCUMENT-NAMING-IMPACT.md` (report only).
+
+### 2. The guided editor
+
+`lorefountain.styleBible`, a `CustomTextEditorProvider` over the plain `TextDocument` (so undo, dirty state and save are VS Code's), following the Story Overview editor. Pure form model in `providers/styleBibleForm.ts` and `styleBiblePresets.ts` (vitest-tested), markup in `styleBibleHtml.ts`, glue in `styleBibleEditorProvider.ts`. Guarantees:
+
+- **Byte-stable:** when the form state equals the state read from the text, the original text is returned untouched. **Minimal change:** only fields whose form value changed are rewritten; unknown frontmatter keys, `format` keys the form doesn't own, untouched palette items, unknown body headings and the title/intro are preserved. A body-only change keeps the original frontmatter text, comments included. A frontmatter change re-serializes the YAML, which **drops YAML `#` comments** (the template's commented examples); the help topic says so.
+- **Cannot get the YAML wrong:** media are chips (none selected means all media, stated in the form); palette rows are name plus colour picker/hex box and are written quoted by the YAML serializer, so the `#` comment trap cannot occur; reference images use a file dialog scoped to the project and store a project-relative path (a file outside the project is refused), with a missing-file warning; `avoid` is chips; `format` has per-medium rows with preset dropdowns plus Custom; `lettering` is a list; `era_reference` and `art_style` are single lines.
+- **Body:** the scaffold's headings as labelled text areas with hints; only medium-relevant sections show (no Lettering unless comic, no Motion unless video or animation) with a **Show all sections** toggle. A section that is not relevant but already has text still shows, so nothing hides content. Everything else in the body goes in one **Additional notes** area. Scaffold hint comments show as empty and are kept when untouched.
+- **Validation:** parse and schema errors (Core's `styleBibleSchema`) show as an inline banner with the field messages instead of a form; invalid hex and missing or outside reference files show next to the field; text that would fail the schema is never written. Messages from the webview are checked with zod.
+- **Open as text** toolbar button (`vscode.openWith` `default`).
+
+### 3. Presets (guidance only; status labelled in the UI)
+
+Sourced against published pages on 2026-11-13 (printer guides and the WEBTOON creator handbook; the URLs are in `styleBiblePresets.ts`): US standard comic 6.625 × 10.25 in; manga tankōbon about 5 × 7.5 in (Japanese B6, about 128 × 182 mm, is quoted differently by different sources); European album about 22 × 29 cm (editions run 21 × 30 to 22.2 × 29.5); WEBTOON strip under 800 px wide, slices under 1280 px tall. **Unsourced starting values**, labelled "unsourced" in the dropdown: every aspect ratio (16:9, 9:16, 1:1, 4:3, 4:5, 1.85:1, 2.39:1, 21:9), graphic novel 6 × 9 in, magazine 8.5 × 11 in, and all illustrated-book trims (6 × 9, 8 × 10, 8.5 × 11, 8 × 8, 8.5 × 8.5, 5.5 × 8.5 in).
+
+### 4. Registering one editor next to the Story Card's selector
+
+VS Code gives no documented specificity ranking between two `default`-priority custom editors whose selectors overlap (the contribution docs say the user is asked to choose). So the registration does not rely on one:
+
+1. Selector `**/style.lf.md` (any folder name, any depth), priority `default`. (First built as `**/*.lf.md`; narrowed by ADR-0048 so the Story Overview, also a `.lf.md`, keeps its own editor.)
+2. `configurationDefaults` `workbench.editorAssociations` maps `style.lf.md` to `lorefountain.styleBible` (and, since ADR-0048, `overview.lf.md` to the Story Overview editor). This replaces the old `**/world/STYLE.md` to `default` workaround rather than removing it: user associations outrank selector priority, which makes the choice deterministic; the pattern has no slash, so it matches in any folder.
+3. Everything the extension opens (World tree, command) uses the explicit view type.
+4. **Defensive redirect:** if the Story Card provider is ever handed a `*.lf.md`, it reopens it with `editorViewTypeForProjectDocument` (the style editor, or text for a future document with none) and disposes its own panel, so no project document opens as an entity form.
+
+The Story Overview's selectors are in ADR-0048.
+
+### 5. Docs and versions
+
+`world-builder.md` 5, `validate.js` 8 (banner in `esbuild.js`), world README 3, help topics updated; Check for File Updates offers them to existing projects. `AGENTS.md` unchanged.
+
+### 6. Tests
+
+`styleBibleForm.test.ts` (reading, byte-stable round trip, minimal change, unknown-field and unknown-section preservation, quoted hex, format rows, validation, helpers, presets), `projectDocumentEditors.test.ts`, the updated `styleBible.test.ts` (scaffold, a Style entity allowed, `*.lf.md` skipped in world, glossary and timeline) and the version tests.
+
+### 7. Not verified, not done
+
+Not verified in a live VS Code window: the editor-resolution measures, the webview's rendering and behaviour (focus while typing, the colour picker, the file dialog), undo steps, and the redirect. Not done: Problems-panel diagnostics, preserving YAML comments across a form edit, any change under `demos/`.
+
+**Open points for the owner:** whether to rename `OVERVIEW.md` (recommendation in the impact analysis: yes, later, with a migration command; leave `README.md`); whether to source the remaining presets; whether dropping YAML comments on the first form edit is acceptable.
+
+Revisit when: a live check shows the editor association or redirect misbehaves.
+
+---
+
+## ADR-0046 — Narrated comics: `comic.panelsAsShots` writes a shot map from panels
+
+**Date:** 2026-11-12 · **Status:** Proposed for the unreleased branch (built; the owner confirms the open points in Core's ADR-0003 section 8). The syntax, the derivation, the precedence rules and every field are Core's ADR-0003 (`LoreFountain-Core/docs/DECISIONS.md`); this entry covers the extension's side.
+
+A narrated comic (panel art with voice and sound over it) reaches LoreFountain-Producer as an ordinary `.shots.json`, derived from the panels, so the Producer needs no change. Print comics are unaffected.
+
+### 1. What the extension does
+
+- **The setting.** `comic.panelsAsShots` (boolean, default `false`) in `lorefountain.config.json`, read with the other `comic` keys by Core's `comicSettingsFromConfig`/`resolveComicSettings` (tolerant: a non-boolean is dropped and reported by the validator like a bad `sfxAsCue`). It is project-level only; there is no VS Code user setting, because the output files belong to the project. `lorefountain.config.schema.json` documents it.
+- **The sidecar, same lifecycle.** `updateShotSidecar(..., { sfxAsCue, panelsAsShots })` calls Core's `buildShotMapFromPages` when the setting is on, else `buildShotMap` exactly as before. The sidecar is written when the script has explicit `SHOT:` lines **or** `derivedFromPanels` is true, regenerated on every save and reindex, removed when neither holds (a comic that loses its panels, or the setting turned off then the next save), and follows a renamed script through the existing `relocateShotSidecar`. It stays git-ignored like the others.
+- **The default tag prefix.** `comics/tagPrefix.ts` (`panelTagPrefixFor`) uses the title page's `Production Code` (lowercased, when it is a slug), else the script file's slug, else no prefix, so a derived tag reads `1x03-p7-2`. The same prefix is passed to `buildPageMap`, so `duplicate-panel-tag` is judged against the tags the sidecar will actually carry.
+- **Validator and Problems panel.** `duplicate-panel-tag` is a warning; `panels-not-derived` (setting on, but explicit `SHOT:` lines win) and the reworded `missing-panel-description` (its derived shot has no picture description) are notes. They ride the existing issue channels (`splitScriptIssues`), never fail a run. Derived panel shots are **not** checked against `assets/manifests/shots.json` (`unmapped-shot-tag` is skipped): an unillustrated panel is the normal starting state and the Producer lists what is missing. Their tags still count as used for `unused-shot-tag`, so a manifest entry keyed by a panel tag is not flagged. The headless `validate.js` and the extension share all of this, since both call `buildIndexFromDisk`/`reindexFile`.
+- **Docs, agent files and syntax.** `script-writer.md` gains the panel `[tag]`, `DURATION:`, `MOVE:` and a "Narrated and motion comics" section; `AGENTS.md` mentions `panelsAsShots`; the Fountain syntax help, the Scripts help page, the Scripts folder README and `docs/FOUNTAIN-EXTENSIONS.md` document it. The TextMate grammar scopes `MOVE:` and the `[tag]` after `PANEL:` (the tag in the same colour as a shot tag), and there are snippets `paneltag` and `move`.
+
+### 2. Versions
+
+Past additions bumped the marker on every agent file whose content or behavior changed: `AGENTS.md` 5 to 6, `script-writer.md` 6 to 7, `validate.js` 6 to 7 (with `esbuild.js`'s banner), and the Scripts README template 6 to 7. The style bible's change set (ADR-0045) is still uncommitted and had already moved `validate.js` to 6 and `world-builder.md` to 4; this change stacks on it rather than reusing its numbers.
+
+### 3. Not done
+
+A "Tag all panels" quick fix (the shot equivalent writes permanent ids), a Pages-view marker for derived shots, and a VS Code user setting for `panelsAsShots`. Mixing explicit `SHOT:` lines with derived panels in one script. See Core's ADR-0003 section 8.
+
+### 4. One fix on the way
+
+`resources/fountain-cues.code-snippets` had raw newlines inside the string bodies of the four comic snippets (invalid JSON, a likely tool-escaping slip when they were added). They are now `\n` escapes, so the file parses as JSON again.
+
+---
+
+## ADR-0045 — The style bible: an optional `world/style.lf.md`
+
+> **Amended 2026-11-13 by ADR-0047:** the file is `world/style.lf.md` (unreleased, so no migration), edited in a guided form rather than as plain text (points 1 and 3 below are superseded), and the exclusion is the generic `*.lf.md` rule, so a real entity named Style is allowed. Version markers moved to `world-builder.md` 5, `validate.js` 8 and the world README 3.
+
+**Date:** 2026-11-12 · **Status:** Proposed for the unreleased branch (built; the owner confirms the open points below). The schema, parser and reference-image resolution are Core's ADR-0002, which carries the field table and the Producer fit; this entry is the extension's adoption.
+
+Comics, video and illustrated books need one place for what the project *looks like*. `style.lf.md` is modeled on the Story Overview (ADR-0029/0032): small tolerant frontmatter (`medium`, `art_style`, `palette`, `reference_images`, `avoid`, `format`, `lettering`, `era_reference`) plus a free body.
+
+1. **A plain text editor, not a custom editor.** The Story Overview earned a form because its four fields are universal and short; the style bible's fields are lists and per-medium maps that read better as YAML next to prose, and the owner asked for no custom editor. The catch is that the Story Card editor's selector (`**/world/*.md`) would claim the file, as it already claims `README.md`. Two measures, neither verified in a live window: the World tree row opens it with `vscode.openWith` and the `default` view type, and `package.json` `configurationDefaults` sets `workbench.editorAssociations` for `**/world/style.lf.md` to `default`. A project with a renamed world folder still gets the first, not the second.
+2. **Created on demand, not by `Initialize Workspace`.** `lorefountain.openStyleBible` ("Open Style Bible (Create If Missing)") writes `resources/style.lf.md` (the project name substituted, never overwriting, any letter case) and opens it. A project that never makes a visual medium isn't handed an empty file; the cost is discoverability, which the World tree row (shown once the file exists), the world README, the help topic and `world-builder.md` address.
+3. **Excluded from entity indexing exactly like `OVERVIEW.md`:** `isNonEntityDoc` in `index/build.ts` and `classifyWorldFile` in `index/workspaceIndex.ts` skip `style.md` (any case, anywhere under `world/`). So a real entity called "Style" cannot live in `world/style.md`. Core's copy of the rule (`project/files`) got the same change; the extension still carries its own, per the standing roadmap item.
+4. **Validation.** `index/styleCheck.ts` (`checkStyleBible`) wraps Core's `readStyleBible`. `agents/validate.js` prints a malformed `style.lf.md` with the other malformed files and **fails the run** (exit 1), because the Producer cannot read it, and prints a missing or outside-the-project reference image as a **note** only. The Output channel logs the same on every full build and on each save of the file. It is not in the Problems panel: that is script-only today, and a file-level diagnostic for a frontmatter field is a possible follow-up. Neither the validator nor the extension validated `OVERVIEW.md` before; this one is.
+5. **Docs and versions.** `agents/world-builder.md` gains "Style bible format" (version 4); `validate.js` and its `esbuild.js` banner go to 6; the world README to 2; a `resources/help/styleBible.md` topic with `lorefountain.showStyleBibleHelp`; the World View help names the row. Existing projects are offered the changes by **Check for LoreFountain File Updates**. `AGENTS.md` is unchanged: it points agents at `world-builder.md` for anything under `world/`.
+6. **Tests:** `test/unit/styleBible.test.ts` (scaffold, the template validating, the check's three outcomes and notes, style.lf.md out of the index), the doc-content checks in `bundledDocVersions.test.ts`, and the updated version expectations.
+7. **Not done:** a Producer-side reader and spec section (Core ADR-0002 section 4); a Problems-panel diagnostic; a quick fix for an unquoted hex colour; a custom editor; scaffolding at `Initialize Workspace`; any change under `demos/`.
+
+**Open points for the owner:** (a) whether a malformed `style.lf.md` should fail `validate.js` (chosen) or only warn; (b) create-on-demand rather than at initialize; (c) whether the editor-association default is acceptable, or the Story Card selector should change instead; (d) the name `style.lf.md` and its place directly in `world/`.
+
+Revisit when: a live check shows the editor association doesn't hold, or the Producer wants fields this schema doesn't have.
+
+---
+
 ## ADR-0044 — Comic settings: `SFX:` is lettering by default, and word-budget presets
 
 **Date:** 2026-11-12 · **Status:** Accepted for the unreleased branch. Settles the two questions ADR-0043 left open; it implements Core's ADR-0001, now Accepted (sections 1 and 4a there carry the reasoning and the research caveats).

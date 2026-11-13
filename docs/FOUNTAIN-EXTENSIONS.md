@@ -16,8 +16,9 @@ LoreFountain **extends Fountain and never changes it** (ADR-0040).
 |---|---|---|---|
 | Shot | `SHOT: <description>` | Action line | 0.x (shot list), tags/sidecar in 1.1.0 |
 | Shot details | `POSE:`, `LIGHT:`, `DURATION:` | Action line | 0.x |
-| Comic page and panel | `PAGE: <label> (<modifiers>)`, `PANEL: <description>` | Action line | Unreleased (ADR-0043) |
+| Comic page and panel | `PAGE: <label> (<modifiers>)`, `PANEL: [tag] <description>` | Action line | Unreleased (ADR-0043; the panel `[tag]` ADR-0046) |
 | Comic lettering and layout | `CAPTION:`, `LAYOUT:` (with `SFX:`, dialogue, `SHOT:`, `POSE:`, `LIGHT:`) | Action line, dialogue | Unreleased (ADR-0043) |
+| Comic camera move | `MOVE: slow zoom in` (and `DURATION:` inside a panel) | Action line | Unreleased (ADR-0046) |
 | Scene pause | `PAUSE:` or `PAUSE: 2s` | Action line | 1.1.0 |
 | Sound cues | `SFX:`, `MUSIC:`, `AMB:` | Action line | 0.x |
 | Tag | `[tag]` after the colon of `SHOT:`, `SFX:`, `MUSIC:`, `AMB:` | Text within an action line | cues 1.0.0, shots 1.1.0 |
@@ -50,6 +51,15 @@ The full decision record is ADR-0001 in LoreFountain-Core (`docs/DECISIONS.md`);
 - `SFX:` in a comic panel is lettering only by default (ADR-0044): it is not written to `.cues.json` and its `[tag]` is not checked against `audio.json`. The project setting `comic.sfxAsCue: true` makes it both, for a narrated or motion comic. `MUSIC:` and `AMB:` are always cues, and a script with no `PAGE:` line is unaffected.
 - Words count balloons and captions only; sound effects and parentheticals are not counted.
 - Output: the derived `<script>.pages.json` sidecar (`schema_version` 1), rebuilt on every save and never hand-edited, written only for a script with an explicit `PAGE:` and removed when the pages go.
+
+### Narrated comics: panels as shots
+
+ADR-0046 here, ADR-0003 in LoreFountain-Core. A narrated ("motion") comic is made by deriving a normal shot map from the panels, so LoreFountain-Producer needs no change. Off by default; the project setting `comic.panelsAsShots: true` turns it on.
+
+- `PANEL: [harbor-wide] Wide shot of the harbor.` An optional `[tag]`, written like a `SHOT:` tag, names the panel (and its art in `shots.json`). Without one the tag is derived: `<production-code>-p7-2` (page 7, panel 2). Tags must be unique in a script (`duplicate-panel-tag`). A derived tag is positional, so tag any panel that has art.
+- `DURATION: 5s` inside a panel is read like a shot's duration. `MOVE: slow zoom in` inside a panel is a camera-move hint (`MOVE:` is a comic keyword, read only in comic scripts), mapped to the Producer's motion vocabulary where recognized. `PAGE: 7 (TURN)` marks the page's first panel as a page-turn reveal (`pageTurn`).
+- With the setting on, a comic script with no `SHOT:` lines gets `<script>.shots.json`: one shot per panel, balloons as spoken lines, a caption as a voice-over line (`caption: true`) for its `CAPTION (SPEAKER):` speaker or the speaker `NARRATOR`, `MUSIC:`/`AMB:` inside the panel as cues, and a lettered `SFX:` as a cue only with `comic.sfxAsCue`.
+- A script that has any `SHOT:` line keeps its own shots; its panels are not derived (note `panels-not-derived`). A script with no `PAGE:` line is unaffected, and with the setting off nothing changes.
 
 ### Scene pauses
 
@@ -102,11 +112,13 @@ Reported in the Problems panel, the Output channel and `node agents/validate.js`
 | `duplicate-page-number` | Warning | A page number used twice, an overlapping range, or a repeated text label |
 | `page-out-of-order` | Warning | A page number lower than the one before it |
 | `panel-before-page`, `content-outside-panel`, `missing-page-label` | Warning | A panel with no page, lettering outside a panel, or a `PAGE:` with no label |
+| `duplicate-panel-tag` | Warning | A panel tag, written or derived, used by more than one panel in a script |
+| `panels-not-derived` | Note | `comic.panelsAsShots` is on but the comic has explicit `SHOT:` lines, so its panels are not turned into shots |
 | `bare-pause-line` | Note | Plain action that looks like a scene pause |
 | `ambiguous-location` | Note | A scene heading's place matches more than one entity |
 | `unused-shot-tag` | Note | A manifest entry no script uses |
 | `unforced-transition` | Note | A transition such as `FADE OUT.` that Fountain recognizes only with a leading `>` |
-| `page-number-gap`, `empty-page`, `missing-panel-description`, `splash-multiple-panels`, `spread-without-range` | Note | Page-structure oddities in a comic script |
+| `page-number-gap`, `empty-page`, `missing-panel-description`, `splash-multiple-panels`, `spread-without-range` | Note | Page-structure oddities in a comic script (with `comic.panelsAsShots` on, an empty panel description also means its derived shot has none) |
 | `many-panels`, `many-balloons`, `long-balloon`, `long-panel-dialogue` | Note | Word-budget guidance, set per project by `comic.preset` and `comic.limits` (default `western`: over 9 panels on a page, 3 balloons in a panel, 25 words in a balloon, 35 words of dialogue in a panel; any limit can be off). Each note names the limit and preset that fired |
 | `misread-as-character` | Note | An all-caps convention line (`PAGE: 7`) with text directly under it, which other Fountain apps read as a character cue |
 

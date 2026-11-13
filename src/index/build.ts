@@ -72,7 +72,11 @@
  * this exclusion every project that adopts it would fail to index. Same for
  * `world/OVERVIEW.md` (any case) — the freeform Story Overview (ADR-0029,
  * `storyOverview.ts`) has no frontmatter at all, so without this exclusion
- * it would fail entity schema validation on every save.
+ * it would fail entity schema validation on every save. And for
+ * any `*.lf.md` project document (`world/style.lf.md`, the style bible,
+ * ADR-0045/0047): its frontmatter is its own schema
+ * (`lorefountain-core/model/styleBible`), not an entity's. One predicate,
+ * Core's `isNonEntityDoc`/`isProjectDocument`, decides all of these.
  *
  * Two script-specific checks run in the same full-candidate-list pass as
  * dangling relations (only from {@link buildIndexFromDisk} — see the same
@@ -92,6 +96,7 @@
 
 import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
+import { isNonEntityDoc } from 'lorefountain-core/project/files';
 import { findUnmappedCueTags, type AudioManifest, type CueManifestWarning } from '../assets/audioManifest';
 import {
   findDanglingManifestEntries,
@@ -126,18 +131,6 @@ import type { IndexStore, ScriptRecord } from './store';
 
 /** Subfolders of `world/` that are never walked for entity files (Spec §5). */
 const ENTITY_EXCLUDED_SUBDIRS = ['glossary', 'timeline', 'notes'];
-
-/**
- * Case-insensitive check for LoreFountain's own reference docs that sit
- * inside indexed folders but are never entity/glossary/event files: the
- * scaffolded `README.md`, and `world/OVERVIEW.md` (the Story Overview,
- * ADR-0029 — freeform prose, no frontmatter, would otherwise fail entity
- * schema validation on every save).
- */
-function isNonEntityDoc(filePath: string): boolean {
-  const name = path.basename(filePath).toLowerCase();
-  return name === 'readme.md' || name === 'overview.md';
-}
 
 /** One file that failed to parse during a build or incremental reindex. */
 export interface IndexBuildIssue {
@@ -365,7 +358,10 @@ export async function buildIndexFromDisk(
       scriptTexts.set(filePath, text);
       summary.scriptCount += 1;
       const cues = await updateCueSidecar(filePath, text, { sfxAsCue: comic?.sfxAsCue });
-      const shotMap = await updateShotSidecar(filePath, text, shotEntities, { sfxAsCue: comic?.sfxAsCue });
+      const shotMap = await updateShotSidecar(filePath, text, shotEntities, {
+        sfxAsCue: comic?.sfxAsCue,
+        panelsAsShots: comic?.panelsAsShots,
+      });
       const pageMap = await updatePageSidecar(filePath, text, shotEntities, comic);
       if (pageMap.hasPages) {
         summary.pageStats.scripts += 1;
@@ -388,7 +384,8 @@ export async function buildIndexFromDisk(
       const allWarnings: IndexWarning[] = [
         ...warnings,
         ...findUnmappedCueTags(cues, audioManifest),
-        ...findUnmappedShotTags(shotMap.shots, shotManifest),
+        // Derived panel shots are not checked against shots.json: an unillustrated panel is the normal starting state, and the Producer lists what is missing.
+        ...(shotMap.derivedFromPanels ? [] : findUnmappedShotTags(shotMap.shots, shotManifest)),
         ...shotWarnings,
       ];
       if (allWarnings.length > 0) {
@@ -456,7 +453,10 @@ export async function reindexFile(
   if (kind === 'script') {
     await updateCueSidecar(filePath, text, { sfxAsCue: options.comic?.sfxAsCue });
     const entities = shotMapEntitiesFrom(store);
-    const shotMap = await updateShotSidecar(filePath, text, entities, { sfxAsCue: options.comic?.sfxAsCue });
+    const shotMap = await updateShotSidecar(filePath, text, entities, {
+      sfxAsCue: options.comic?.sfxAsCue,
+      panelsAsShots: options.comic?.panelsAsShots,
+    });
     const pageMap = await updatePageSidecar(filePath, text, entities, options.comic);
     // Per-script format checks run on save too; manifest cross-checks stay
     // full-build only (see the module doc comment).

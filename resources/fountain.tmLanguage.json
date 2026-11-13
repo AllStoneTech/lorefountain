@@ -97,10 +97,12 @@
       }
     },
     "comic-prefix": {
-      "match": "^\\s*((?:PAGE|PANEL|CAPTION|LAYOUT):)",
+      "match": "^\\s*(?:(PANEL:)\\s*(\\[[a-z0-9]+(?:-[a-z0-9]+)*\\])?|((?:PAGE|CAPTION|LAYOUT|MOVE):))",
       "name": "support.function.comic-prefix.lorefountain",
       "captures": {
-        "1": { "name": "support.function.comic-prefix.lorefountain" }
+        "1": { "name": "support.function.comic-prefix.lorefountain" },
+        "2": { "name": "variable.other.asset-tag.lorefountain" },
+        "3": { "name": "support.function.comic-prefix.lorefountain" }
       }
     },
     "emphasis": {

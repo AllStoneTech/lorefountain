@@ -5,7 +5,7 @@
  * editor (Phase D3); selecting a glossary term or Timeline event opens its
  * plain Markdown file (Spec §4.7/§4.6 — both stay lightweight, no custom
  * editor, same posture as glossary). A single "Story Overview" row (the project owner,
- * 2026-07-29) sits above every category when `world/OVERVIEW.md` exists —
+ * 2026-07-29) sits above every category when `world/overview.lf.md` exists —
  * see `config/storyOverview.ts`.
  *
  * `vscode`-facing glue; not covered by the vitest unit suite (would require
@@ -20,6 +20,10 @@ import type { EntityType, Significance } from '../model/entity';
 import type { EntityRecord, IndexStore } from '../index/store';
 import { titleizeSlug } from '../model/slug';
 import { STORY_CARD_VIEW_TYPE } from './storyCardEditorProvider';
+import { isNonEntityDoc } from 'lorefountain-core/project/files';
+import { findStoryOverviewFile } from 'lorefountain-core/project/storyOverview';
+import { findStyleBibleFile } from 'lorefountain-core/project/styleBible';
+import { STYLE_BIBLE_VIEW_TYPE } from './styleBibleEditorProvider';
 import { STORY_OVERVIEW_VIEW_TYPE } from './storyOverviewEditorProvider';
 import { groupEntitiesBySignificance } from './worldTreeGrouping';
 
@@ -68,6 +72,7 @@ const CATEGORY_ICONS: Record<Category, string> = {
 export type WorldTreeNode =
   | { kind: 'folder'; folder: vscode.WorkspaceFolder }
   | { kind: 'storyOverview'; folder: vscode.WorkspaceFolder; filePath: string }
+  | { kind: 'styleBible'; folder: vscode.WorkspaceFolder; filePath: string }
   | { kind: 'category'; folder: vscode.WorkspaceFolder; category: Category }
   | { kind: 'significanceGroup'; folder: vscode.WorkspaceFolder; significance: Significance | 'unset'; label: string; entities: readonly EntityRecord[] }
   | { kind: 'entity'; folder: vscode.WorkspaceFolder; name: string; filePath: string }
@@ -118,6 +123,21 @@ export class WorldTreeProvider implements vscode.TreeDataProvider<WorldTreeNode>
           command: 'vscode.openWith',
           title: 'Open',
           arguments: [vscode.Uri.file(node.filePath), STORY_OVERVIEW_VIEW_TYPE],
+        };
+        return item;
+      }
+      case 'styleBible': {
+        const item = new vscode.TreeItem('Style Bible', vscode.TreeItemCollapsibleState.None);
+        item.contextValue = 'lorefountain.styleBible';
+        item.iconPath = new vscode.ThemeIcon('symbol-color');
+        // The guided style bible editor (ADR-0047), opened by explicit view
+        // type: the Story Card selector (`**/world/*.md`) also matches this
+        // file, and resolution between overlapping selectors isn't something
+        // to rely on.
+        item.command = {
+          command: 'vscode.openWith',
+          title: 'Open',
+          arguments: [vscode.Uri.file(node.filePath), STYLE_BIBLE_VIEW_TYPE],
         };
         return item;
       }
@@ -235,7 +255,7 @@ export class WorldTreeProvider implements vscode.TreeDataProvider<WorldTreeNode>
     }
 
     return entries
-      .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.md') && !isNonEntityDoc(entry.name))
       .map((entry) => ({
         kind: 'note' as const,
         folder,
@@ -249,7 +269,7 @@ export class WorldTreeProvider implements vscode.TreeDataProvider<WorldTreeNode>
 /**
  * The category rows plus, when it actually exists on disk, a "Story
  * Overview" row above all of them — not shown before `Initialize Workspace`
- * (or a migration pass) has actually scaffolded/written `world/OVERVIEW.md`,
+ * (or a migration pass) has actually scaffolded/written `world/overview.lf.md`,
  * so this never links to a file that isn't there yet.
  */
 async function categoryNodesFor(folder: vscode.WorkspaceFolder): Promise<WorldTreeNode[]> {
@@ -261,18 +281,15 @@ async function categoryNodesFor(folder: vscode.WorkspaceFolder): Promise<WorldTr
     category,
   }));
 
-  const overviewPath = path.join(folders.world, 'OVERVIEW.md');
-  if (await pathExists(overviewPath)) {
-    return [{ kind: 'storyOverview', folder, filePath: overviewPath }, ...categoryNodes];
+  const projectNodes: WorldTreeNode[] = [];
+  const overview = await findStoryOverviewFile(folders.world);
+  if (overview !== undefined) {
+    projectNodes.push({ kind: 'storyOverview', folder, filePath: overview.filePath });
   }
-  return categoryNodes;
-}
-
-async function pathExists(target: string): Promise<boolean> {
-  try {
-    await fsp.access(target);
-    return true;
-  } catch {
-    return false;
+  // The optional style bible (ADR-0045), shown only when the file exists.
+  const stylePath = await findStyleBibleFile(folders.world);
+  if (stylePath !== undefined) {
+    projectNodes.push({ kind: 'styleBible', folder, filePath: stylePath });
   }
+  return [...projectNodes, ...categoryNodes];
 }

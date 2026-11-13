@@ -49,7 +49,7 @@ A battered long-haul cargo ship, held together by duct tape and stubbornness.
 ];
 
 const SAMPLE_OVERVIEW = {
-  fileName: 'OVERVIEW.md',
+  fileName: 'overview.lf.md',
   content: `# Story Overview
 
 ## Premise

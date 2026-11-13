@@ -9,6 +9,20 @@ On the local branch `feature/lorefountain-core`, not part of 1.1.0.
 
 ### Added
 
+- **Narrated comics: panels as shots** (ADR-0046, built on Core's ADR-0003).
+  With the new project setting `comic.panelsAsShots: true` (default false), a
+  comic script with no `SHOT:` lines gets a derived `<script>.shots.json` with
+  one shot per panel, so a narrated or motion comic (panel art with voice and
+  sound over it) can go to LoreFountain-Producer unchanged. A panel can carry
+  an explicit `PANEL: [tag]` (otherwise a tag like `1x03-p7-2` is derived),
+  `DURATION:` and a new `MOVE: slow zoom in` camera-move line, and a `TURN`
+  page marks its first panel as a page-turn reveal. Balloons become spoken
+  lines, a caption a voice-over line for its speaker or `NARRATOR`. A repeated
+  panel tag is a warning (`duplicate-panel-tag`); explicit `SHOT:` lines win
+  and say so (`panels-not-derived`). `.pages.json` gains the matching panel
+  fields (still schema version 1). Highlighting and snippets cover `MOVE:`
+  and the panel tag; the agent docs, help pages and the config schema document
+  it (`AGENTS.md` 6, `script-writer.md` 7, `validate.js` 7, Scripts README 7).
 - **Comic scripts: `PAGE:` and `PANEL:`** (ADR-0043, built on Core's ADR-0001).
   A script with a `PAGE: 7 (SPLASH)` line is read as a comic: pages, numbered
   panels, `CAPTION:`, `SFX:` and `LAYOUT:` lines and ordinary dialogue as
@@ -53,6 +67,46 @@ On the local branch `feature/lorefountain-core`, not part of 1.1.0.
   fired. The numbers are guidance, not standards. The `comic` block is in the
   config file's schema and is read tolerantly (a bad value is reported and
   dropped, never fatal).
+
+- **The Story Overview is now `world/overview.lf.md`** (ADR-0048). Existing
+  projects are renamed automatically the first time the extension opens them
+  after the update: `OVERVIEW.md` becomes `overview.lf.md`, content untouched,
+  never overwriting (if both exist you get a warning and nothing changes). Old
+  names still work everywhere until then. New projects, Try LoreFountain and
+  the demos use the new name. The folder `README.md` files keep their names.
+  Also fixed: the Notes list in the World view no longer shows the folder
+  README as a note. `agents/world-builder.md` (now version 6),
+  `agents/initiator.md` (version 3) and the world README (version 4) describe
+  it.
+
+- **The `.lf.md` naming convention and a guided style bible editor** (ADR-0047,
+  Core's ADR-0004). LoreFountain's own project documents that aren't entities
+  end in `.lf.md` and are never indexed as entities, glossary terms, events or
+  notes, wherever they sit; the style bible is `world/style.lf.md`, so a real
+  entity called Style (`world/style.md`) is fine. The style bible opens in a
+  form: media chips (none selected means all media), a palette with colour
+  pickers that always saves valid quoted hex, reference images chosen with a
+  project file picker with missing-file warnings, avoid chips, per-medium
+  format presets (aspect ratios; comic, manga, album, webtoon and book trims;
+  each marked sourced or unsourced guidance), lettering notes, and the
+  template's headings as labelled boxes plus Additional notes so nothing is
+  lost. Unknown fields round-trip, an untouched file is never rewritten, undo
+  works, and **Open as text** is one click away. Changing a field in the form
+  drops `#` comment lines in the frontmatter.
+
+- **A project style bible, `world/style.lf.md`** (ADR-0045, built on Core's
+  ADR-0002): one optional file for how the project looks and feels in every
+  medium, so comics, video and illustrated books share a brief. A short
+  frontmatter block (`medium`, `art_style`, `palette`, `reference_images`,
+  `avoid`, `format`, `lettering`, `era_reference`, all optional) plus free
+  Markdown. **LoreFountain: Open Style Bible (Create If Missing)** writes a
+  template and opens it in a guided form; a **Style Bible** row then appears at
+  the top of the World view. It is never indexed as an entity.
+  `node agents/validate.js` fails on a malformed one and notes a reference
+  image that doesn't exist; the Output channel reports the same on each save.
+  New help topic, `agents/world-builder.md` (now version 5), `validate.js`
+  (version 8) and the world README (version 3) describe it; existing projects
+  are offered them by **Check for LoreFountain File Updates**.
 
 ### Changed
 
