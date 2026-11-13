@@ -1,1 +1,8 @@
-{ "folders": { "world": "world", "scripts": "scripts", "imports": "imports" } }
+{
+  "project_type": "serialized_universe",
+  "folders": {
+    "world": "world",
+    "scripts": "scripts",
+    "imports": "imports"
+  }
+}

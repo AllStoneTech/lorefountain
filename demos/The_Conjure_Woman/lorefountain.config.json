@@ -1,4 +1,5 @@
 {
+  "project_type": "tv_series",
   "folders": {
     "world": "world",
     "scripts": "scripts",

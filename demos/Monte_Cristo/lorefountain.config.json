@@ -1,4 +1,5 @@
 {
+  "project_type": "prose",
   "folders": {
     "world": "world",
     "scripts": "scripts",

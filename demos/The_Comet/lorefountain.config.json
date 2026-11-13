@@ -1,4 +1,5 @@
 {
+  "project_type": "audio_drama",
   "folders": {
     "world": "world",
     "scripts": "scripts",
