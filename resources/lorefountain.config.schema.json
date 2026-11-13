@@ -77,6 +77,22 @@
           "default": true,
           "description": "Start PDF and Word exports with the script's title page."
         },
+        "layout": {
+          "type": "string",
+          "enum": ["auto", "screenplay", "comic"],
+          "default": "auto",
+          "description": "Page layout for PDF, Word and web page exports. auto uses the comic script layout for a script with PAGE: lines, and the screenplay layout otherwise."
+        },
+        "comicPageSides": {
+          "type": "boolean",
+          "default": false,
+          "description": "In the comic script layout, mark each page LEFT or RIGHT (page one is a right-hand page)."
+        },
+        "language": {
+          "type": "string",
+          "default": "en",
+          "description": "The language exported documents declare, as a language tag such as en, en-GB or yo. Screen readers and spell checkers use it."
+        },
         "custom": {
           "type": "object",
           "description": "Your Custom preset: what an export includes.",

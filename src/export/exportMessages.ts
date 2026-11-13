@@ -9,7 +9,7 @@
 
 import { z } from 'zod';
 import { EXPORT_PRESET_IDS, exportContentSchema, type ExportContent, type ExportPresetId } from 'lorefountain-core/export/options';
-import { EXPORT_FORMATS, type ExportFormat, type ExportSettings } from 'lorefountain-core/export/settings';
+import { EXPORT_FORMATS, EXPORT_LAYOUTS, type ExportFormat, type ExportSettings } from 'lorefountain-core/export/settings';
 
 /** What the writer chose in the dialog. */
 const exportChoiceSchema = z.strictObject({
@@ -19,6 +19,8 @@ const exportChoiceSchema = z.strictObject({
   content: exportContentSchema,
   paper: z.enum(['letter', 'a4']),
   titlePage: z.boolean(),
+  layout: z.enum(EXPORT_LAYOUTS),
+  comicPageSides: z.boolean(),
   scope: z.enum(['script', 'group']),
 });
 

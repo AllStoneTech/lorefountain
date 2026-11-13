@@ -66,7 +66,7 @@ describe('renderScreenplayDocx', () => {
       'TitlePageText', 'TitlePageText', 'TitlePageText', 'TitlePageText',
       'SceneHeading', 'Action', 'Character', 'Parenthetical', 'Dialogue', 'Lyric', 'Transition',
     ]);
-    expect(body).toContain('<w:t xml:space="preserve">\t1</w:t>');
+    expect(body).toContain('<w:tab/><w:t xml:space="preserve">1</w:t>');
     expect(body).toContain('<w:i/>');
     expect(body).not.toContain('never printed');
   });

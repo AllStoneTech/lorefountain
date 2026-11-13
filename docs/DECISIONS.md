@@ -6,6 +6,23 @@ revisit.
 
 ---
 
+## ADR-0046 — Comic script layout in the PDF, Word and HTML exports
+
+**Date:** 2026-11-13 · **Status:** Accepted (owner approved the design on 2026-11-13). Core side: Core ADR-0004.
+
+1. **The dialog gains a Layout choice**: Automatic, Screenplay or Comic script, for PDF, Word and web page exports. Automatic follows the project type when there is one, and otherwise picks Comic script for a script with `PAGE:` lines. A season export resolves Automatic per script. A **Mark left and right pages** box applies to the comic layout. Both are saved to the config's `export` section with the other choices.
+2. **PDF.** Core's comic layout draws through the same renderer as the screenplay. The renderer also writes the layout's bookmarks as the PDF outline and declares the export language (both layouts).
+3. **Word.** `src/export/docx.ts` gains a comic writer with named styles (Comic Page, Panel, Panel Description, Lettering), a hanging indent for numbered lettering, and a page break before each comic page. The screenplay writer and the comic writer both declare the export language.
+4. **HTML** comes from Core (`writeComicHtml`).
+5. **Final Draft, Fountain and the transcript** ignore the layout. Final Draft has no standard comic format, so a comic exported to `.fdx` is a screenplay, as before.
+6. **Word tabs fixed.** A tab character inside Word text is only whitespace, so the screenplay writer's scene numbers never reached their right tab stop. Both writers now use Word tab elements, and the tests check for them.
+
+Not done here, as for ADR-0045: a live check in the F5 Extension Development Host and opening the files in Word.
+
+Revisit when: `project_type` lands, or a publisher's template needs different styles.
+
+---
+
 ## ADR-0045 — Script export: PDF, Fountain, Final Draft, HTML, Word and transcript
 
 **Date:** 2026-11-13 · **Status:** Accepted (owner approved the design, formats, free tier, the Courier Prime and Noto Sans Mono fonts and the `pdfkit` dependency on 2026-11-11 to 2026-11-13). Core side: Core ADR-0003.

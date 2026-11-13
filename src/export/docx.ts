@@ -4,7 +4,10 @@
  * with one named paragraph style per screenplay element, so a writer can
  * restyle a whole element type in Word at once.
  *
- * Exports {@link renderScreenplayDocx} and {@link DocxOptions}.
+ * Exports {@link renderScreenplayDocx}, {@link DocxOptions}, and
+ * {@link docxRuns}, {@link titlePageParagraphs}, {@link DOCX_PAGE} and
+ * {@link TWIPS} (shared with the
+ * comic writer, ADR-0046).
  *
  * Layout matches the PDF: Courier Prime 12 pt (Word substitutes Courier New
  * where Courier Prime isn't installed), margins 1.5 in left and 1 in elsewhere,
@@ -26,6 +29,7 @@ import {
   Table,
   TableCell,
   TableRow,
+  Tab,
   TabStopType,
   TextRun,
   WidthType,
@@ -45,11 +49,15 @@ export interface DocxOptions {
   sceneNumbers?: boolean;
   /** The document's Title property when the script has no `Title:`. */
   fallbackTitle: string;
+  /** The document language, as a BCP 47 tag. Defaults to `en`. */
+  lang?: string;
 }
 
 /** Twentieths of a point per inch. */
-const TWIPS = 1440;
-const PAGE: Readonly<Record<PaperSize, { width: number; height: number }>> = {
+export const TWIPS = 1440;
+
+/** Page sizes in twips. */
+export const DOCX_PAGE: Readonly<Record<PaperSize, { width: number; height: number }>> = {
   letter: { width: 12240, height: 15840 },
   a4: { width: 11906, height: 16838 },
 };
@@ -101,7 +109,7 @@ function paragraphStyles(): IParagraphStyleOptions[] {
  * @returns The `.docx` file's bytes.
  */
 export async function renderScreenplayDocx(screenplay: Screenplay, options: DocxOptions): Promise<Buffer> {
-  const page = PAGE[options.paper];
+  const page = DOCX_PAGE[options.paper];
   const properties = {
     page: {
       size: { width: page.width, height: page.height },
@@ -132,7 +140,7 @@ export async function renderScreenplayDocx(screenplay: Screenplay, options: Docx
     ...(author ? { creator: author.lines.map(plainText).join(' ') } : {}),
     description: 'Exported by LoreFountain',
     styles: {
-      default: { document: { run: { font: FONT, size: 24 }, paragraph: { spacing: { line: LINE, before: 0, after: 0 } } } },
+      default: { document: { run: { font: FONT, size: 24, language: { value: options.lang ?? 'en' } }, paragraph: { spacing: { line: LINE, before: 0, after: 0 } } } },
       paragraphStyles: paragraphStyles(),
     },
     sections,
@@ -140,20 +148,25 @@ export async function renderScreenplayDocx(screenplay: Screenplay, options: Docx
   return Packer.toBuffer(doc);
 }
 
-/** The title page: title block a third of the way down, the rest below. */
-function titlePageParagraphs(screenplay: Screenplay): Paragraph[] {
+/**
+ * The title page: title block a third of the way down, the rest below.
+ *
+ * @param screenplay - The script; only its title page is read.
+ * @returns The title page's paragraphs.
+ */
+export function titlePageParagraphs(screenplay: Pick<Screenplay, 'titlePage'>): Paragraph[] {
   const center = ['title', 'credit', 'author', 'authors', 'source'];
   const paragraphs: Paragraph[] = [new Paragraph({ spacing: { before: 3.2 * TWIPS } })];
   for (const key of center) {
     for (const entry of screenplay.titlePage.filter((candidate) => candidate.key === key)) {
-      for (const line of entry.lines) paragraphs.push(new Paragraph({ style: STYLE.titlePage, children: runs(line) }));
+      for (const line of entry.lines) paragraphs.push(new Paragraph({ style: STYLE.titlePage, children: docxRuns(line) }));
       paragraphs.push(new Paragraph({ style: STYLE.titlePage }));
     }
   }
   const rest = screenplay.titlePage.filter((entry) => !center.includes(entry.key));
   if (rest.length > 0) paragraphs.push(new Paragraph({ spacing: { before: 3 * TWIPS } }));
   for (const entry of rest) {
-    for (const line of entry.lines) paragraphs.push(new Paragraph({ children: runs(line) }));
+    for (const line of entry.lines) paragraphs.push(new Paragraph({ children: docxRuns(line) }));
     paragraphs.push(new Paragraph({}));
   }
   return paragraphs;
@@ -171,12 +184,13 @@ function bodyChildren(screenplay: Screenplay, sceneNumbers: boolean): (Paragraph
   for (const element of screenplay.elements) {
     switch (element.kind) {
       case 'scene-heading': {
-        // A right tab stop at the text edge holds the scene number, which follows a tab.
-        const number = sceneNumbers && element.number ? [new TextRun({ text: `\t${element.number}` })] : [];
+        // A right tab stop at the text edge holds the scene number, after a Word tab
+        // element (a tab character inside the text is only whitespace to Word).
+        const number = sceneNumbers && element.number ? [new TextRun({ children: [new Tab(), element.number] })] : [];
         children.push(
           new Paragraph({
             style: STYLE.sceneHeading,
-            children: [...runs(element.runs), ...number],
+            children: [...docxRuns(element.runs), ...number],
             tabStops: [{ type: TabStopType.RIGHT, position: 6 * TWIPS }],
             pageBreakBefore,
           }),
@@ -187,7 +201,7 @@ function bodyChildren(screenplay: Screenplay, sceneNumbers: boolean): (Paragraph
       case 'action':
         // Each Fountain line is a line in Word; the block keeps its blank line before.
         element.lines.forEach((line, index) => {
-          const printed = runs(line.runs);
+          const printed = docxRuns(line.runs);
           if (printed.length === 0 && line.runs.length > 0) return;
           children.push(new Paragraph({ style: STYLE.action, children: printed, pageBreakBefore, ...(index > 0 ? { spacing: { before: 0 } } : {}) }));
           pageBreakBefore = false;
@@ -204,13 +218,13 @@ function bodyChildren(screenplay: Screenplay, sceneNumbers: boolean): (Paragraph
         pageBreakBefore = false;
         break;
       case 'lyric':
-        for (const line of element.lines) add({ style: STYLE.action, children: runs(line, { italics: true }) });
+        for (const line of element.lines) add({ style: STYLE.action, children: docxRuns(line, { italics: true }) });
         break;
       case 'transition':
-        add({ style: STYLE.transition, children: runs(element.runs) });
+        add({ style: STYLE.transition, children: docxRuns(element.runs) });
         break;
       case 'centered':
-        for (const line of element.lines) add({ style: STYLE.centered, children: runs(line) });
+        for (const line of element.lines) add({ style: STYLE.centered, children: docxRuns(line) });
         break;
       case 'page-break':
         pageBreakBefore = true;
@@ -226,13 +240,13 @@ function bodyChildren(screenplay: Screenplay, sceneNumbers: boolean): (Paragraph
 
 /** Paragraph options for a speech, in order. */
 function speechParagraphs(block: DialogueBlock): { style: string; children: TextRun[] }[] {
-  const paragraphs: { style: string; children: TextRun[] }[] = [{ style: STYLE.character, children: runs(block.cue) }];
+  const paragraphs: { style: string; children: TextRun[] }[] = [{ style: STYLE.character, children: docxRuns(block.cue) }];
   for (const part of block.parts) {
     if (part.kind === 'parenthetical') {
-      paragraphs.push({ style: STYLE.parenthetical, children: runs(part.runs) });
+      paragraphs.push({ style: STYLE.parenthetical, children: docxRuns(part.runs) });
     } else {
       const style = part.kind === 'lyric' ? STYLE.lyric : STYLE.dialogue;
-      for (const line of part.lines) paragraphs.push({ style, children: runs(line) });
+      for (const line of part.lines) paragraphs.push({ style, children: docxRuns(line) });
     }
   }
   return paragraphs;
@@ -261,7 +275,7 @@ function dualTable(left: DialogueBlock, right: DialogueBlock): Table {
  * @param extra - Styling added to every run, such as italics for a lyric.
  * @returns Word text runs.
  */
-function runs(line: RunLine, extra: { italics?: boolean } = {}): TextRun[] {
+export function docxRuns(line: RunLine, extra: { italics?: boolean } = {}): TextRun[] {
   return line
     .filter((run) => !run.note)
     .map(

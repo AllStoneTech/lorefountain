@@ -46,6 +46,18 @@ On the local branch `feature/lorefountain-core`, not part of 1.1.0.
   paragraphs. Choices are remembered in `lorefountain.config.json`, and files
   go to an `exports/` folder by default. New help page: **Script Export: How
   to Use This Feature**.
+- **Comic scripts export as comic scripts** (ADR-0046). PDF, Word and web
+  page exports of a script with `PAGE:` lines use the comic "full script"
+  layout artists and letterers expect: `PAGE ONE (4 panels)` starting each
+  sheet, `PANEL 1` and its description, and captions, balloons and sound
+  effects numbered per page in a hanging column. Spreads are headed
+  `PAGES TWO–THREE`, a long page continues under `PAGE ONE (CONTINUED)`,
+  and pages can be marked left or right. The dialog's new **Layout** choice
+  (Automatic, Screenplay or Comic script) overrides the automatic pick.
+- **PDF bookmarks and a document language.** A PDF export lists every scene
+  (or comic page) as a bookmark. PDF, Word and web page exports declare the
+  language set by `export.language` in `lorefountain.config.json`
+  (English by default), for screen readers and spell checkers.
 - **Convention lines can start with Fountain's `!`** (ADR-0044), Fountain
   1.1's way to force a line to be action: `!SHOT: CLOSE-UP` keeps a stacked
   all-caps shot block from printing as a character speaking in other Fountain
