@@ -6,6 +6,24 @@ revisit.
 
 ---
 
+## ADR-0045 — Script export: PDF, Fountain, Final Draft, HTML, Word and transcript
+
+**Date:** 2026-11-13 · **Status:** Accepted (owner approved the design, formats, free tier, the Courier Prime and Noto Sans Mono fonts and the `pdfkit` dependency on 2026-11-11 to 2026-11-13). Core side: Core ADR-0003.
+
+1. **Free tier, every format.** Portability is a core promise, so getting a script out of LoreFountain is never paid. Spec §16 already put PDF and the transcript in the free tier; Fountain, FDX, HTML and Word join them. Pro keeps the specialised exports (BBC radio script, cue sheet, shot list, story bible).
+2. **Where the code lives.** Core holds everything that needs no third-party library: options and presets, the filter, the screenplay model, the `.fountain`, `.html` and `.fdx` writers and the PDF page layout. The extension holds the two renderers that need libraries (`src/export/pdf.ts` with `pdfkit`, `src/export/docx.ts` with the existing `docx`), the orchestration (`src/export/exportScript.ts`), and the dialog and command (`src/commands/exportScript.ts`, `src/providers/exportHtml.ts`).
+3. **One dialog.** **Export Script…** (editor title bar, the Scripts view's right-click menu on a script or a season, the Command Palette) opens a webview form: format, preset or boxes, scene numbers, paper and title page, and this script or the whole season. Webview messages are validated with Zod (`src/export/exportMessages.ts`). Choices are saved to the config's `export` section after a successful export; Core reads that section field by field, so a bad value never blocks the config. The transcript is a sixth format in the dialog, and **Export Transcript** stays as a toolbar shortcut.
+4. **Where files go.** The default is an `exports/` folder at the project root. A `.fountain` export saved inside the scripts folder would be indexed as another script with a clashing Production Code, so the command asks first. A season goes into one chosen folder, asking before replacing files.
+5. **PDF fonts.** The industry font is Courier 12 pt, but the PDF's built-in Courier can't show characters outside Western European, which Yoruba names need. The PDF embeds Courier Prime (made for screenplays) and, for any character it lacks (ẹ, ọ, ṣ, combining tone marks), Noto Sans Mono, which has the same 0.6 em advance, so Core's character grid stays exact. A grapheme cluster comes wholly from one font, and both fonts share an alphabetic baseline. Both are SIL Open Font License; their licence files ship beside them in `resources/fonts/`. US Letter is the default, A4 an option.
+6. **Bundling gotcha.** `pdfkit` and `fontkit` are imported with `import x = require(...)`, so esbuild bundles their CommonJS builds. Their ES-module builds locate data files through `import.meta.url`, which is empty in the extension's CommonJS bundle, and crashed the extension on load. `test/unit/exportBundle.test.ts` bundles the export code the same way and runs it with no `node_modules` beside it. `pdfkit` is also told to load no default font, so it never reads its built-in Helvetica metrics.
+7. **Word.** One named paragraph style per element (Scene Heading, Action, Character, Parenthetical, Dialogue, Lyric, Transition, Centered), the PDF's margins and indents, keep-with-next instead of `(MORE)`/`(CONT'D)` (Word paginates itself), page numbers from page 2, dual dialogue as a borderless table. The font is named, not embedded: Word uses Courier Prime where installed, Courier New otherwise.
+
+Not done here: a live check in the F5 Extension Development Host, opening the `.fdx` in Final Draft or Fade In and the `.docx` in Word, and an Export entry on the What's New page (the unreleased version's notes aren't written yet).
+
+Revisit when: a writer needs another paper size or font, or Final Draft or another tool rejects the FDX.
+
+---
+
 ## ADR-0044 — `misread-as-character` on every script, fixed with Fountain's forced-action `!`
 
 **Date:** 2026-11-12 · **Status:** Accepted (owner approved on 2026-11-11 and 2026-11-12). Core side: Core ADR-0002.

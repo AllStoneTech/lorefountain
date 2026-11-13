@@ -153,6 +153,12 @@
         "category": "LoreFountain"
       },
       {
+        "command": "lorefountain.exportScript",
+        "title": "Export Script…",
+        "category": "LoreFountain",
+        "icon": "$(export)"
+      },
+      {
         "command": "lorefountain.exportTranscript",
         "title": "Export Transcript",
         "category": "LoreFountain",
@@ -299,6 +305,12 @@
       {
         "command": "lorefountain.showShotListHelp",
         "title": "Shot List Export (Pro): How to Use This Feature",
+        "category": "LoreFountain",
+        "icon": "$(question)"
+      },
+      {
+        "command": "lorefountain.showExportScriptHelp",
+        "title": "Script Export: How to Use This Feature",
         "category": "LoreFountain",
         "icon": "$(question)"
       },
@@ -547,6 +559,11 @@
       ],
       "editor/title": [
         {
+          "command": "lorefountain.exportScript",
+          "when": "editorLangId == fountain",
+          "group": "navigation"
+        },
+        {
           "command": "lorefountain.exportTranscript",
           "when": "editorLangId == fountain",
           "group": "navigation"
@@ -587,6 +604,11 @@
           "group": "9_lorefountain"
         },
         {
+          "command": "lorefountain.showExportScriptHelp",
+          "when": "editorLangId == fountain",
+          "group": "9_lorefountain"
+        },
+        {
           "command": "lorefountain.showAssetManifestHelp",
           "when": "activeCustomEditorId == 'lorefountain.assetManifest'",
           "group": "navigation@9"
@@ -603,6 +625,11 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "lorefountain.exportScript",
+          "when": "view == lorefountain.scriptsView && viewItem =~ /^lorefountain\\.(script|scriptGroup)$/",
+          "group": "export"
+        },
         {
           "command": "lorefountain.newCharacter",
           "when": "view == lorefountain.worldView && viewItem == lorefountain.category.character",
@@ -744,8 +771,10 @@
   "dependencies": {
     "cytoscape": "^3.34.0",
     "docx": "^9.8.1",
+    "fontkit": "^2.0.4",
     "fountain-js": "^1.2.4",
     "markdown-it": "^15.0.0",
+    "pdfkit": "^0.20.2",
     "sql.js": "^1.14.2",
     "yaml": "^2.9.1",
     "zod": "^4.4.3"
@@ -753,8 +782,10 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/cytoscape": "^3.21.9",
+    "@types/fontkit": "^2.0.9",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^22.0.0",
+    "@types/pdfkit": "^0.17.7",
     "@types/sql.js": "^1.4.11",
     "@types/vscode": "^1.125.0",
     "@vscode/vsce": "^4.0.0",

@@ -95,8 +95,11 @@ files there beyond the script itself.
   Palette, or the `...` menu next to its icon in this editor's title bar)
   for what it produces.
 - Hover any recognized character/location/glossary mention in a script to
-  preview its Story Card. The editor toolbar's **Export Transcript** button
-  exports a script's dialogue/action text on its own.
+  preview its Story Card. The editor toolbar's **Export Script…** button
+  (also on a script's or season's right-click menu here) exports to PDF,
+  Fountain, Final Draft, a web page, Word or a transcript, with or without
+  LoreFountain's own lines; it's free. **Export Transcript** is a shortcut
+  for the dialogue-only transcript.
   
 ## Fountain Tips;
 

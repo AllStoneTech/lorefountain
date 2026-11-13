@@ -55,7 +55,9 @@ The free tier covers the whole worldbuilding workflow: the entity model
 and significance grouping, a glossary, a dual-ordered Timeline, a Story Card
 editor and Story Overview document, hover previews and autocomplete, Rename
 Entity with reference propagation, Structured Search, broken-reference
-detection, transcript export, and project-level AI agent instructions
+detection, script export (PDF, Fountain, Final Draft `.fdx`, HTML, Word and
+a dialogue transcript, with a "Pure Fountain" option that strips
+LoreFountain's own lines), and project-level AI agent instructions
 (`AGENTS.md`/`agents/*.md`). There's also a headless `validate.js` for
 CI or AI-agent use with no VS Code dependency.
 

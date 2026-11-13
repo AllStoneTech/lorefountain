@@ -31,6 +31,21 @@ On the local branch `feature/lorefountain-core`, not part of 1.1.0.
   agent docs (`AGENTS.md` and `agents/script-writer.md`, now version 4 and 5)
   and `docs/FOUNTAIN-EXTENSIONS.md` describe the convention. Existing projects
   are offered the updated docs by **Check for LoreFountain File Updates**.
+- **Script export, free** (ADR-0045): **Export Script…** (editor title bar,
+  a script's or season's right-click menu in the Scripts view, or the Command
+  Palette) exports to **PDF**, **Fountain**, **Final Draft (.fdx)**, a **web
+  page**, **Word** or a dialogue **transcript**, one script or a whole season.
+  Presets choose what goes in: **Pure Fountain** (every LoreFountain line,
+  tag and title key removed), **Production draft** (everything), **Audio
+  draft** (sound cues and pauses), or your own **Custom** choice of shot
+  lines, sound cues, pauses, comic lines, tags, notes, sections, synopses,
+  boneyard and scene numbers (as written, automatic or none). The PDF uses the
+  industry screenplay layout on US Letter or A4, with `(MORE)`/`(CONT'D)`
+  across pages, in Courier Prime with a Noto Sans Mono fallback so every
+  letter prints, Yoruba's included. `SHOT:` lines become Final Draft Shot
+  paragraphs. Choices are remembered in `lorefountain.config.json`, and files
+  go to an `exports/` folder by default. New help page: **Script Export: How
+  to Use This Feature**.
 - **Convention lines can start with Fountain's `!`** (ADR-0044), Fountain
   1.1's way to force a line to be action: `!SHOT: CLOSE-UP` keeps a stacked
   all-caps shot block from printing as a character speaking in other Fountain
