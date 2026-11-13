@@ -6,6 +6,39 @@ revisit.
 
 ---
 
+## ADR-0050 — Script export: PDF, Fountain, Final Draft, HTML, Word and transcript
+
+**Date:** 2026-11-13 · **Status:** Accepted (owner approved the design, formats, free tier, the Courier Prime and Noto Sans Mono fonts and the `pdfkit` dependency on 2026-11-11 to 2026-11-13). Core side: Core ADR-0006.
+
+1. **Free tier, every format.** Portability is a core promise, so getting a script out of LoreFountain is never paid. Spec §16 already put PDF and the transcript in the free tier; Fountain, FDX, HTML and Word join them. Pro keeps the specialised exports (BBC radio script, cue sheet, shot list, story bible).
+2. **Where the code lives.** Core holds everything that needs no third-party library: options and presets, the filter, the screenplay model, the `.fountain`, `.html` and `.fdx` writers and the PDF page layout. The extension holds the two renderers that need libraries (`src/export/pdf.ts` with `pdfkit`, `src/export/docx.ts` with the existing `docx`), the orchestration (`src/export/exportScript.ts`), and the dialog and command (`src/commands/exportScript.ts`, `src/providers/exportHtml.ts`).
+3. **One dialog.** **Export Script…** (editor title bar, the Scripts view's right-click menu on a script or a season, the Command Palette) opens a webview form: format, preset or boxes, scene numbers, paper and title page, and this script or the whole season. Webview messages are validated with Zod (`src/export/exportMessages.ts`). Choices are saved to the config's `export` section after a successful export; Core reads that section field by field, so a bad value never blocks the config. The transcript is a sixth format in the dialog, and **Export Transcript** stays as a toolbar shortcut.
+4. **Where files go.** The default is an `exports/` folder at the project root. A `.fountain` export saved inside the scripts folder would be indexed as another script with a clashing Production Code, so the command asks first. A season goes into one chosen folder, asking before replacing files.
+5. **PDF fonts.** The industry font is Courier 12 pt, but the PDF's built-in Courier can't show characters outside Western European, which Yoruba names need. The PDF embeds Courier Prime (made for screenplays) and, for any character it lacks (ẹ, ọ, ṣ, combining tone marks), Noto Sans Mono, which has the same 0.6 em advance, so Core's character grid stays exact. A grapheme cluster comes wholly from one font, and both fonts share an alphabetic baseline. Both are SIL Open Font License; their licence files ship beside them in `resources/fonts/`. US Letter is the default, A4 an option.
+6. **Bundling gotcha.** `pdfkit` and `fontkit` are imported with `import x = require(...)`, so esbuild bundles their CommonJS builds. Their ES-module builds locate data files through `import.meta.url`, which is empty in the extension's CommonJS bundle, and crashed the extension on load. `test/unit/exportBundle.test.ts` bundles the export code the same way and runs it with no `node_modules` beside it. `pdfkit` is also told to load no default font, so it never reads its built-in Helvetica metrics.
+7. **Word.** One named paragraph style per element (Scene Heading, Action, Character, Parenthetical, Dialogue, Lyric, Transition, Centered), the PDF's margins and indents, keep-with-next instead of `(MORE)`/`(CONT'D)` (Word paginates itself), page numbers from page 2, dual dialogue as a borderless table. The font is named, not embedded: Word uses Courier Prime where installed, Courier New otherwise.
+
+Not done here: a live check in the F5 Extension Development Host, opening the `.fdx` in Final Draft or Fade In and the `.docx` in Word, and an Export entry on the What's New page (the unreleased version's notes aren't written yet).
+
+Revisit when: a writer needs another paper size or font, or Final Draft or another tool rejects the FDX.
+
+---
+
+## ADR-0049 — `misread-as-character` on every script, fixed with Fountain's forced-action `!`
+
+**Date:** 2026-11-12 · **Status:** Accepted (owner approved on 2026-11-11 and 2026-11-12). Core side: Core ADR-0005.
+
+Same ground rule as ADR-0038 and ADR-0040: **extend Fountain, never change it.**
+
+1. **A warning on every script, not a comic-only note.** An all-caps convention line with a blank line above and text directly under it (`SHOT: CLOSE-UP` over `POSE: SANGO KNEELS`) prints in every other Fountain app as a character speaking. That is a portability defect, so it is a warning, like `orphaned-parenthetical`. The shot map reports prefix lines; the page map reports comic lines; a line is reported once. LoreFountain itself keeps reading the line as a convention line, so shot maps and cues stay correct until it is fixed.
+2. **Two quick fixes, `!` first.** Fountain 1.1's forced-action `!` makes any line action in every 1.1 app, which strips it before printing. It keeps a shot block together, so it is the preferred fix and the one Fix All applies. Inserting a blank line after the line stays available as the second quick fix. Neither changes a word. Nothing is rewritten on save.
+3. **Convention lines accept a leading `!` everywhere** (Core): matching, cues, shot maps, page maps, the validator and syntax colouring. The `!` gets its own scope (`keyword.operator.forced-action.fountain`).
+4. **Highlighting follows the parser more closely.** Backslash-escaped `\*` and `\_` no longer colour as emphasis, and the title-page keys match `fountain-js` (`Date`, `Draft date`, `Revisions`).
+5. **Docs.** The Fountain Syntax help, `agents/script-writer.md`, the scaffolded scripts README and `docs/FOUNTAIN-EXTENSIONS.md` recommend `!`. Their version markers were already raised on this unreleased branch (ADR-0043), so they are not raised again.
+
+Rejected: rewriting the line automatically on save (the writer's file is theirs), and accepting a lowercase keyword (`Shot:`), which would change the convention.
+
+Revisit when: a Fountain app the owner relies on is found not to honour `!` (Final Draft's Fountain import is unverified), or Fountain's spec changes how forced action works.
 ## ADR-0048 — The Story Overview becomes `overview.lf.md`; existing projects are renamed on first run
 
 **Date:** 2026-11-13 · **Status:** Proposed for the unreleased branch (built and unit-tested; the rename on first run and the editor routing are not yet verified in a live VS Code window). Follows Core's ADR-0004 and the impact analysis it cites (`LoreFountain-Core/docs/PROJECT-DOCUMENT-NAMING-IMPACT.md`). The owner approved renaming `OVERVIEW.md` ("no downside") on 2026-11-13, required that an update renames existing files, and chose to leave the folder `README.md` files as they are.

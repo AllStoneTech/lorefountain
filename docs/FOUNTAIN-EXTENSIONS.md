@@ -27,10 +27,10 @@ LoreFountain **extends Fountain and never changes it** (ADR-0040).
 
 ## Convention lines
 
-A convention line is an action line that starts, in capitals and at the start of the line, with a keyword and a colon: `SHOT:`, not `Shot:` or `SHOT :`. Anything else is ordinary action.
+A convention line is an action line that starts, in capitals and at the start of the line, with a keyword and a colon: `SHOT:`, not `Shot:` or `SHOT :`. Anything else is ordinary action. It may start with Fountain 1.1's forced-action `!` (`!SHOT: CLOSE-UP`; Core ADR-0005).
 
 - Convention lines belong in the action, never in the middle of a speech. Interrupting a speech splits it: the speech ends, the convention line follows, and the speaker is re-cued with `(CONT'D)`. The quick fix does this automatically.
-- An all-caps convention line with text directly under it is read by Fountain as a character cue. LoreFountain still understands it, but other apps would print it as a speaker. Keep a lowercase word in the line, or leave a blank line after it.
+- An all-caps convention line with a blank line above and text directly under it is read by Fountain as a character cue. LoreFountain still understands it, but other apps would print it as a speaker, so it is a `misread-as-character` warning. Start it with `!` (the preferred quick fix, and the one Fix All uses), keep a lowercase word in the line, or leave a blank line after it.
 
 ### Shots
 
@@ -113,6 +113,7 @@ Reported in the Problems panel, the Output channel and `node agents/validate.js`
 | `page-out-of-order` | Warning | A page number lower than the one before it |
 | `panel-before-page`, `content-outside-panel`, `missing-page-label` | Warning | A panel with no page, lettering outside a panel, or a `PAGE:` with no label |
 | `duplicate-panel-tag` | Warning | A panel tag, written or derived, used by more than one panel in a script |
+| `misread-as-character` | Warning | An all-caps convention line (`SHOT: CLOSE-UP`, `PAGE: 7`) with a blank line above and text directly under it, which other Fountain apps read as a character cue |
 | `panels-not-derived` | Note | `comic.panelsAsShots` is on but the comic has explicit `SHOT:` lines, so its panels are not turned into shots |
 | `bare-pause-line` | Note | Plain action that looks like a scene pause |
 | `ambiguous-location` | Note | A scene heading's place matches more than one entity |
@@ -120,9 +121,8 @@ Reported in the Problems panel, the Output channel and `node agents/validate.js`
 | `unforced-transition` | Note | A transition such as `FADE OUT.` that Fountain recognizes only with a leading `>` |
 | `page-number-gap`, `empty-page`, `missing-panel-description`, `splash-multiple-panels`, `spread-without-range` | Note | Page-structure oddities in a comic script (with `comic.panelsAsShots` on, an empty panel description also means its derived shot has none) |
 | `many-panels`, `many-balloons`, `long-balloon`, `long-panel-dialogue` | Note | Word-budget guidance, set per project by `comic.preset` and `comic.limits` (default `western`: over 9 panels on a page, 3 balloons in a panel, 25 words in a balloon, 35 words of dialogue in a panel; any limit can be off). Each note names the limit and preset that fired |
-| `misread-as-character` | Note | An all-caps convention line (`PAGE: 7`) with text directly under it, which other Fountain apps read as a character cue |
 
-Notes never fail a validator run. The quick fixes and **Fix All Script Formatting Issues** handle the orphaned parenthetical, the bare pause line, the unforced transition and `misread-as-character` (a blank line is inserted).
+Notes never fail a validator run. The quick fixes and **Fix All Script Formatting Issues** handle the orphaned parenthetical, the bare pause line, the unforced transition and `misread-as-character` (a leading `!`, or a blank line after the line; Fix All uses the `!`).
 
 ## Keeping this file current
 

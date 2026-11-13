@@ -48,6 +48,7 @@ const HELP_TOPICS: readonly HelpTopic[] = [
   { command: 'lorefountain.showBBCRadioScriptHelp', docFile: 'bbcRadioScript.md', title: 'Help: BBC Radio Drama Export' },
   { command: 'lorefountain.showCueSheetHelp', docFile: 'cueSheet.md', title: 'Help: SFX/Cue-Sheet Export' },
   { command: 'lorefountain.showShotListHelp', docFile: 'shotList.md', title: 'Help: Shot List Export' },
+  { command: 'lorefountain.showExportScriptHelp', docFile: 'exportScript.md', title: 'Help: Script Export' },
   { command: 'lorefountain.showAssetManifestHelp', docFile: 'assetManifest.md', title: 'Help: Asset Manifests' },
   { command: 'lorefountain.showStoryCardHelp', docFile: 'storyCard.md', title: 'Help: Story Card' },
   { command: 'lorefountain.showStoryOverviewHelp', docFile: 'storyOverview.md', title: 'Help: Story Overview' },

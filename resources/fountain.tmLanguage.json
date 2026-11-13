@@ -72,55 +72,58 @@
       "name": "storage.type.parenthetical.fountain"
     },
     "title-page": {
-      "match": "(?i)^\\s*(title|credit|authors?|source|draft date|contact|copyright|notes|revision):(.*)$",
+      "match": "(?i)^\\s*(title|credit|authors?|source|notes|draft ?date|date|contact|copyright|revisions?):(.*)$",
       "name": "keyword.other.title-page-key.fountain",
       "captures": {
         "1": { "name": "support.type.property-name.fountain" }
       }
     },
     "cue-prefix": {
-      "match": "^\\s*((?:SFX|MUSIC|AMB):)\\s*(\\[[a-z0-9]+(?:-[a-z0-9]+)*\\])?\\s*(SOURCE BED|BED|STING|BRIDGE|IN|OUT)?",
+      "match": "^\\s*(!)?((?:SFX|MUSIC|AMB):)\\s*(\\[[a-z0-9]+(?:-[a-z0-9]+)*\\])?\\s*(SOURCE BED|BED|STING|BRIDGE|IN|OUT)?",
       "name": "support.function.cue-prefix.lorefountain",
       "captures": {
-        "1": { "name": "support.function.cue-prefix.lorefountain" },
-        "2": { "name": "variable.other.asset-tag.lorefountain" },
-        "3": { "name": "keyword.other.cue-modifier.lorefountain" }
+        "1": { "name": "keyword.operator.forced-action.fountain" },
+        "2": { "name": "support.function.cue-prefix.lorefountain" },
+        "3": { "name": "variable.other.asset-tag.lorefountain" },
+        "4": { "name": "keyword.other.cue-modifier.lorefountain" }
       }
     },
     "shot-prefix": {
-      "match": "^\\s*(?:(SHOT:)\\s*(\\[[a-z0-9]+(?:-[a-z0-9]+)*\\])?|((?:POSE|LIGHT|DURATION|PAUSE):))",
+      "match": "^\\s*(!)?(?:(SHOT:)\\s*(\\[[a-z0-9]+(?:-[a-z0-9]+)*\\])?|((?:POSE|LIGHT|DURATION|PAUSE):))",
       "name": "support.function.shot-prefix.lorefountain",
       "captures": {
-        "1": { "name": "support.function.shot-prefix.lorefountain" },
-        "2": { "name": "variable.other.asset-tag.lorefountain" },
-        "3": { "name": "support.function.shot-prefix.lorefountain" }
+        "1": { "name": "keyword.operator.forced-action.fountain" },
+        "2": { "name": "support.function.shot-prefix.lorefountain" },
+        "3": { "name": "variable.other.asset-tag.lorefountain" },
+        "4": { "name": "support.function.shot-prefix.lorefountain" }
       }
     },
     "comic-prefix": {
-      "match": "^\\s*(?:(PANEL:)\\s*(\\[[a-z0-9]+(?:-[a-z0-9]+)*\\])?|((?:PAGE|CAPTION|LAYOUT|MOVE):))",
+      "match": "^\\s*(!)?(?:(PANEL:)\\s*(\\[[a-z0-9]+(?:-[a-z0-9]+)*\\])?|((?:PAGE|CAPTION|LAYOUT|MOVE):))",
       "name": "support.function.comic-prefix.lorefountain",
       "captures": {
-        "1": { "name": "support.function.comic-prefix.lorefountain" },
-        "2": { "name": "variable.other.asset-tag.lorefountain" },
-        "3": { "name": "support.function.comic-prefix.lorefountain" }
+        "1": { "name": "keyword.operator.forced-action.fountain" },
+        "2": { "name": "support.function.comic-prefix.lorefountain" },
+        "3": { "name": "variable.other.asset-tag.lorefountain" },
+        "4": { "name": "support.function.comic-prefix.lorefountain" }
       }
     },
     "emphasis": {
       "patterns": [
         {
-          "match": "\\*\\*\\*(?!\\s)([^*\\n]+?)(?<!\\s)\\*\\*\\*",
+          "match": "(?<!\\\\)\\*\\*\\*(?!\\s)([^*\\n]+?)(?<!\\s|\\\\)\\*\\*\\*",
           "name": "markup.bold.markup.italic.fountain"
         },
         {
-          "match": "\\*\\*(?!\\s)([^*\\n]+?)(?<!\\s)\\*\\*",
+          "match": "(?<!\\\\)\\*\\*(?!\\s)([^*\\n]+?)(?<!\\s|\\\\)\\*\\*",
           "name": "markup.bold.fountain"
         },
         {
-          "match": "\\*(?!\\s)([^*\\n]+?)(?<!\\s)\\*",
+          "match": "(?<!\\\\)\\*(?!\\s)([^*\\n]+?)(?<!\\s|\\\\)\\*",
           "name": "markup.italic.fountain"
         },
         {
-          "match": "_(?!\\s)([^_\\n]+?)(?<!\\s)_",
+          "match": "(?<!\\\\)_(?!\\s)([^_\\n]+?)(?<!\\s|\\\\)_",
           "name": "markup.underline.fountain"
         }
       ]

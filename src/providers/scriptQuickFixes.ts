@@ -1,8 +1,10 @@
 /**
  * Quick fixes (code actions) for the script diagnostics (ADR-0039):
  * `orphaned-parenthetical` (join to the previous speech, or re-cue the
- * speaker with `(CONT'D)`), `bare-pause-line` (replace with `PAUSE:`) and
- * `unforced-transition` (add Fountain's `>` force marker).
+ * speaker with `(CONT'D)`), `bare-pause-line` (replace with `PAUSE:`),
+ * `unforced-transition` (add Fountain's `>` force marker) and
+ * `misread-as-character` (add Fountain's forced-action `!`, preferred, or a
+ * blank line after the line).
  * Each applies exactly one standard Fountain correction; the planning is
  * pure and unit-tested in `upgrade/formatFixes.ts`. Every fix also comes
  * with a "fix all in the project" action that runs the Fix All command.
@@ -12,7 +14,7 @@
  */
 
 import * as vscode from 'vscode';
-import { FIXABLE_CODES, planLineFix, type TextEditPlan } from '../upgrade/formatFixes';
+import { FIXABLE_CODES, planLineFixes, type TextEditPlan } from '../upgrade/formatFixes';
 import { SCRIPT_DIAGNOSTIC_SOURCE } from './scriptDiagnostics';
 
 /** The Fix All command id, also offered from every quick-fix menu. */
@@ -42,14 +44,15 @@ class ScriptQuickFixProvider implements vscode.CodeActionProvider {
       const code = typeof diagnostic.code === 'string' ? diagnostic.code : undefined;
       if (diagnostic.source !== SCRIPT_DIAGNOSTIC_SOURCE || code === undefined || !FIXABLE_CODES.has(code)) continue;
 
-      const fix = planLineFix(text, code, diagnostic.range.start.line);
-      if (!fix) continue;
-      const action = new vscode.CodeAction(fix.title, vscode.CodeActionKind.QuickFix);
-      action.edit = new vscode.WorkspaceEdit();
-      action.edit.replace(document.uri, toRange(fix.edit), fix.edit.newText);
-      action.diagnostics = [diagnostic];
-      action.isPreferred = true;
-      actions.push(action);
+      planLineFixes(text, code, diagnostic.range.start.line).forEach((fix, index) => {
+        const action = new vscode.CodeAction(fix.title, vscode.CodeActionKind.QuickFix);
+        action.edit = new vscode.WorkspaceEdit();
+        action.edit.replace(document.uri, toRange(fix.edit), fix.edit.newText);
+        action.diagnostics = [diagnostic];
+        // Only the first (preferred) fix is the Ctrl+. default.
+        action.isPreferred = index === 0;
+        actions.push(action);
+      });
     }
 
     if (actions.length > 0) {

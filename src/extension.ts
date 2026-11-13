@@ -30,6 +30,7 @@ import { registerCheckFileUpdatesCommand } from './commands/checkFileUpdates';
 import { registerCheckForUpdatesCommand } from './commands/checkForUpdates';
 import { registerEntityCreationCommands } from './commands/createEntity';
 import { registerCreateScriptCommand } from './commands/createScript';
+import { registerExportScriptCommand } from './commands/exportScript';
 import { registerExportTranscriptCommand } from './commands/exportTranscript';
 import { registerInstallDemoCommand } from './commands/installDemo';
 import { registerLicensingCommands } from './commands/licensing';
@@ -121,6 +122,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   registerNoteCommands(context, pickTargetWorkspaceFolder);
   registerStyleBibleCommand(context, pickTargetWorkspaceFolder, () => treeProvider.refresh());
   registerReferenceCommands(context, outputChannel, findStoreForFolder);
+  registerExportScriptCommand(context);
   registerExportTranscriptCommand(context);
   registerStructuredSearchCommand(context, outputChannel, pickTargetWorkspaceFolder, findStoreForFolder);
   registerTryLoreFountainCommand(context);

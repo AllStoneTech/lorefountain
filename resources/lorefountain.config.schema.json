@@ -100,6 +100,55 @@
         }
       },
       "additionalProperties": false
+    },
+    "export": {
+      "type": "object",
+      "description": "Script export choices, saved by the Export Script dialog after each export. A missing or invalid field uses its default.",
+      "properties": {
+        "preset": {
+          "type": "string",
+          "enum": ["pure", "production", "audio", "custom"],
+          "default": "production",
+          "description": "The preset used last: Pure Fountain, Production draft, Audio draft or your Custom choice."
+        },
+        "format": {
+          "type": "string",
+          "enum": ["pdf", "fountain", "fdx", "html", "docx", "transcript"],
+          "default": "pdf",
+          "description": "The format used last."
+        },
+        "paper": {
+          "type": "string",
+          "enum": ["letter", "a4"],
+          "default": "letter",
+          "description": "Paper size for PDF and Word exports."
+        },
+        "titlePage": {
+          "type": "boolean",
+          "default": true,
+          "description": "Start PDF and Word exports with the script's title page."
+        },
+        "custom": {
+          "type": "object",
+          "description": "Your Custom preset: what an export includes.",
+          "properties": {
+            "shots": { "type": "boolean", "description": "SHOT:, POSE:, LIGHT:, DURATION: and MOVE: lines." },
+            "sound": { "type": "boolean", "description": "SFX:, MUSIC: and AMB: lines." },
+            "pauses": { "type": "boolean", "description": "PAUSE: lines." },
+            "comic": { "type": "boolean", "description": "PAGE:, PANEL:, LAYOUT: and CAPTION: lines." },
+            "tags": { "type": "boolean", "description": "[tags] after a convention keyword (dropping a tag keeps its line)." },
+            "notes": { "type": "boolean", "description": "[[notes]]." },
+            "sections": { "type": "boolean", "description": "# sections." },
+            "synopses": { "type": "boolean", "description": "= synopses." },
+            "boneyard": { "type": "boolean", "description": "Boneyard (cut) text." },
+            "loreFountainTitleKeys": { "type": "boolean", "description": "The Order: and Production Code: title-page keys." },
+            "sceneNumbers": { "type": "string", "enum": ["as-written", "auto", "none"], "description": "Scene numbers as written, numbered automatically, or none." }
+          },
+          "required": ["shots", "sound", "pauses", "comic", "tags", "notes", "sections", "synopses", "boneyard", "loreFountainTitleKeys", "sceneNumbers"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": true
