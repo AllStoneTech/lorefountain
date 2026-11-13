@@ -4,10 +4,13 @@
  * existing transcript. Pure apart from reading fonts, which the caller supplies.
  *
  * Exports {@link exportScript}, {@link ExportRequest}, {@link ExportOutput},
- * {@link FORMAT_DETAILS} and {@link defaultExportFileName}.
+ * {@link FORMAT_DETAILS}, {@link defaultExportFileName} and {@link layoutFor}.
  *
  * Gotchas:
  * - The transcript ignores the content options: it is always dialogue only.
+ * - The layout (screenplay or comic, ADR-0052) applies to PDF, Word and HTML.
+ *   `auto` is resolved per script, so a season of mixed scripts exports each
+ *   in its own layout. Final Draft is always a screenplay.
  * - An exported `.fountain` saved inside the scripts folder would be indexed as
  *   another script (and clash on its Production Code), which is why exports
  *   default to an `exports/` folder; the command warns about the scripts folder.
@@ -19,9 +22,14 @@ import { writeFountain } from 'lorefountain-core/export/fountain';
 import { writeHtml } from 'lorefountain-core/export/html';
 import { layoutScreenplay, type PaperSize } from 'lorefountain-core/export/layout';
 import type { ExportContent } from 'lorefountain-core/export/options';
-import { buildScreenplay, plainText, type Screenplay } from 'lorefountain-core/export/screenplay';
-import type { ExportFormat } from 'lorefountain-core/export/settings';
+import type { ProjectType } from 'lorefountain-core/config/projectType';
+import { buildComicScript, comicExportContent, hasComicPages } from 'lorefountain-core/export/comic';
+import { writeComicHtml } from 'lorefountain-core/export/comicHtml';
+import { layoutComic } from 'lorefountain-core/export/comicLayout';
+import { buildScreenplay, plainText, type TitlePageEntry } from 'lorefountain-core/export/screenplay';
+import { resolveExportLayout, type ExportFormat, type ExportLayout, type ExportLayoutSetting } from 'lorefountain-core/export/settings';
 import { parseFountain } from '../fountain/parse';
+import { renderComicDocx } from './comicDocx';
 import { renderScreenplayDocx } from './docx';
 import { renderPdf, type PdfFonts } from './pdf';
 import { buildTranscript, serializeTranscriptMarkdown } from './transcript';
@@ -32,6 +40,14 @@ export interface ExportRequest {
   content: ExportContent;
   paper: PaperSize;
   titlePage: boolean;
+  /** Screenplay, comic, or `auto` (decided per script). */
+  layout: ExportLayoutSetting;
+  /** Mark comic pages LEFT or RIGHT. */
+  comicPageSides: boolean;
+  /** The language the document declares, as a BCP 47 tag. */
+  language: string;
+  /** The project's type, when it has one; a `comic` project defaults to the comic layout. */
+  projectType?: ProjectType;
 }
 
 /** One exported file's contents and extension. */
@@ -93,25 +109,60 @@ export async function exportScript(
       break;
   }
 
+  if (format !== 'fdx' && layoutFor(scriptText, request) === 'comic') {
+    const comic = buildComicScript(filterScript(scriptText, comicExportContent(content)).text, { pageSides: request.comicPageSides });
+    const lang = request.language;
+    switch (format) {
+      case 'html':
+        return { extension, data: writeComicHtml(comic, { fallbackTitle: scriptStem, lang }) };
+      case 'docx':
+        return { extension, data: await renderComicDocx(comic, { paper: request.paper, titlePage: request.titlePage, fallbackTitle: scriptStem, lang }) };
+      case 'pdf': {
+        const layout = layoutComic(comic, { paper: request.paper, titlePage: request.titlePage });
+        return { extension, data: await renderPdf(layout, await loadFonts(), pdfMetadata(comic.titlePage, scriptStem, lang)) };
+      }
+    }
+  }
+
   const screenplay = buildScreenplay(filterScript(scriptText, content).text);
   switch (format) {
     case 'html':
-      return { extension, data: writeHtml(screenplay, { fallbackTitle: scriptStem, sceneNumbers }) };
+      return { extension, data: writeHtml(screenplay, { fallbackTitle: scriptStem, sceneNumbers, lang: request.language }) };
     case 'fdx':
       return { extension, data: writeFdx(screenplay) };
     case 'docx':
-      return { extension, data: await renderScreenplayDocx(screenplay, { paper: request.paper, titlePage: request.titlePage, sceneNumbers, fallbackTitle: scriptStem }) };
+      return {
+        extension,
+        data: await renderScreenplayDocx(screenplay, { paper: request.paper, titlePage: request.titlePage, sceneNumbers, fallbackTitle: scriptStem, lang: request.language }),
+      };
     case 'pdf': {
       const layout = layoutScreenplay(screenplay, { paper: request.paper, titlePage: request.titlePage, sceneNumbers });
-      const author = titleValue(screenplay, 'author') ?? titleValue(screenplay, 'authors');
-      return { extension, data: await renderPdf(layout, await loadFonts(), { title: titleValue(screenplay, 'title') ?? scriptStem, ...(author ? { author } : {}) }) };
+      return { extension, data: await renderPdf(layout, await loadFonts(), pdfMetadata(screenplay.titlePage, scriptStem, request.language)) };
     }
   }
 }
 
+/**
+ * The layout one script exports in.
+ *
+ * @param scriptText - The script's text.
+ * @param request - The layout setting and project type.
+ * @returns `screenplay` or `comic`.
+ */
+export function layoutFor(scriptText: string, request: Pick<ExportRequest, 'layout' | 'projectType'>): ExportLayout {
+  if (request.layout !== 'auto') return request.layout;
+  return resolveExportLayout('auto', { ...(request.projectType ? { projectType: request.projectType } : {}), hasComicPages: hasComicPages(scriptText) });
+}
+
+/** The PDF's Title, Author and language. */
+function pdfMetadata(titlePage: TitlePageEntry[], scriptStem: string, lang: string): { title: string; author?: string; lang: string } {
+  const author = titleValue(titlePage, 'author') ?? titleValue(titlePage, 'authors');
+  return { title: titleValue(titlePage, 'title') ?? scriptStem, ...(author ? { author } : {}), lang };
+}
+
 /** A title-page value as plain text, or `undefined` when the key is absent. */
-function titleValue(screenplay: Screenplay, key: string): string | undefined {
-  const entry = screenplay.titlePage.find((candidate) => candidate.key === key);
+function titleValue(titlePage: TitlePageEntry[], key: string): string | undefined {
+  const entry = titlePage.find((candidate) => candidate.key === key);
   const text = entry?.lines.map(plainText).join(' ').trim();
   return text ? text : undefined;
 }

@@ -8,7 +8,7 @@ import * as path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { presetContent } from 'lorefountain-core/export/options';
 import { parseExportDialogMessage } from '../../src/export/exportMessages';
-import { defaultExportFileName, exportScript, FORMAT_DETAILS, type ExportRequest } from '../../src/export/exportScript';
+import { defaultExportFileName, exportScript, FORMAT_DETAILS, layoutFor, type ExportRequest } from '../../src/export/exportScript';
 import { loadPdfFonts } from '../../src/export/pdf';
 
 const FONTS_DIR = path.join(__dirname, '..', '..', 'resources', 'fonts');
@@ -19,9 +19,52 @@ const request = (format: ExportRequest['format'], preset: 'pure' | 'production' 
   content: presetContent(preset),
   paper: 'letter',
   titlePage: true,
+  layout: 'auto',
+  comicPageSides: false,
+  language: 'en',
 });
 
+const COMIC = 'Title: Harbour\n\nPAGE: 1\n\nPANEL: The harbour at dawn.\nSHOT: [harbour] WIDE\nCAPTION: Lagos, 1897.\n\nADE\nThey are late.\n';
+
 const noFonts = vi.fn(() => Promise.reject(new Error('fonts should not be read')));
+
+describe('exportScript: comic layout (ADR-0052)', () => {
+  it('chooses the layout per script: explicit, then project type, then PAGE: lines', () => {
+    expect(layoutFor(COMIC, { layout: 'auto' })).toBe('comic');
+    expect(layoutFor(SCRIPT, { layout: 'auto' })).toBe('screenplay');
+    expect(layoutFor(SCRIPT, { layout: 'auto', projectType: 'comic' })).toBe('comic');
+    expect(layoutFor(COMIC, { layout: 'screenplay' })).toBe('screenplay');
+  });
+
+  it('writes a comic script as HTML in the comic layout, keeping the comic lines even for Pure Fountain', async () => {
+    const html = await exportScript(COMIC, 'h1', { ...request('html', 'pure'), language: 'yo' }, noFonts);
+    expect(html.data).toContain('<html lang="yo">');
+    expect(html.data).toContain('PAGE ONE');
+    expect(html.data).toContain('<span class="lettering__number">1.</span><span class="lettering__label">CAPTION:</span>');
+    expect(html.data).not.toContain('WIDE');
+  });
+
+  it('marks page sides when asked', async () => {
+    const html = await exportScript(COMIC, 'h1', { ...request('html'), comicPageSides: true }, noFonts);
+    expect(html.data).toContain('(RIGHT, 1 panel)');
+  });
+
+  it('keeps the screenplay layout when asked, and for Final Draft', async () => {
+    const html = await exportScript(COMIC, 'h1', { ...request('html'), layout: 'screenplay' }, noFonts);
+    expect(html.data).not.toContain('PAGE ONE');
+    const fdx = await exportScript(COMIC, 'h1', { ...request('fdx'), layout: 'comic' }, noFonts);
+    expect(fdx.data).toContain('<Paragraph Type="Character">');
+  });
+
+  it('writes comic Word and PDF files', async () => {
+    const docx = await exportScript(COMIC, 'h1', request('docx'), noFonts);
+    expect((docx.data as Buffer).subarray(0, 2).toString('latin1')).toBe('PK');
+    const pdf = await exportScript(COMIC, 'h1', request('pdf'), () => loadPdfFonts(FONTS_DIR));
+    const raw = (pdf.data as Buffer).toString('latin1');
+    expect(raw).toContain('/Outlines');
+    expect(raw).toContain('(PAGE ONE)');
+  });
+});
 
 describe('exportScript', () => {
   it('writes Fountain through the filter', async () => {
@@ -83,6 +126,8 @@ describe('parseExportDialogMessage', () => {
     content: presetContent('custom'),
     paper: 'a4',
     titlePage: false,
+    layout: 'comic',
+    comicPageSides: true,
     scope: 'group',
   };
 
@@ -97,6 +142,8 @@ describe('parseExportDialogMessage', () => {
     expect(parseExportDialogMessage({ type: 'delete' })).toBeUndefined();
     expect(parseExportDialogMessage({ ...valid, format: 'exe' })).toBeUndefined();
     expect(parseExportDialogMessage({ ...valid, extra: true })).toBeUndefined();
+    expect(parseExportDialogMessage({ ...valid, layout: 'manga' })).toBeUndefined();
+    expect(parseExportDialogMessage({ ...valid, comicPageSides: undefined })).toBeUndefined();
     expect(parseExportDialogMessage({ ...valid, content: { ...valid.content, shots: 'yes' } })).toBeUndefined();
   });
 });

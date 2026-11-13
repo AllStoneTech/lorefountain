@@ -37,9 +37,14 @@ describe('bundled export code', () => {
 
     const content = { shots: true, sound: true, pauses: true, comic: true, tags: true, notes: true, sections: true, synopses: true, boneyard: false, loreFountainTitleKeys: true, sceneNumbers: 'as-written' as const };
     const loadFonts = (): ReturnType<typeof loadPdfFonts> => loadPdfFonts(path.join(ROOT, 'resources', 'fonts'));
-    const pdf = await exportScript('INT. ỌRUN - DAY\n\nṢàngó waits.\n', 's', { format: 'pdf', content, paper: 'letter', titlePage: true }, loadFonts);
+    const pdf = await exportScript('INT. ỌRUN - DAY\n\nṢàngó waits.\n', 's', { format: 'pdf', content, paper: 'letter', titlePage: true, layout: 'auto', comicPageSides: false, language: 'yo' }, loadFonts);
     expect((pdf.data as Buffer).subarray(0, 5).toString('latin1')).toBe('%PDF-');
-    const docx = await exportScript('INT. A - DAY\n\nRain.\n', 's', { format: 'docx', content, paper: 'a4', titlePage: true }, loadFonts);
+    const docx = await exportScript('INT. A - DAY\n\nRain.\n', 's', { format: 'docx', content, paper: 'a4', titlePage: true, layout: 'auto', comicPageSides: false, language: 'en' }, loadFonts);
     expect((docx.data as Buffer).subarray(0, 2).toString('latin1')).toBe('PK');
+    const comicRequest = { format: 'pdf' as const, content, paper: 'letter' as const, titlePage: true, layout: 'comic' as const, comicPageSides: true, language: 'en' };
+    const comicPdf = await exportScript('PAGE: 1\n\nPANEL: Rain.\n\nCAPTION: Night.\n', 's', comicRequest, loadFonts);
+    expect((comicPdf.data as Buffer).subarray(0, 5).toString('latin1')).toBe('%PDF-');
+    const comicDocx = await exportScript('PAGE: 1\n\nPANEL: Rain.\n', 's', { ...comicRequest, format: 'docx' }, loadFonts);
+    expect((comicDocx.data as Buffer).subarray(0, 2).toString('latin1')).toBe('PK');
   }, 60_000);
 });

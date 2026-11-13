@@ -57,7 +57,8 @@ editor and Story Overview document, hover previews and autocomplete, Rename
 Entity with reference propagation, Structured Search, broken-reference
 detection, script export (PDF, Fountain, Final Draft `.fdx`, HTML, Word and
 a dialogue transcript, with a "Pure Fountain" option that strips
-LoreFountain's own lines), and project-level AI agent instructions
+LoreFountain's own lines, and the comic "full script" layout for comic
+scripts), and project-level AI agent instructions
 (`AGENTS.md`/`agents/*.md`). There's also a headless `validate.js` for
 CI or AI-agent use with no VS Code dependency.
 

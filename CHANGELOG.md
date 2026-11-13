@@ -3,9 +3,11 @@
 All notable changes to LoreFountain are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] - after 1.1.0
+## [Unreleased]
 
-Merged into `main` on 2026-11-13, after the 1.1.0 work. Parsing comes from LoreFountain-Core 0.2.0.
+## [1.1.0] - 2026-11-13
+
+Project types, script export (PDF, Fountain, Final Draft, HTML, Word and transcript, with the comic script layout), comic scripts, the style bible and the Problems panel. Parsing comes from LoreFountain-Core 0.3.0.
 
 ### Added
 
@@ -83,6 +85,20 @@ Merged into `main` on 2026-11-13, after the 1.1.0 work. Parsing comes from LoreF
   paragraphs. Choices are remembered in `lorefountain.config.json`, and files
   go to an `exports/` folder by default. New help page: **Script Export: How
   to Use This Feature**.
+- **Comic scripts export as comic scripts** (ADR-0052). PDF, Word and web
+  page exports of a script with `PAGE:` lines use the comic "full script"
+  layout artists and letterers expect: `PAGE ONE (4 panels)` starting each
+  sheet, `PANEL 1` and its description, and captions, balloons and sound
+  effects numbered per page in a hanging column. Spreads are headed
+  `PAGES TWO–THREE`, a long page continues under `PAGE ONE (CONTINUED)`,
+  and pages can be marked left or right. The dialog's new **Layout** choice
+  (Automatic, Screenplay or Comic script) overrides the automatic pick,
+  which is the comic layout in a `comic` project and for any script with
+  `PAGE:` lines.
+- **PDF bookmarks and a document language.** A PDF export lists every scene
+  (or comic page) as a bookmark. PDF, Word and web page exports declare the
+  language set by `export.language` in `lorefountain.config.json`
+  (English by default), for screen readers and spell checkers.
 - **Convention lines can start with Fountain's `!`** (ADR-0049), Fountain
   1.1's way to force a line to be action: `!SHOT: CLOSE-UP` keeps a stacked
   all-caps shot block from printing as a character speaking in other Fountain
@@ -91,6 +107,80 @@ Merged into `main` on 2026-11-13, after the 1.1.0 work. Parsing comes from LoreF
 - **`misread-as-character` now warns on every script**, not only comics: an
   all-caps convention line with text directly under it. Its quick fixes add
   the `!` (preferred, and what Fix All uses) or insert a blank line after it.
+- **Script problems in the Problems panel.** Script warnings and notes now
+  show as diagnostics on the line they're about (warnings as warnings,
+  notes as information), alongside the existing Output-channel log.
+- **Quick fixes** (Ctrl+. / Cmd+.), each one standard Fountain correction:
+  join an orphaned `(beat)` back to the previous speech, re-cue the speaker
+  with `(CONT'D)` when a `SHOT:` or other line interrupts a speech, or turn
+  a standalone `Beat.` into `PAUSE:`.
+- **Fix All Script Formatting Issues** applies every safe fix across the
+  project in one refactor preview, where each change can be reviewed and
+  unticked before anything is written.
+- **A What's New page** that opens by itself once after a minor or major
+  update (never for patch releases or fresh installs), and a once-per-project
+  summary offering Fix All when a project's scripts have fixable issues. Both
+  can be turned off under `lorefountain.notifications`.
+- The World view's **…** menu is reordered by how often each item is used,
+  with **Check for LoreFountain File Updates**, **Check for LoreFountain
+  Updates** and **What's New** grouped at the bottom.
+
+- **Shot maps.** A `SHOT:` line can now carry an optional `[tag]`
+  (`SHOT: [1x01-basement-wide] WIDE, establishing`), the same stable handle
+  cues use, mapped to the still or clip that fills the shot in a new
+  hand-authored `assets/manifests/shots.json`
+  (`{ file, kind: still|clip, motion?, source?, license?, prompt? }`).
+  Every script with shots gets a derived `<script>.shots.json` sidecar —
+  each shot's line range, what's heard in it (dialogue with speaker and
+  extensions, parentheticals such as `(exhales)` with their wording kept,
+  pauses, lyrics, overlapping dual dialogue), its action blocks, its
+  on-screen text (Fountain centered text), the transition at its end, the
+  entities it mentions, its scene heading broken into INT./EXT., setting,
+  time of day and resolved locations, and pointers to the cues that start
+  in it — so a video pipeline can assemble an episode without parsing
+  Fountain. Every heard, action and on-screen entry carries its script
+  line, so they merge into one timeline.
+- **`PAUSE:` for scene pauses**, with an optional length (`PAUSE: 2s`). A
+  character's own pause stays a `(beat)`-style parenthetical.
+- **New validator checks**, in `node agents/validate.js` and the Output
+  channel: `unmapped-shot-tag`, `shot-kind-mismatch` and
+  `orphaned-parenthetical` warnings (the last catches a `(beat)` after a
+  blank line, which Fountain reads as action), and a new informational
+  **notes** section that never fails a run: `bare-pause-line`,
+  `ambiguous-location`, `unused-shot-tag`, and `unforced-transition` (a
+  transition such as `FADE IN:` or `CUT TO BLACK.` that the Fountain spec
+  only recognizes when it starts with `>`; the quick fix and Fix All add
+  the `>`).
+- Highlighting for cue and shot tags and `PAUSE:`, plus `shot-tag` and
+  `pause` snippets.
+- Updated project docs and agent files (`scripts/README.md`,
+  `assets/README.md`, `AGENTS.md`, `agents/script-writer.md`,
+  `agents/validate.js`) — existing projects are offered the update.
+- **A Fountain syntax tutorial and quick reference** help page
+  (`resources/help/fountainSyntax.md`): every Fountain 1.1 element and every
+  LoreFountain convention (`SHOT:`/`POSE:`/`LIGHT:`/`DURATION:`, `PAUSE:`,
+  `SFX:`/`MUSIC:`/`AMB:`, tags, `Order:`/`Production Code:`), with an example
+  of each. Open it from the Command Palette, the Scripts view's **…** menu,
+  or the **…** menu of any open `.fountain` script. It replaces the shorter
+  tutorial that was at the end of the Scripts view help. Help pages now
+  render tables with borders.
+- **A license notice for LoreFountain Pro** (`LICENSE-PRO.md`). The free tier
+  stays MIT; the compiled Pro module is proprietary and is now described as
+  such in the package and the README.
+
+### Changed
+
+- **Comic default limits are now 3 balloons per panel and 35 words per panel**
+  (were 5 and 40; 9 panels per page and 25 words per balloon are unchanged).
+  The scaffolded `AGENTS.md` (5), `agents/script-writer.md` (6),
+  `agents/validate.js` (5) and scripts README (6) describe the new settings.
+- **The parsing code and config reading now come from LoreFountain-Core**
+  ([AllStoneTech/lorefountain-core](https://github.com/AllStoneTech/lorefountain-core)),
+  a separate MIT package shared with LoreFountain-Producer, so both read a
+  project identically. Nothing changes for writers: scripts, sidecars,
+  checks and fixes behave exactly as in 1.1.0 (ADR-0042).
+- A shot's `[tag]` is no longer part of its description, including in
+  Export Shot List.
 
 ### Fixed
 
@@ -159,93 +249,6 @@ Merged into `main` on 2026-11-13, after the 1.1.0 work. Parsing comes from LoreF
   New help topic, `agents/world-builder.md` (now version 5), `validate.js`
   (version 8) and the world README (version 3) describe it; existing projects
   are offered them by **Check for LoreFountain File Updates**.
-
-### Changed
-
-- **Comic default limits are now 3 balloons per panel and 35 words per panel**
-  (were 5 and 40; 9 panels per page and 25 words per balloon are unchanged).
-  The scaffolded `AGENTS.md` (5), `agents/script-writer.md` (6),
-  `agents/validate.js` (5) and scripts README (6) describe the new settings.
-- **The parsing code and config reading now come from LoreFountain-Core**
-  ([AllStoneTech/lorefountain-core](https://github.com/AllStoneTech/lorefountain-core)),
-  a separate MIT package shared with LoreFountain-Producer, so both read a
-  project identically. Nothing changes for writers: scripts, sidecars,
-  checks and fixes behave exactly as in 1.1.0 (ADR-0042).
-
-## [Unreleased] - 1.1.0
-
-Not yet released.
-
-### Added
-
-- **Script problems in the Problems panel.** Script warnings and notes now
-  show as diagnostics on the line they're about (warnings as warnings,
-  notes as information), alongside the existing Output-channel log.
-- **Quick fixes** (Ctrl+. / Cmd+.), each one standard Fountain correction:
-  join an orphaned `(beat)` back to the previous speech, re-cue the speaker
-  with `(CONT'D)` when a `SHOT:` or other line interrupts a speech, or turn
-  a standalone `Beat.` into `PAUSE:`.
-- **Fix All Script Formatting Issues** applies every safe fix across the
-  project in one refactor preview, where each change can be reviewed and
-  unticked before anything is written.
-- **A What's New page** that opens by itself once after a minor or major
-  update (never for patch releases or fresh installs), and a once-per-project
-  summary offering Fix All when a project's scripts have fixable issues. Both
-  can be turned off under `lorefountain.notifications`.
-- The World view's **…** menu is reordered by how often each item is used,
-  with **Check for LoreFountain File Updates**, **Check for LoreFountain
-  Updates** and **What's New** grouped at the bottom.
-
-- **Shot maps.** A `SHOT:` line can now carry an optional `[tag]`
-  (`SHOT: [1x01-basement-wide] WIDE, establishing`), the same stable handle
-  cues use, mapped to the still or clip that fills the shot in a new
-  hand-authored `assets/manifests/shots.json`
-  (`{ file, kind: still|clip, motion?, source?, license?, prompt? }`).
-  Every script with shots gets a derived `<script>.shots.json` sidecar —
-  each shot's line range, what's heard in it (dialogue with speaker and
-  extensions, parentheticals such as `(exhales)` with their wording kept,
-  pauses, lyrics, overlapping dual dialogue), its action blocks, its
-  on-screen text (Fountain centered text), the transition at its end, the
-  entities it mentions, its scene heading broken into INT./EXT., setting,
-  time of day and resolved locations, and pointers to the cues that start
-  in it — so a video pipeline can assemble an episode without parsing
-  Fountain. Every heard, action and on-screen entry carries its script
-  line, so they merge into one timeline.
-- **`PAUSE:` for scene pauses**, with an optional length (`PAUSE: 2s`). A
-  character's own pause stays a `(beat)`-style parenthetical.
-- **New validator checks**, in `node agents/validate.js` and the Output
-  channel: `unmapped-shot-tag`, `shot-kind-mismatch` and
-  `orphaned-parenthetical` warnings (the last catches a `(beat)` after a
-  blank line, which Fountain reads as action), and a new informational
-  **notes** section that never fails a run: `bare-pause-line`,
-  `ambiguous-location`, `unused-shot-tag`, and `unforced-transition` (a
-  transition such as `FADE IN:` or `CUT TO BLACK.` that the Fountain spec
-  only recognizes when it starts with `>`; the quick fix and Fix All add
-  the `>`).
-- Highlighting for cue and shot tags and `PAUSE:`, plus `shot-tag` and
-  `pause` snippets.
-- Updated project docs and agent files (`scripts/README.md`,
-  `assets/README.md`, `AGENTS.md`, `agents/script-writer.md`,
-  `agents/validate.js`) — existing projects are offered the update.
-- **A Fountain syntax tutorial and quick reference** help page
-  (`resources/help/fountainSyntax.md`): every Fountain 1.1 element and every
-  LoreFountain convention (`SHOT:`/`POSE:`/`LIGHT:`/`DURATION:`, `PAUSE:`,
-  `SFX:`/`MUSIC:`/`AMB:`, tags, `Order:`/`Production Code:`), with an example
-  of each. Open it from the Command Palette, the Scripts view's **…** menu,
-  or the **…** menu of any open `.fountain` script. It replaces the shorter
-  tutorial that was at the end of the Scripts view help. Help pages now
-  render tables with borders.
-- **A license notice for LoreFountain Pro** (`LICENSE-PRO.md`). The free tier
-  stays MIT; the compiled Pro module is proprietary and is now described as
-  such in the package and the README.
-
-### Changed
-
-- A shot's `[tag]` is no longer part of its description, including in
-  Export Shot List.
-
-### Fixed
-
 - **Nothing inside a boneyard (`/* ... */`) is read as data any more.**
   `SFX:`/`MUSIC:`/`AMB:` lines there no longer become cues (so they stay out
   of the `.cues.json` sidecar, Cue Sheet and BBC Radio Script exports and

@@ -17,6 +17,8 @@
  * - Noto Sans Mono has no italic here; italic fallback characters print upright.
  * - `pdfkit` is told to load no default font, so it never reads its built-in
  *   Helvetica metrics (files the bundle doesn't ship).
+ * - The layout's bookmarks (scene headings, or comic pages) become the PDF
+ *   outline, each pointing at the sheet it starts on (ADR-0052).
  */
 
 import * as fs from 'node:fs/promises';
@@ -91,6 +93,8 @@ export interface RenderPdfOptions {
   title: string;
   /** The PDF's Author metadata, when the script has one. */
   author?: string;
+  /** The document language, as a BCP 47 tag. Defaults to `en`. */
+  lang?: string;
 }
 
 /** `pdfkit` font names registered for the document. */
@@ -138,7 +142,7 @@ export async function renderPdf(layout: ScreenplayLayout, fonts: PdfFonts, optio
         font: '',
         info: { Title: options.title, ...(options.author ? { Author: options.author } : {}), Creator: 'LoreFountain' },
         pdfVersion: '1.7',
-        lang: 'en',
+        lang: options.lang ?? 'en',
         displayTitle: true,
       });
       const chunks: Buffer[] = [];
@@ -152,6 +156,8 @@ export async function renderPdf(layout: ScreenplayLayout, fonts: PdfFonts, optio
       for (const page of pages) {
         doc.addPage({ size: [geometry.widthPt, geometry.heightPt], margin: 0 });
         for (const line of page.lines) drawLine(doc, line, geometry.colPt, geometry.rowPt, covered);
+        // An outline item points at the page added last.
+        for (const bookmark of page.bookmarks ?? []) doc.outline.addItem(bookmark);
       }
       doc.end();
     } catch (error) {

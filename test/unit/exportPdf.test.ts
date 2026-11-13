@@ -68,3 +68,23 @@ describe('renderPdf', () => {
     await expect(loadPdfFonts(path.join(FONTS_DIR, 'nope'))).rejects.toBeInstanceOf(PdfRenderError);
   });
 });
+
+describe('renderPdf: outline and language (ADR-0052)', () => {
+  it('turns scene headings into bookmarks and declares the language', async () => {
+    const fonts = await loadPdfFonts(FONTS_DIR);
+    const layout = layoutScreenplay(buildScreenplay('INT. HOUSE - DAY #1#\n\nRain.\n\nEXT. YARD - DAY\n\nSun.\n'), { paper: 'letter' });
+    const raw = (await renderPdf(layout, fonts, { title: 'x', lang: 'en-GB' })).toString('latin1');
+    expect(raw).toContain('/Outlines');
+    expect(raw).toContain('/PageMode /UseOutlines');
+    expect(raw).toContain('(1. INT. HOUSE - DAY)');
+    expect(raw).toContain('(EXT. YARD - DAY)');
+    expect(raw).toContain('/Lang (en-GB)');
+  });
+
+  it('writes no outline when there are no bookmarks', async () => {
+    const fonts = await loadPdfFonts(FONTS_DIR);
+    const raw = (await renderPdf(layoutScreenplay(buildScreenplay('Just action.\n'), { paper: 'letter' }), fonts, { title: 'x' })).toString('latin1');
+    expect(raw).not.toContain('/PageMode /UseOutlines');
+    expect(raw).toContain('/Lang (en)');
+  });
+});

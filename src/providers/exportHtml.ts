@@ -10,7 +10,9 @@
  * - Picking a preset fills the checkboxes; changing any checkbox switches the
  *   preset to Custom, which is saved as the project's Custom preset.
  * - The content options are disabled for the transcript (always dialogue
- *   only); paper and title page apply to PDF and Word only.
+ *   only); paper and title page apply to PDF and Word only; the layout
+ *   (ADR-0052) applies to PDF, Word and HTML, and page sides to the comic
+ *   layout only.
  * - Styled with VS Code's `--vscode-*` variables, so it follows the theme.
  *   Every control has a label, and related controls sit in a fieldset.
  */
@@ -75,6 +77,17 @@ export function buildExportHtml(cspSource: string, nonce: string): string {
     <p class="hint">Changing a box switches to Custom, which is saved for this project.</p>
   </fieldset>
 
+  <fieldset id="layout-options">
+    <legend>Layout (PDF, Word and web page)</legend>
+    <div role="radiogroup" aria-label="Layout">
+      <label class="row"><input type="radio" name="layout" value="auto"> Automatic (comic script for a comic project or a script with PAGE: lines)</label>
+      <label class="row"><input type="radio" name="layout" value="screenplay"> Screenplay</label>
+      <label class="row"><input type="radio" name="layout" value="comic"> Comic script (pages, panels and numbered lettering)</label>
+    </div>
+    <label class="row"><input type="checkbox" id="comic-page-sides"> Mark comic pages left or right</label>
+    <p class="hint">Final Draft has no comic format, so a comic exported to .fdx is a screenplay.</p>
+  </fieldset>
+
   <fieldset id="page-options">
     <legend>Page (PDF and Word)</legend>
     <div class="row" role="radiogroup" aria-label="Paper size">
@@ -134,6 +147,14 @@ export function buildExportHtml(cspSource: string, nonce: string): string {
         const format = selectedFormat();
         byId('content-options').disabled = format === 'transcript';
         byId('page-options').disabled = format !== 'pdf' && format !== 'docx';
+        byId('layout-options').disabled = format !== 'pdf' && format !== 'docx' && format !== 'html';
+        applyLayout();
+      }
+      function selectedLayout() {
+        return (document.querySelector('input[name="layout"]:checked') || {}).value || 'auto';
+      }
+      function applyLayout() {
+        byId('comic-page-sides').disabled = selectedLayout() === 'screenplay';
       }
       function el(tag, attributes, text) {
         const node = document.createElement(tag);
@@ -179,6 +200,10 @@ export function buildExportHtml(cspSource: string, nonce: string): string {
 
         document.querySelector('input[name="paper"][value="' + message.settings.paper + '"]').checked = true;
         byId('title-page').checked = message.settings.titlePage;
+        const layoutInput = document.querySelector('input[name="layout"][value="' + message.settings.layout + '"]');
+        if (layoutInput) layoutInput.checked = true;
+        for (const input of document.querySelectorAll('input[name="layout"]')) input.addEventListener('change', applyLayout);
+        byId('comic-page-sides').checked = message.settings.comicPageSides;
 
         byId('subject').textContent = 'Exporting ' + message.scope.script;
         byId('scope-script').textContent = 'This script (' + message.scope.script + ')';
@@ -198,6 +223,8 @@ export function buildExportHtml(cspSource: string, nonce: string): string {
           content: readContent(),
           paper: document.querySelector('input[name="paper"]:checked').value,
           titlePage: byId('title-page').checked,
+          layout: selectedLayout(),
+          comicPageSides: byId('comic-page-sides').checked,
           scope: document.querySelector('input[name="scope"]:checked').value,
         });
       });

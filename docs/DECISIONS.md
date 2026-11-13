@@ -6,6 +6,23 @@ revisit.
 
 ---
 
+## ADR-0052 — Comic script layout in the PDF, Word and HTML exports
+
+**Date:** 2026-11-13 · **Status:** Accepted (owner approved the design on 2026-11-13). Core side: Core ADR-0008.
+
+1. **The dialog gains a Layout choice**: Automatic, Screenplay or Comic script, for PDF, Word and web page exports. Automatic uses the comic layout for a `comic` project (`project_type`, ADR-0051), and otherwise picks Comic script for a script with `PAGE:` lines. A season export resolves Automatic per script. A **Mark left and right pages** box applies to the comic layout. Both are saved to the config's `export` section with the other choices.
+2. **PDF.** Core's comic layout draws through the same renderer as the screenplay. The renderer also writes the layout's bookmarks as the PDF outline and declares the export language (both layouts).
+3. **Word.** `src/export/docx.ts` gains a comic writer with named styles (Comic Page, Panel, Panel Description, Lettering), a hanging indent for numbered lettering, and a page break before each comic page. The screenplay writer and the comic writer both declare the export language.
+4. **HTML** comes from Core (`writeComicHtml`).
+5. **Final Draft, Fountain and the transcript** ignore the layout. Final Draft has no standard comic format, so a comic exported to `.fdx` is a screenplay, as before.
+6. **Word tabs fixed.** A tab character inside Word text is only whitespace, so the screenplay writer's scene numbers never reached their right tab stop. Both writers now use Word tab elements, and the tests check for them.
+
+Not done here, as for ADR-0050: a live check in the Extension Development Host and opening the files in Word.
+
+Revisit when: a publisher's template needs different styles.
+
+---
+
 ## ADR-0051 — `project_type`, and the "What kind of project is this?" prompt
 
 **Date:** 2026-11-13 · **Status:** Accepted (owner approved the design and the steps on 2026-11-13; the name `project_type`, the `serialized_universe` type and the prompt were the owner's calls). Core side: Core ADR-0007.

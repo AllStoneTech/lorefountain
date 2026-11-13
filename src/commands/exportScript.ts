@@ -21,6 +21,7 @@ import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { EXPORT_PRESETS, EXPORT_PRESET_IDS } from 'lorefountain-core/export/options';
+import { projectTypeFromConfig } from 'lorefountain-core/config/projectType';
 import { EXPORT_FORMATS, exportSettingsFromConfig, type ExportSettings } from 'lorefountain-core/export/settings';
 import { readLoreFountainConfig, writeLoreFountainConfig } from '../config/configFile';
 import { getWorkspaceFolders } from '../config/workspaceConfig';
@@ -194,8 +195,22 @@ async function initMessage(subject: ExportSubject): Promise<ExportDialogInit> {
  * @returns True when files were written (the dialog then closes); false when the writer cancelled a prompt.
  */
 async function runExport(subject: ExportSubject, choice: ExportChoice, loadFonts: () => Promise<PdfFonts>): Promise<boolean> {
-  const request: ExportRequest = { format: choice.format, content: choice.content, paper: choice.paper, titlePage: choice.titlePage };
   const root = subject.folder.uri.fsPath;
+  const config = await readLoreFountainConfig(root);
+  const saved = config.ok ? exportSettingsFromConfig(config.config) : exportSettingsFromConfig({});
+  // The language is set in the config only. A `comic` project_type makes the automatic layout a comic
+  // script (Core ADR-0008); otherwise it follows each script's PAGE: lines.
+  const projectType = config.ok ? projectTypeFromConfig(config.config).projectType : undefined;
+  const request: ExportRequest = {
+    format: choice.format,
+    content: choice.content,
+    paper: choice.paper,
+    titlePage: choice.titlePage,
+    layout: choice.layout,
+    comicPageSides: choice.comicPageSides,
+    language: saved.language,
+    ...(projectType ? { projectType } : {}),
+  };
   const exportsDir = path.join(root, EXPORTS_FOLDER);
   const files = choice.scope === 'group' && subject.group ? subject.group.files : [subject.scriptPath];
   const stem = (file: string): string => path.basename(file, '.fountain');
@@ -260,6 +275,9 @@ async function saveSettings(root: string, choice: ExportChoice): Promise<void> {
     format: choice.format,
     paper: choice.paper,
     titlePage: choice.titlePage,
+    layout: choice.layout,
+    comicPageSides: choice.comicPageSides,
+    language: previous.language,
     custom: choice.preset === 'custom' ? choice.content : previous.custom,
   };
   try {

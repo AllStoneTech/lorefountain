@@ -860,7 +860,7 @@
     "esbuild": "^0.28.1",
     "eslint": "^10.11.0",
     "javascript-obfuscator": "^5.8.0",
-    "lorefountain-core": "https://github.com/AllStoneTech/lorefountain-core/releases/download/v0.2.0/lorefountain-core-0.2.0.tgz",
+    "lorefountain-core": "https://github.com/AllStoneTech/lorefountain-core/releases/download/v0.3.0/lorefountain-core-0.3.0.tgz",
     "ovsx": "^1.2.0",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.65.0",
