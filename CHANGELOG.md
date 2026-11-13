@@ -5,7 +5,7 @@ All notable changes to LoreFountain are documented here. This project follows
 
 ## [Unreleased] - after 1.1.0
 
-On the local branch `feature/lorefountain-core`, not part of 1.1.0.
+Merged into `main` on 2026-11-13, after the 1.1.0 work. Parsing comes from LoreFountain-Core 0.2.0.
 
 ### Added
 

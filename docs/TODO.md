@@ -22,11 +22,12 @@ The repository is public (as of 2026-10-02), recreated from the clean history so
 
 ## 1.1.1 or 1.2: the Core split
 
-ADR-0042 moves the parsing code to the separate LoreFountain-Core repo. It sits on the local branch `feature/lorefountain-core`, which is not pushed and is not part of 1.1.0.
+ADR-0042 moves the parsing code to the separate LoreFountain-Core repo. Merged into `main` on 2026-11-13.
 
-- Switch the `lorefountain-core` dependency from the local `file:../LoreFountain-Core` link to a pinned Core release, likely a prebuilt `npm pack` tarball attached to each Core GitHub release (`github:` dependencies fail on npm 11.12), so CI can install it.
-- Push the branch, merge it, and release.
-- Producer-side changes ship in the same release. Core's own changelog and docs, and any follow-up to the Producer spec, are handled in those repositories.
+- [x] Switch the `lorefountain-core` dependency to a pinned Core release: the prebuilt package on Core's v0.2.0 GitHub release.
+- [x] Merge `feature/lorefountain-core` into `main`.
+- [ ] Push `main` and let CI confirm a fresh install.
+- [ ] Release. Producer-side changes ship in the same release. Core's own changelog and docs, and any follow-up to the Producer spec, are handled in those repositories.
 
 ## LoreFountain-Producer support
 

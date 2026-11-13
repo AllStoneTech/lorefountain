@@ -436,7 +436,13 @@
         },
         "lorefountain.comic.defaultPreset": {
           "type": "string",
-          "enum": ["western", "manga", "european", "webtoon", "custom"],
+          "enum": [
+            "western",
+            "manga",
+            "european",
+            "webtoon",
+            "custom"
+          ],
           "enumDescriptions": [
             "Western comics: up to 9 panels per page, 3 balloons per panel, 25 words per balloon, 35 words per panel.",
             "Manga: like western, but up to 8 panels per page.",
@@ -838,7 +844,7 @@
     "esbuild": "^0.28.1",
     "eslint": "^10.11.0",
     "javascript-obfuscator": "^5.8.0",
-    "lorefountain-core": "file:../LoreFountain-Core",
+    "lorefountain-core": "https://github.com/AllStoneTech/lorefountain-core/releases/download/v0.2.0/lorefountain-core-0.2.0.tgz",
     "ovsx": "^1.2.0",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.65.0",
