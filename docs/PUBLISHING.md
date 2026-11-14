@@ -54,6 +54,8 @@ npx ovsx publish lorefountain-<version>.vsix                 # reads OVSX_PAT
 
 Neither tool bumps the version for you: what's published is whatever `package.json`'s `"version"` is. Update `CHANGELOG.md` (and its date) in the same change.
 
+The production build loads each obfuscated bundle in plain Node after obfuscating it (`scripts/smoke-load-bundle.js`) and fails if loading throws, because unit tests never run the bundle that ships. Before publishing, still install the `.vsix` locally (`code --install-extension lorefountain-<version>.vsix --force`), reload, open a project, and check the LoreFountain views fill in: the smoke check can't run `activate`.
+
 After both succeed, tag the release (`git tag v<version>` and push the tag) so the GitHub Release workflow attaches a build to it.
 
 ## Publishing after December 1, 2026

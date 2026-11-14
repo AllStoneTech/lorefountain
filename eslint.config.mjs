@@ -23,7 +23,7 @@ export default tseslint.config(
   },
   {
     // Node-based build/config scripts (CommonJS), not part of the bundle.
-    files: ['esbuild.js'],
+    files: ['esbuild.js', 'scripts/**/*.js'],
     languageOptions: {
       sourceType: 'commonjs',
       globals: {

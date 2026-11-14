@@ -22,3 +22,4 @@ tsconfig.json
 
 **/*.ts
 **/*.map
+scripts/**

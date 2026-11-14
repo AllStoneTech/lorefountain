@@ -51,6 +51,25 @@
 
 const esbuild = require('esbuild');
 const JavaScriptObfuscator = require('javascript-obfuscator');
+const { spawnSync } = require('node:child_process');
+
+// Node bundles have no browser `self`. Some dependencies (docx) write
+// `globalThis || self`, which is safe as written, but the "max" profile's
+// control-flow flattening turns `a || b` into a call that evaluates both
+// sides, so the 1.1.0 package crashed on load with "self is not defined".
+// Replacing `self` with `globalThis` leaves nothing undefined to evaluate.
+const NODE_GLOBALS = { self: 'globalThis' };
+
+// Loads a finished release bundle in plain Node (with a stand-in `vscode`)
+// and fails the build if loading throws: unit tests never run the minified,
+// obfuscated bundle that ships. See scripts/smoke-load-bundle.js.
+function smokeLoad(outfile) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, 'scripts', 'smoke-load-bundle.js'), outfile], { stdio: 'inherit' });
+  if (result.status !== 0) {
+    console.error(`[smoke] ${outfile} failed to load; not shipping it.`);
+    process.exitCode = 1;
+  }
+}
 const fs = require('fs');
 const path = require('path');
 
@@ -144,6 +163,7 @@ async function main() {
     format: 'cjs',
     platform: 'node',
     target: 'node22',
+    define: NODE_GLOBALS,
     outfile: 'dist/extension.js',
     external: ['vscode'],
     minify: production,
@@ -166,7 +186,10 @@ async function main() {
           });
           build.onEnd(() => {
             copySqlWasm();
-            if (production) obfuscateBundle('dist/extension.js', 'extension');
+            if (production) {
+              obfuscateBundle('dist/extension.js', 'extension');
+              smokeLoad('dist/extension.js');
+            }
             console.log('[esbuild] build finished');
           });
         },
@@ -180,6 +203,7 @@ async function main() {
     format: 'cjs',
     platform: 'node',
     target: 'node22',
+    define: NODE_GLOBALS,
     outfile: 'resources/agents/validate.js',
     minify: production,
     sourcemap: false,
@@ -221,6 +245,7 @@ async function main() {
         format: 'cjs',
         platform: 'node',
         target: 'node22',
+    define: NODE_GLOBALS,
         outfile: 'dist/pro.js',
         external: ['vscode'],
         minify: production,
@@ -235,7 +260,10 @@ async function main() {
                 console.log('[esbuild:pro] build started');
               });
               build.onEnd(() => {
-                if (production) obfuscateBundle('dist/pro.js', 'pro');
+                if (production) {
+                  obfuscateBundle('dist/pro.js', 'pro');
+                  smokeLoad('dist/pro.js');
+                }
                 console.log('[esbuild:pro] build finished');
               });
             },
