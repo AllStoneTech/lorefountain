@@ -69,6 +69,7 @@ import { ScriptDiagnostics } from './providers/scriptDiagnostics';
 import { registerScriptQuickFixes } from './providers/scriptQuickFixes';
 import { registerFixScriptFormattingCommand } from './commands/fixScriptFormatting';
 import { askProjectType, maybePromptProjectType, registerSetProjectTypeCommand } from './commands/projectType';
+import { maybeOfferGeneratedFilesNotice } from './commands/generatedFilesNotice';
 import { captureInstallState, maybeShowProjectSummary, maybeShowWhatsNew } from './commands/upgradeNotices';
 import { checkGitSafety } from './safety/gitSafetyBanner';
 import { maybeShowTelemetryConsentPrompt } from './telemetry/consent';
@@ -503,6 +504,7 @@ async function addIndexFor(folder: vscode.WorkspaceFolder): Promise<void> {
     const summary = await index.rebuild();
     void maybeShowProjectSummary(extensionContext, folder, summary);
     void maybePromptProjectType(extensionContext, folder);
+    void maybeOfferGeneratedFilesNotice(extensionContext, folder);
     void checkGitSafetyForFolder(folder);
   } catch (err) {
     outputChannel.appendLine(
@@ -632,6 +634,8 @@ async function initializeWorkspace(): Promise<void> {
   // A brand-new project is asked for its type straight away (ADR-0051). An existing config that
   // already has one is left alone; one without is asked by `maybePromptProjectType` as usual.
   if (wroteConfig) await askProjectType(extensionContext, folder);
+  // Once per project (flagged in workspace state), so the index build's call and this one never both show.
+  await maybeOfferGeneratedFilesNotice(extensionContext, folder);
 }
 
 /** Open the settings webview panel for a target workspace folder, refreshing the World tree after a save. */

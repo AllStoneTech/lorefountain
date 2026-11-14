@@ -488,6 +488,11 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "Ask \"What kind of project is this?\" once for a project that has a `lorefountain.config.json` but no `project_type`. Skipping or dismissing the question is remembered, and `LoreFountain: Set Project Type` is always available."
+        },
+        "lorefountain.notifications.generatedFiles": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Once per project, mention which files LoreFountain regenerates (`*.shots.json`, `*.cues.json`, `*.pages.json`, `.lorefountain/`) and don't need to be kept in version control. If the project already has a `.gitignore`, offer to add them to it. LoreFountain never runs source-control commands."
         }
       }
     },

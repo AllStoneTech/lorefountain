@@ -5,6 +5,22 @@ All notable changes to LoreFountain are documented here. This project follows
 
 ## [Unreleased]
 
+### Added
+
+- **A one-time "generated files" offer** (ADR-0053). Once per project, after an
+  update or when **Initialize Workspace** creates it, a notification says that
+  `*.shots.json`, `*.cues.json`, `*.pages.json` and the `.lorefountain` folder
+  are rebuilt from your scripts and don't need to be kept in version control.
+  If the project already has a `.gitignore`, a button appends those patterns to
+  it (idempotent, existing lines untouched); with no `.gitignore` the notice is
+  information only. LoreFountain never runs source-control commands, and files
+  your source control already tracks stay tracked. `Show Details` opens the root
+  README. `lorefountain.notifications.generatedFiles` turns it off.
+- **File naming and version control in the root README** (version 3): which
+  files you write, which are generated, and that `*.lfp.json` files belong to
+  LoreFountain-Producer. "Check for LoreFountain File Updates" offers it to
+  existing projects.
+
 ## [1.1.0] - 2026-11-13
 
 Project types, script export (PDF, Fountain, Final Draft, HTML, Word and transcript, with the comic script layout), comic scripts, the style bible and the Problems panel. Parsing comes from LoreFountain-Core 0.3.0.

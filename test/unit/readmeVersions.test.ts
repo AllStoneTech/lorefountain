@@ -22,7 +22,7 @@ describe('checkReadmeVersions', () => {
 
     const results = await checkReadmeVersions(workspaceDir, folders);
     const root = results.find((r) => r.relativePath === 'README.md');
-    expect(root).toMatchObject({ templateName: 'root.md', status: 'untracked', currentVersion: 2 });
+    expect(root).toMatchObject({ templateName: 'root.md', status: 'untracked', currentVersion: 3 });
   });
 
   it('tracks the assets.md template at its own target path', async () => {
@@ -67,6 +67,6 @@ describe('checkReadmeVersions', () => {
     expect(results.length).toBeGreaterThan(0);
     expect(results.every((r) => r.status === 'missing')).toBe(true);
     const root = results.find((r) => r.relativePath === 'README.md');
-    expect(root).toMatchObject({ templateName: 'root.md', status: 'missing', currentVersion: 2 });
+    expect(root).toMatchObject({ templateName: 'root.md', status: 'missing', currentVersion: 3 });
   });
 });
