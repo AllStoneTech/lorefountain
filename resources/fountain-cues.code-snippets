@@ -44,6 +44,21 @@
     "body": "PAUSE: ${1:2s}",
     "description": "Insert a scene-level pause — a silence that belongs to the scene, not a speaker. The length is optional ('2s', 'long'). For a character's own pause inside their dialogue, use a (beat) parenthetical instead."
   },
+  "Super": {
+    "prefix": "super",
+    "body": "SUPER: ${1:text}",
+    "description": "Insert on-screen text drawn over the picture, such as a place and date. Add a [tag] right after the colon to pick a text style (textStyles in producer.lfp.json)."
+  },
+  "Chyron": {
+    "prefix": "chyron",
+    "body": "CHYRON: ${1:text}",
+    "description": "Insert a lower-third caption, usually a name and role. Add a [tag] right after the colon to pick a text style."
+  },
+  "Title Card": {
+    "prefix": "titlecard",
+    "body": "TITLE CARD: ${1:text}",
+    "description": "Insert a title card. Add a [tag] right after the colon to pick a text style."
+  },
   "Shot Pose": {
     "prefix": "pose",
     "body": "POSE: ${1:description}",

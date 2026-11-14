@@ -18,6 +18,7 @@
     { "include": "#title-page" },
     { "include": "#cue-prefix" },
     { "include": "#shot-prefix" },
+    { "include": "#on-screen-prefix" },
     { "include": "#comic-prefix" },
     { "include": "#emphasis" }
   ],
@@ -96,6 +97,15 @@
         "2": { "name": "support.function.shot-prefix.lorefountain" },
         "3": { "name": "variable.other.asset-tag.lorefountain" },
         "4": { "name": "support.function.shot-prefix.lorefountain" }
+      }
+    },
+    "on-screen-prefix": {
+      "match": "^\\s*(!)?((?:SUPER|TITLE CARD|CHYRON):)\\s*(\\[[a-z0-9]+(?:-[a-z0-9]+)*\\])?",
+      "name": "support.function.on-screen-prefix.lorefountain",
+      "captures": {
+        "1": { "name": "keyword.operator.forced-action.fountain" },
+        "2": { "name": "support.function.on-screen-prefix.lorefountain" },
+        "3": { "name": "variable.other.asset-tag.lorefountain" }
       }
     },
     "comic-prefix": {
