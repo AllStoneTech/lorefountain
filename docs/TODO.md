@@ -42,7 +42,7 @@ Agreed with the Producer spec on 2026-11-05 (`LoreFountain-Producer/docs/LOREFOU
 - [ ] **Reference images:** several per character version and look, each with an optional angle label.
 - [ ] **Structured pronunciation** (`{ respelling, ipa }` or a plain string) on entities and glossary terms.
 - [ ] **Read Producer data, read-only and tolerantly:** "covered by an accepted Producer take" instead of "not sourced yet", per-episode production status with coverage sub-shots, and a warning when a deleted or retagged shot has accepted takes.
-- [ ] **`AGENTS.md`:** say that `producer.json` and `producer/` are maintained by the Producer and not hand-edited.
+- [ ] **`AGENTS.md`:** say that `producer.lfp.json` and `producer/` (every Producer file is named `*.lfp.*`, Core ADR-0009) are maintained by the Producer and not hand-edited.
 - [ ] **A demo project with media**, shared by both products as a test case.
 - [x] **Bug:** `fountain-js` 1.2.4 throws on a `~` lyric directly under a character cue, so the whole script fails to parse. Worked around in Core (ADR-0005).
 
