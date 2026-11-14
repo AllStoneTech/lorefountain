@@ -12,7 +12,7 @@ The change has three parts, each modeled on an existing cue feature:
 2. A derived `<script>.shots.json` sidecar, regenerated on every save like `.cues.json`, holds each shot with its line range, narration and the entities it mentions.
 3. A hand-authored `assets/manifests/shots.json` maps each shot tag to its file, the same way `audio.json` maps a cue tag.
 
-Existing projects keep working unchanged. Tags are optional, and an untagged shot is never an error.
+Existing projects keep working unchanged. Tags began as optional; since the Producer needs them, an untagged shot is now a warning (`untagged-shot`, ADR-0054) with a **Tag All Shots** fix. It is still never an error.
 
 ## The problem
 
@@ -38,7 +38,7 @@ SHOT: MEDIUM, on LUCIEN
 **Rules**
 
 - **Pattern:** the existing `CUE_TAG` regex, lowercase letters, digits and single hyphens (`[a-z0-9]+(?:-[a-z0-9]+)*`). Move it to a shared module so the two can't drift apart.
-- **Optional:** an untagged shot is valid. It still appears in the sidecar with its position, but it can't be mapped to an asset.
+- **Expected, not enforced:** an untagged shot is valid and still appears in the sidecar with its position, but it can't be mapped to an asset, so it gets a warning (ADR-0054).
 - **Project-wide scope:** a tag means the same asset in every script. Recurring shots (the Archive ident, the Odù glyph bumper) reuse one tag across episodes and resolve to one file, which is the same reuse philosophy as the audio manifest.
 - **Repeats within a script are allowed.** Cutting back to the same image is a normal editing choice.
 - **No positional fallback.** Matching is exact on the tag, never on scene and shot number.

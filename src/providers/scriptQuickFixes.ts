@@ -4,7 +4,8 @@
  * speaker with `(CONT'D)`), `bare-pause-line` (replace with `PAUSE:`),
  * `unforced-transition` (add Fountain's `>` force marker) and
  * `misread-as-character` (add Fountain's forced-action `!`, preferred, or a
- * blank line after the line).
+ * blank line after the line), and `cue-extension-parenthetical` (move `V.O.` and
+ * friends onto the cue line). `untagged-shot` gets "Tag all shots" (ADR-0054).
  * Each applies exactly one standard Fountain correction; the planning is
  * pure and unit-tested in `upgrade/formatFixes.ts`. Every fix also comes
  * with a "fix all in the project" action that runs the Fix All command.
@@ -14,6 +15,9 @@
  */
 
 import * as vscode from 'vscode';
+import { planShotTags } from 'lorefountain-core/shots/tagShots';
+import { panelTagPrefixFor } from '../comics/tagPrefix';
+import { TAG_ALL_SHOTS_COMMAND } from '../commands/tagAllShots';
 import { FIXABLE_CODES, planLineFixes, type TextEditPlan } from '../upgrade/formatFixes';
 import { SCRIPT_DIAGNOSTIC_SOURCE } from './scriptDiagnostics';
 
@@ -59,6 +63,26 @@ class ScriptQuickFixProvider implements vscode.CodeActionProvider {
       const fixAll = new vscode.CodeAction('Fix all script formatting issues in the project…', vscode.CodeActionKind.QuickFix);
       fixAll.command = { command: FIX_SCRIPT_FORMATTING_COMMAND, title: 'Fix All Script Formatting Issues' };
       actions.push(fixAll);
+    }
+
+    // Untagged shots: tag this script's shots (previewed like any quick fix), or run the command for the
+    // whole project. Kept apart from Fix All, which is for formatting (ADR-0054).
+    const untagged = context.diagnostics.find(
+      (diagnostic) => diagnostic.source === SCRIPT_DIAGNOSTIC_SOURCE && diagnostic.code === 'untagged-shot',
+    );
+    if (untagged) {
+      const plan = planShotTags(text, panelTagPrefixFor(document.uri.fsPath, text));
+      if (plan.edits.length > 0) {
+        const tagScript = new vscode.CodeAction(`Tag all ${plan.edits.length} untagged shot(s) in this script`, vscode.CodeActionKind.QuickFix);
+        tagScript.edit = new vscode.WorkspaceEdit();
+        for (const tag of plan.edits) tagScript.edit.insert(document.uri, new vscode.Position(tag.line, tag.character), tag.insert);
+        tagScript.diagnostics = [untagged];
+        actions.push(tagScript);
+      }
+      const tagProject = new vscode.CodeAction('Tag all shots in the project…', vscode.CodeActionKind.QuickFix);
+      tagProject.command = { command: TAG_ALL_SHOTS_COMMAND, title: 'Tag All Shots' };
+      tagProject.diagnostics = [untagged];
+      actions.push(tagProject);
     }
     return actions;
   }

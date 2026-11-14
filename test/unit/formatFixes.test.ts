@@ -163,11 +163,13 @@ describe('planAllFixes', () => {
     ].join('\n');
 
     const plan = planAllFixes(text);
-    expect(plan.fixes.map((fix) => fix.kind)).toEqual(['join', 'join', 'recue', 'pause']);
+    expect(plan.fixes.map((fix) => fix.kind)).toEqual(['cue-extension', 'join', 'join', 'recue', 'pause']);
     expect(plan.skipped).toBe(0);
     const fixed = apply(text, plan.fixes);
     expect(remainingCodes(fixed)).toEqual([]);
-    expect(fixed).toContain("SHOT: CLOSE, abstract\n\nTHE ARCHIVE (CONT'D)\n     (beat)\nWelcome to the Orun Archive.");
+    // The V.O. line moved onto the cue, and the re-cued (CONT'D) cue carries the same extensions.
+    expect(fixed).toContain('               THE ARCHIVE (V.O.) (FILTERED)\n     (not Lucien)\nYou found us.');
+    expect(fixed).toContain("SHOT: CLOSE, abstract\n\nTHE ARCHIVE (V.O.) (FILTERED) (CONT'D)\n     (beat)\nWelcome to the Orun Archive.");
   });
 
   it('skips and counts a re-cue across plain action and an orphan with no speaker', () => {
@@ -247,5 +249,77 @@ describe('misread-as-character fixes (ADR-0049)', () => {
   it('does not touch a script with no stacked all-caps convention line', () => {
     expect(findFixableIssues('INT. A - DAY\n\nMara waits.\n')).toEqual([]);
     expect(findFixableIssues('INT. A - DAY\n\nSHOT: WIDE on the dock\nPOSE: MARA KNEELS\n')).toEqual([]);
+  });
+});
+
+describe('cue-extension-parenthetical fixes', () => {
+  const fixOnly = (text: string): string => {
+    const issue = findFixableIssues(text).find((candidate) => candidate.code === 'cue-extension-parenthetical');
+    expect(issue).toBeDefined();
+    const fix = planLineFix(text, 'cue-extension-parenthetical', (issue as { line: number }).line);
+    expect(fix).toMatchObject({ kind: 'cue-extension', safeForFixAll: true });
+    return apply(text, [fix as FormatFix]);
+  };
+  const script = (...lines: string[]): string => ['INT. A - DAY', '', ...lines, ''].join('\n');
+  const codes = (text: string): string[] => buildShotMap(text, []).issues.map((issue) => issue.code).filter((code) => code === 'cue-extension-parenthetical');
+
+  it('moves V.O. onto the cue and keeps the performance note as a parenthetical', () => {
+    expect(fixOnly(script('THE ARCHIVE', '(V.O., reading)', 'Hello.'))).toBe(script('THE ARCHIVE (V.O.)', '(reading)', 'Hello.'));
+  });
+
+  it('moves both tokens and keeps only the wording after the dash', () => {
+    expect(fixOnly(script('THE ARCHIVE', '(V.O., FILTERED — not Lucien)', 'Hello.'))).toBe(
+      script('THE ARCHIVE (V.O.) (FILTERED)', '(not Lucien)', 'Hello.'),
+    );
+  });
+
+  it('keeps commas inside the remaining wording', () => {
+    expect(fixOnly(script('THE ARCHIVE', '(V.O., precise, an academic register)', 'Hello.'))).toBe(
+      script('THE ARCHIVE (V.O.)', '(precise, an academic register)', 'Hello.'),
+    );
+  });
+
+  it('removes the parenthetical when it was only extensions', () => {
+    expect(fixOnly(script('THE ARCHIVE', '(V.O., FILTERED)', 'Hello.'))).toBe(script('THE ARCHIVE (V.O.) (FILTERED)', 'Hello.'));
+  });
+
+  it("puts the extensions before (CONT'D), after existing extensions, and keeps ^", () => {
+    expect(fixOnly(script("THE ARCHIVE (O.S.) (CONT'D)", '(V.O., low)', 'Hello.'))).toBe(script("THE ARCHIVE (O.S.) (V.O.) (CONT'D)", '(low)', 'Hello.'));
+    expect(fixOnly(script('MARA ^', '(O.S., low)', 'Hello.'))).toBe(script('MARA (O.S.) ^', '(low)', 'Hello.'));
+  });
+
+  it('does not repeat an extension already on the cue', () => {
+    expect(fixOnly(script('THE ARCHIVE (V.O.)', '(V.O., reading)', 'Hello.'))).toBe(script('THE ARCHIVE (V.O.)', '(reading)', 'Hello.'));
+  });
+
+  it('is idempotent: after the fix there is nothing left to flag or fix', () => {
+    const once = fixOnly(script('THE ARCHIVE', '(V.O., FILTERED — not Lucien)', 'Hello.'));
+    expect(codes(once)).toEqual([]);
+    expect(planAllFixes(once).fixes).toEqual([]);
+  });
+
+  it('preserves CRLF line endings', () => {
+    const text = 'INT. A - DAY\r\n\r\nTHE ARCHIVE\r\n(V.O., reading)\r\nHello.\r\n';
+    expect(fixOnly(text)).toBe('INT. A - DAY\r\n\r\nTHE ARCHIVE (V.O.)\r\n(reading)\r\nHello.\r\n');
+  });
+
+  it('skips an ambiguous one: the warning stays, there is no fix, and Fix All counts it as skipped', () => {
+    const text = script('THE ARCHIVE', '(V.O. reading aloud)', 'Hello.');
+    expect(codes(text)).toHaveLength(1);
+    expect(planLineFix(text, 'cue-extension-parenthetical', 3)).toBeUndefined();
+    expect(planAllFixes(text)).toEqual({ fixes: [], skipped: 1 });
+  });
+
+  it('is in Fix All, alongside the other safe fixes', () => {
+    expect(FIXABLE_CODES.has('cue-extension-parenthetical')).toBe(true);
+    const text = script('THE ARCHIVE', '(V.O., reading)', 'Hello.');
+    expect(apply(text, planAllFixes(text).fixes)).toBe(script('THE ARCHIVE (V.O.)', '(reading)', 'Hello.'));
+  });
+
+  it('changes no dialogue, action or other wording', () => {
+    const text = script('THE ARCHIVE', '(V.O., FILTERED — not Lucien)', 'Hello there.', '', 'Mara watches.');
+    const fixed = apply(text, planAllFixes(text).fixes);
+    const words = (value: string): string[] => value.replace(/[()—,]/g, ' ').split(/\s+/).filter(Boolean).sort();
+    expect(words(fixed)).toEqual(words(text));
   });
 });

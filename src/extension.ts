@@ -68,6 +68,7 @@ import { WorldTreeProvider } from './providers/worldTreeProvider';
 import { ScriptDiagnostics } from './providers/scriptDiagnostics';
 import { registerScriptQuickFixes } from './providers/scriptQuickFixes';
 import { registerFixScriptFormattingCommand } from './commands/fixScriptFormatting';
+import { registerTagAllShotsCommand } from './commands/tagAllShots';
 import { askProjectType, maybePromptProjectType, registerSetProjectTypeCommand } from './commands/projectType';
 import { maybeOfferGeneratedFilesNotice } from './commands/generatedFilesNotice';
 import { captureInstallState, maybeShowProjectSummary, maybeShowWhatsNew } from './commands/upgradeNotices';
@@ -112,6 +113,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(scriptDiagnostics);
   registerScriptQuickFixes(context);
   registerFixScriptFormattingCommand(context, outputChannel);
+  registerTagAllShotsCommand(context, outputChannel);
   void maybeShowWhatsNew(context, installState);
 
   context.subscriptions.push(

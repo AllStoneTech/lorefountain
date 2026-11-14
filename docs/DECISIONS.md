@@ -6,6 +6,36 @@ revisit.
 
 ---
 
+## ADR-0054 — Update-check isolation, cue-extension fix, Tag All Shots
+
+**Date:** 2026-11-14 · **Status:** Accepted (owner approved the plan on 2026-11-14). Core side: Core ADR-0010. Needs a Core release that exports `fountain/cueExtensions` and `shots/tagShots` (0.4.0); until then the pinned 0.3.0 does not build.
+
+### 1. "Check for LoreFountain File Updates" no longer stops at the first failure
+
+In Orun, one run updated `AGENTS.md` and three agent docs but left `agents/validate.js`, `world/README.md` and `scripts/README.md` stale; a second run fixed them. The version checks were correct (every agent file and every README template is compared). The review loop was the cause: it awaited each file in a bare `for` loop, in the order agent files (validate.js last) then READMEs, so an exception on `validate.js` ended the loop and the READMEs queued after it were never offered. That matches the Orun history exactly (four docs at 19:10, the other three at 19:31). Which exception it was was not reproduced in the Extension Development Host; the likely ones are the diff of a 600 KB minified file and an unreadable bundled copy.
+
+Fix: `reviewEachIsolated` (`config/updateReview.ts`) catches per file and carries on, and the command reports the files that failed. A file over 200 KB (`validate.js`) skips the diff view and is confirmed by size. `bundledDocVersions.test.ts` now also checks that no bundled file carries a version marker without being in a version table, and that a built `validate.js` carries its registry version.
+
+### 2. Cue-line extensions
+
+A parenthetical directly under a cue that starts with `V.O.`, `O.S.`, `O.C.` or `FILTERED` gets the Core warning `cue-extension-parenthetical`. The fix (`planCueExtension`, in `upgrade/formatFixes.ts`) moves only the recognized tokens onto the cue line, after existing extensions and before `(CONT'D)`, keeps the rest as a parenthetical, and removes a parenthetical that was only tokens. It is a quick fix and part of Fix All, is idempotent, and an ambiguous form gets no fix and is counted as skipped. A re-cued `(CONT'D)` line now carries the extensions that fix will move, so the two fixes agree within one Fix All run. `agents/validate.js` reports the warning through the same shot map.
+
+### 3. Tag All Shots
+
+`lorefountain.tagAllShots` (and a quick fix on the `untagged-shot` warning) writes generated tags through the refactor preview, per script or for the whole project, using the title-page Production Code (else the file slug) as the prefix. Tags already written anywhere in the project are reserved, so a new tag is unique across the project. It is **not** part of Fix All: Fix All is for formatting, and writing an ID into every shot is a different kind of change that earns its own command. A scene whose opening content has no `SHOT:` line is not tagged; the warning says to add one.
+
+### 4. Ignoring generated files
+
+Checked: Initialize Workspace has never written `.gitignore` entries, and nothing offered them to an existing project. The statements elsewhere that sidecars are "git-ignored" (ADR-0014, ADR-0043, ADR-0046 and the 1.1.0 changelog) describe this repository's own `.gitignore`, not projects the extension creates. ADR-0053 and its one-time offer are the answer, and are unchanged: no source-control commands and no `git rm --cached`.
+
+The Producer's side of the rule holds in its spec ("Version contract"): it rebuilds sidecar contents in memory with its bundled core rather than trusting files on disk, so ignoring them cannot lose Producer data. Producer-owned state lives in `*.lfp.json` files (Core ADR-0009), which are kept.
+
+### 5. Not done
+
+A live check of the update loop, the quick fixes, the command and the notification in the Extension Development Host (the planning is unit-tested and was run against a scratch copy of Orun; see the changelog). The old-to-new tag rename map from the Producer spec.
+
+---
+
 ## ADR-0053 — File ownership, naming, and the one-time generated-files offer
 
 **Date:** 2026-11-14 · **Status:** Accepted (owner decided 2026-11-14).

@@ -82,11 +82,11 @@ describe('checkAgentFileVersions', () => {
   it('reports validate.js current when its JS-style marker matches', async () => {
     writeFileSync(
       join(workspaceDir, 'agents', 'validate.js'),
-      '// lorefountain-docs-version: 8\nconsole.log("validating");\n',
+      '// lorefountain-docs-version: 9\nconsole.log("validating");\n',
     );
 
     const results = await checkAgentFileVersions(workspaceDir);
     const validateJs = results.find((r) => r.relativePath === join('agents', 'validate.js'));
-    expect(validateJs).toEqual({ relativePath: join('agents', 'validate.js'), status: 'current', version: 8 });
+    expect(validateJs).toEqual({ relativePath: join('agents', 'validate.js'), status: 'current', version: 9 });
   });
 });

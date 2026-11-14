@@ -52,6 +52,7 @@ import * as vscode from 'vscode';
 import { checkAgentFileVersions, type AgentFileVersionStatus } from '../config/agentFileVersions';
 import { renderReadmeTemplate } from '../config/readmeFiles';
 import { checkReadmeVersions, type ReadmeVersionStatus } from '../config/readmeVersions';
+import { LARGE_FILE_BYTES, reviewEachIsolated } from '../config/updateReview';
 import { getWorkspaceFolders } from '../config/workspaceConfig';
 import { registerTrackedCommand } from '../telemetry/trackedCommands';
 
@@ -173,8 +174,20 @@ async function checkFileUpdatesCommand(
   );
   if (!picks || picks.length === 0) return;
 
-  for (const pick of picks) {
-    await reviewAndUpdateFile(pick.finding, workspaceRoot, previewProvider);
+  // One file failing (say, the diff of the large agents/validate.js) must not stop the files after
+  // it: in Orun that left validate.js and two READMEs stale.
+  const result = await reviewEachIsolated(
+    picks.map((pick) => pick.finding),
+    (finding) => reviewAndUpdateFile(finding, workspaceRoot, previewProvider),
+  );
+  if (result.failed.length > 0) {
+    for (const failure of result.failed) {
+      outputChannel.appendLine(`[LoreFountain] Could not review ${failure.relativePath}: ${failure.message}`);
+    }
+    outputChannel.show();
+    void vscode.window.showWarningMessage(
+      `LoreFountain: could not review ${result.failed.length} file(s): ${result.failed.map((f) => f.relativePath).join(', ')}. The rest were reviewed. See the "LoreFountain" output channel.`,
+    );
   }
 }
 
@@ -260,13 +273,21 @@ async function reviewAndUpdateFile(
   const previewUri = buildPreviewUri(finding.relativePath);
   previewProvider.set(previewUri, effectiveContent);
 
+  const tooLargeToDiff = effectiveContent.length > LARGE_FILE_BYTES;
   try {
-    await vscode.commands.executeCommand(
-      'vscode.diff',
-      vscode.Uri.file(workspacePath),
-      previewUri,
-      finding.isNew ? `${finding.relativePath} (not yet created ↔ current template)` : `${finding.relativePath} (yours ↔ current template)`,
-    );
+    // A minified bundle (agents/validate.js, ~600 KB) has an unreadable diff and can fail to open, so
+    // large files skip the diff view and are confirmed by version and size instead.
+    if (!tooLargeToDiff) {
+      await vscode.commands.executeCommand(
+        'vscode.diff',
+        vscode.Uri.file(workspacePath),
+        previewUri,
+        finding.isNew ? `${finding.relativePath} (not yet created ↔ current template)` : `${finding.relativePath} (yours ↔ current template)`,
+      );
+    }
+    const sizeNote = tooLargeToDiff
+      ? ` It is a generated file of about ${Math.round(effectiveContent.length / 1000)} KB, so no diff is shown; it is never hand-edited.`
+      : ' Review the diff, then choose.';
 
     // Deliberately NOT modal: a modal dialog blocks the whole window, so the
     // diff opened above could not be scrolled or read before deciding. A
@@ -274,12 +295,12 @@ async function reviewAndUpdateFile(
     // dismissing it (the X) resolves to undefined, which means "keep mine".
     const confirm = finding.isNew
       ? await vscode.window.showWarningMessage(
-          `Create "${finding.relativePath}" from the current template? Review the diff, then choose. Any missing parent folder is created too.`,
+          `Create "${finding.relativePath}" from the current template?${sizeNote} Any missing parent folder is created too.`,
           'Create from Current Template',
           'Skip',
         )
       : await vscode.window.showWarningMessage(
-          `Replace your copy of "${finding.relativePath}" with the current template? Review the diff, then choose. This overwrites the whole file — copy anything you want to keep out of the diff first.`,
+          `Replace your copy of "${finding.relativePath}" with the current template?${sizeNote} This overwrites the whole file — copy anything you want to keep out of the diff first.`,
           'Replace with Current Template',
           'Keep My Copy',
         );

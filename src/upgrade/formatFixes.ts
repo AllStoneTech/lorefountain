@@ -24,6 +24,13 @@
  *   and the one Fix All uses, since the block stays together), or insert a
  *   blank line after it.
  *
+ * - `cue-extension-parenthetical`: a parenthetical directly under a cue whose
+ *   first token is `V.O.`, `O.S.`, `O.C.` or `FILTERED` (`(V.O., FILTERED —
+ *   not Lucien)`). Only the recognized tokens move onto the cue line, before
+ *   any `(CONT'D)`; what is left stays a parenthetical, and a parenthetical of
+ *   only tokens is removed. An ambiguous one (`(V.O. reading)`, no separator)
+ *   gets no fix and is counted as skipped.
+ *
  * Exports {@link planLineFixes} (every fix for one issue, for quick fixes),
  * {@link planLineFix} (the preferred one) and {@link planAllFixes} (a whole
  * script, for Fix All).
@@ -47,6 +54,7 @@
  */
 
 import { buildPageMap } from 'lorefountain-core/comics/pageMap';
+import { splitExtensionParenthetical } from 'lorefountain-core/fountain/cueExtensions';
 import { buildShotMap } from '../shots/shotMap';
 import { scanScript, type CharacterItem, type ScriptItem } from '../shots/scanScript';
 
@@ -64,7 +72,7 @@ export interface TextEditPlan {
 }
 
 /** The kinds of fix this module plans. */
-export type FormatFixKind = 'join' | 'recue' | 'pause' | 'force' | 'force-action' | 'blank';
+export type FormatFixKind = 'join' | 'recue' | 'pause' | 'force' | 'force-action' | 'blank' | 'cue-extension';
 
 /** One planned fix for one issue. */
 export interface FormatFix {
@@ -91,6 +99,7 @@ export const FIXABLE_CODES: ReadonlySet<string> = new Set([
   'bare-pause-line',
   'unforced-transition',
   'misread-as-character',
+  'cue-extension-parenthetical',
 ]);
 
 /** A fixable issue's code and 0-based line. */
@@ -145,9 +154,11 @@ export function planLineFixes(text: string, code: string, line: number): FormatF
         ? [planForce(context, line)]
         : code === 'misread-as-character'
           ? [planForceAction(context, line), planBlankAfter(context, line)]
-          : code === 'orphaned-parenthetical'
-            ? [planOrphan(context, line, new Map())]
-            : [];
+          : code === 'cue-extension-parenthetical'
+            ? [planCueExtension(context, line)]
+            : code === 'orphaned-parenthetical'
+              ? [planOrphan(context, line, new Map())]
+              : [];
   return fixes.filter((fix): fix is FormatFix => fix !== undefined);
 }
 
@@ -186,7 +197,9 @@ export function planAllFixes(text: string): FixAllPlan {
           ? planForce(context, issue.line)
           : issue.code === 'misread-as-character'
             ? planForceAction(context, issue.line)
-            : planOrphan(context, issue.line, becomingDialogue);
+            : issue.code === 'cue-extension-parenthetical'
+              ? planCueExtension(context, issue.line)
+              : planOrphan(context, issue.line, becomingDialogue);
     if (!fix || !fix.safeForFixAll) {
       skipped += 1;
       continue;
@@ -260,6 +273,70 @@ function planForce(context: ScriptContext, line: number): FormatFix | undefined 
   };
 }
 
+/**
+ * Plan moving the cue-line extensions out of a parenthetical directly under a
+ * cue (see the header). One edit covers the cue line and the parenthetical
+ * line, which are adjacent. Nothing but the recognized tokens moves; an
+ * ambiguous parenthetical, or one not on a line of its own, gets no fix.
+ */
+function planCueExtension(context: ScriptContext, line: number): FormatFix | undefined {
+  const item = context.items.find((candidate) => candidate.kind === 'parenthetical' && candidate.line === line);
+  if (item?.kind !== 'parenthetical' || item.speaker.line !== line - 1) return undefined;
+  const parentheticalLine = context.lines[line];
+  if (parentheticalLine === undefined || parentheticalLine.trim() !== item.text) return undefined;
+  const split = splitExtensionParenthetical(item.text);
+  if (split?.kind !== 'split') return undefined;
+  const cue = rebuildCueLine(context.lines[line - 1] ?? '', split.extensions);
+  if (cue === undefined) return undefined;
+
+  const indent = parentheticalLine.slice(0, parentheticalLine.length - parentheticalLine.trimStart().length);
+  const remainder = split.remainder === '' ? '' : `${context.eol}${indent}(${split.remainder})`;
+  return {
+    kind: 'cue-extension',
+    line,
+    title: `Move ${split.extensions.join(' ')} onto the cue line${split.remainder === '' ? ' and remove this line' : ''}`,
+    edit: { start: { line: line - 1, character: 0 }, end: { line, character: parentheticalLine.length }, newText: `${cue}${remainder}` },
+    safeForFixAll: true,
+  };
+}
+
+/**
+ * A speaker's cue-line extensions plus any that a `cue-extension` fix will move
+ * onto that cue (from a parenthetical directly under it), so a re-cued
+ * `(CONT'D)` line carries the same extensions whether or not that fix has
+ * been applied yet.
+ */
+function extensionsWithPending(context: ScriptContext, speaker: CharacterItem): string[] {
+  const result = [...speaker.extensions];
+  const under = context.items.find((candidate) => candidate.kind === 'parenthetical' && candidate.line === speaker.line + 1);
+  const split = under?.kind === 'parenthetical' ? splitExtensionParenthetical(under.text) : undefined;
+  if (split?.kind === 'split') {
+    for (const extension of split.extensions) {
+      if (!result.some((existing) => existing.toUpperCase() === extension.toUpperCase())) result.push(extension);
+    }
+  }
+  return result;
+}
+
+/**
+ * The cue line with `extensions` added after its existing parenthesized
+ * extensions and before any `(CONT'D)`. Extensions already on the cue are not
+ * repeated; a `^` (dual dialogue) stays last. Returns the line unchanged when
+ * there is nothing to add, and `undefined` when it does not read as a cue.
+ */
+function rebuildCueLine(cueLine: string, extensions: readonly string[]): string | undefined {
+  const match = /^(\s*)(.*?)((?:\s*\([^()]*\))*)(\s*\^)?\s*$/.exec(cueLine);
+  if (!match || match[2].trim() === '') return undefined;
+  const [, indent, name, groupText, caret] = match;
+  const groups = [...groupText.matchAll(/\(([^()]*)\)/g)].map((group) => group[1].trim());
+  const isContinued = (group: string): boolean => /^CONT['’]D\.?$/i.test(group);
+  const existing = groups.filter((group) => !isContinued(group));
+  const added = extensions.filter((extension) => !existing.some((group) => group.toUpperCase() === extension.toUpperCase()));
+  if (added.length === 0) return cueLine;
+  const all = [...existing, ...added, ...groups.filter(isContinued)];
+  return `${indent}${name.trimEnd()} ${all.map((group) => `(${group})`).join(' ')}${caret === undefined ? '' : ' ^'}`;
+}
+
 /** Plan the join or re-cue for an orphaned parenthetical. */
 function planOrphan(
   context: ScriptContext,
@@ -305,7 +382,7 @@ function planOrphan(
 
   const speaker = speakerAbove(context, line, becomingDialogue);
   if (!speaker) return undefined;
-  const cue = [speaker.name, ...speaker.extensions.map((extension) => `(${extension})`), "(CONT'D)"].join(' ');
+  const cue = [speaker.name, ...extensionsWithPending(context, speaker).map((extension) => `(${extension})`), "(CONT'D)"].join(' ');
   if (following !== undefined) {
     return {
       kind: 'recue',

@@ -1,4 +1,4 @@
-<!-- lorefountain-docs-version: 7 -->
+<!-- lorefountain-docs-version: 8 -->
 # LoreFountain — Script-Writing Reference
 
 Read this before creating or editing any `.fountain` file under `scripts/`.
@@ -41,11 +41,33 @@ There are two kinds of pause, and they're written differently:
 - **A character's own pause** is a parenthetical inside their dialogue: `(beat)`, `(a beat)`, `(long beat)`, `(pause)`, `(a pause)`, `(long pause)` or `(silence)`. It's performance direction for that speaker.
 - **A scene pause**, a silence that belongs to the scene rather than to anyone speaking, is a `PAUSE:` line with an optional length: `PAUSE:`, `PAUSE: 2s`, `PAUSE: long`. Don't write a bare `Beat.` action line for this; it stays ordinary action, and the validator notes it as `bare-pause-line`.
 
+### On-screen text
+
+Text over the picture is written with `SUPER:` (a place and date, for example), `CHYRON:` (a lower third, usually a name and role) and `TITLE CARD:`. Each may take a `[tag]` right after the colon that names a text style (`textStyles` in `producer.lfp.json`); leave it off to use the default for the kind. Put each on its own line, with a blank line after it (or start it with `!`), so other Fountain apps don't read an all-caps line as a character cue. Don't use `> TEXT <` centered text for these: it stays a plain on-screen line with no kind.
+
+```
+SHOT: [1x01-richmond-wide] WIDE, the capitol at dawn
+
+SUPER: [place] Richmond, Virginia, 1894
+
+CHYRON: DR. ADA OKAFOR - Linguist
+```
+
 ### Transitions
 
 Fountain only recognizes a transition on its own when it's uppercase, has a blank line before and after, and ends in `TO:` (`CUT TO:`, `DISSOLVE TO:`). Any other transition, including `FADE IN:`, `FADE OUT.`, `FADE TO BLACK.` and `CUT TO BLACK.`, must start with `>` (`> FADE OUT.`), or other Fountain apps read it as action. The validator notes a missing `>` as `unforced-transition`.
 
 Put extensions such as `V.O.`, `O.S.` or `FILTERED` on the character cue line (`THE ARCHIVE (V.O.) (FILTERED)`), not inside a parenthetical. Only cue-line extensions are recognized as extensions.
+
+Do not write an extension as a separate parenthetical under the cue (`(V.O., reading)`, `(V.O., FILTERED — not Lucien)`). Fountain only reads extensions on the cue line, so the validator reports it as `cue-extension-parenthetical`. Move only the extension tokens up and keep the rest as an ordinary parenthetical:
+
+```
+THE ARCHIVE (V.O.) (FILTERED)
+(not Lucien)
+Hello.
+```
+
+A parenthetical of only extensions is removed; the extensions go before any `(CONT'D)`. A parenthetical like `(V.O. reading aloud)`, with no comma or dash after the extension, is ambiguous: the validator still reports it, but it is never rewritten automatically, so fix it by hand. The extension's quick fix and **Fix All Script Formatting Issues** do the safe cases.
 
 ## Folder structure: one folder per script
 
@@ -141,13 +163,18 @@ SHOT: [1x01-basement-wide] WIDE, establishing — LUCIEN's basement office
 SHOT: MEDIUM, on LUCIEN
 ```
 
-Naming convention:
+Every `SHOT:` line should carry a tag: an untagged one is a warning (`untagged-shot`), because per-shot data, files and takes are keyed by the shot's tag. Cue tags stay optional.
 
-- Prefix an episode-specific shot with the episode's production code: `1x01-basement-wide`.
-- Leave the prefix off a recurring shot used across episodes (an ident, a bumper): `archive-ident`. The same tag in several scripts means the same asset.
-- **Never put a scene or shot number in a tag.** Numbers are exactly what changes when a shot is inserted, which is why shots are keyed by tag at all.
+Two kinds of tag:
 
-Tags are optional, and an untagged shot is never an error. Repeating a tag within one script is fine (cutting back to the same image). A tagged shot with no `shots.json` entry is a non-blocking warning (`unmapped-shot-tag`): the image may not exist yet. As with `audio.json`, never create or edit `assets/manifests/shots.json` yourself unless the writer asks.
+- **Generated IDs.** **LoreFountain: Tag All Shots** (also a quick fix on the warning) writes `<production code>-<scene>-<shot>`, such as `1x03-04-02` (scene 4, shot 2 of episode 1x03; shots before the first scene heading use scene `00`). The numbers say where the shot was *when it was tagged*, and nothing more: once written the tag is an ID and never changes, so inserting a shot later never renumbers its neighbours. A shot added later gets the next free number in its scene. Do not edit a generated tag to "fix" the numbers.
+- **Hand-written names.** For a shot worth naming: prefix an episode-specific shot with the production code (`1x01-basement-wide`), and leave the prefix off a recurring shot used across episodes (`archive-ident`). The same tag in several scripts means the same asset. Do not put a scene or shot number in a name you choose yourself: numbers change when shots are inserted, which is exactly why shots are keyed by tag. (A generated ID is the one exception, because it is never recomputed.)
+
+Rules for any tag: never overwrite or change an existing tag, never reuse one within a script (the tool will not generate a duplicate), and keep to the shape above. If you add `SHOT:` lines, write a tag on each, or leave them for **Tag All Shots**.
+
+A scene with content before its first `SHOT:` line (or no `SHOT:` line at all, in a script that uses them) has an opening shot with no line to carry a tag: the validator warns (`untagged-implicit-shot`). Add a `SHOT:` line above that content; Tag All Shots does not insert lines for you.
+
+Repeating a tag within one script is allowed for hand-written names (cutting back to the same image). A tagged shot with no `shots.json` entry is a non-blocking warning (`unmapped-shot-tag`): the image may not exist yet. As with `audio.json`, never create or edit `assets/manifests/shots.json` yourself unless the writer asks.
 
 ### The shot sidecar
 

@@ -112,9 +112,9 @@ import * as path from 'node:path';
 export const AGENT_FILE_VERSIONS: Record<string, number> = {
   'AGENTS.md': 7,
   [path.join('agents', 'world-builder.md')]: 6,
-  [path.join('agents', 'script-writer.md')]: 7,
+  [path.join('agents', 'script-writer.md')]: 8,
   [path.join('agents', 'initiator.md')]: 3,
-  [path.join('agents', 'validate.js')]: 8,
+  [path.join('agents', 'validate.js')]: 9,
 };
 
 /**

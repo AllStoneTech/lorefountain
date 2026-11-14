@@ -7,7 +7,7 @@
  * carry the comic-script convention (ADR-0043).
  */
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseVersionMarker } from '../../src/config/agentFileVersions';
@@ -30,6 +30,30 @@ describe('bundled doc version markers', () => {
       expect(parseVersionMarker(readFileSync(join(RESOURCES, 'readmes', name), 'utf8'))).toBe(version);
     },
   );
+});
+
+describe('every managed file is tracked by the update check', () => {
+  /** Every file under `resources/` whose first line carries a docs-version marker, as a path relative to `resources/`. */
+  function markedFiles(dir: string, base = ''): string[] {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const relative = base === '' ? entry.name : join(base, entry.name);
+      if (entry.isDirectory()) return markedFiles(join(dir, entry.name), relative);
+      const firstLine = readFileSync(join(dir, entry.name), 'utf8').split('\n', 1)[0] ?? '';
+      return /lorefountain-docs-version:/.test(firstLine) ? [relative] : [];
+    });
+  }
+
+  it('no bundled file carries a version marker without being in a version table', () => {
+    const tracked = new Set([...Object.keys(AGENT_FILE_VERSIONS), ...README_TEMPLATES.map((t) => join('readmes', t.templateName))]);
+    const untracked = markedFiles(RESOURCES).filter((file) => !tracked.has(file));
+    expect(untracked).toEqual([]);
+  });
+
+  // validate.js is a generated build output (gitignored), so it is checked only when a build has produced it.
+  it.skipIf(!existsSync(join(RESOURCES, 'agents', 'validate.js')))('the built agents/validate.js carries its registry version', () => {
+    const content = readFileSync(join(RESOURCES, 'agents', 'validate.js'), 'utf8');
+    expect(parseVersionMarker(content)).toBe(AGENT_FILE_VERSIONS[join('agents', 'validate.js')]);
+  });
 });
 
 describe('style bible documentation (ADR-0045)', () => {

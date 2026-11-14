@@ -220,7 +220,7 @@ async function main() {
     // and checking the packaged output, not by anything automatic. There's
     // no compile-time guard against this happening again; if this number
     // ever matters enough to be worth one, that's the fix, not a comment.)
-    banner: { js: '// lorefountain-docs-version: 8' },
+    banner: { js: '// lorefountain-docs-version: 9' },
     plugins: [
       {
         name: 'log-cli-build',

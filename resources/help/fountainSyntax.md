@@ -547,6 +547,35 @@ A line of plain action such as `Beat.` or `A long silence.` stays action.
 LoreFountain adds a note suggesting `PAUSE:` if a scene pause is what you
 meant.
 
+### On-screen text: SUPER, CHYRON and TITLE CARD
+
+Text that appears over or instead of the picture has its own lines:
+
+- `SUPER:` is text over the picture, such as a place and date.
+- `CHYRON:` is a lower-third caption, usually a name and role.
+- `TITLE CARD:` is a title card.
+
+An optional `[tag]` right after the colon picks a text style. The tag is
+a name your production tool knows (the Producer reads it from
+`textStyles` in `producer.lfp.json`), not a file.
+
+```fountain
+SHOT: [1x01-richmond-wide] WIDE, the capitol at dawn
+
+SUPER: [place] Richmond, Virginia, 1894
+
+CHYRON: DR. ADA OKAFOR - Linguist
+
+TITLE CARD: ACT ONE
+```
+
+Each line goes into the shot's list of on-screen text, in order, beside
+any Fountain centered text. A line with no text after the colon is
+ignored. Exports keep these lines, since they read as ordinary action.
+Like other convention lines, an all-caps one with text directly under
+it is read by other Fountain apps as a character cue: leave a blank line
+after it, or start it with `!`.
+
 ### Sound cues: SFX, MUSIC and AMB
 
 - `SFX:` a sound effect.
@@ -597,11 +626,12 @@ AMB: [rain-tin-roof] steady rain
   start or end with a hyphen. Anything else, such as `[Door Slam]`, isn't
   a tag and is read as part of the description.
 - On a `MUSIC:` cue, the tag comes before the role and timing.
-- Tags are optional. An untagged line just isn't linked to a file yet.
+- Tags on `SFX:`, `MUSIC:` and `AMB:` cues are optional: an untagged cue just isn't linked to a file yet. A `SHOT:` line should carry a tag (an untagged shot is a warning), and **LoreFountain: Tag All Shots** generates them, such as `[1x03-04-02]`.
 - Start a tag used in only one episode with that episode's production code
   (`1x03-archive-wide`), and leave the code off a tag you reuse across
   episodes (`archive-theme`). Never put scene or shot numbers in a tag;
   they change whenever you add a shot.
+- `SUPER:`, `TITLE CARD:` and `CHYRON:` take a tag too, but it names a text style, not a file.
 - `POSE:`, `LIGHT:`, `DURATION:` and `PAUSE:` don't take tags.
 
 Open `shots.json` or `audio.json` for a form-based editor instead of

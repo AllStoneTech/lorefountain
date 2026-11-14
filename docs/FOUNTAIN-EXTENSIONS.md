@@ -21,7 +21,8 @@ LoreFountain **extends Fountain and never changes it** (ADR-0040).
 | Comic camera move | `MOVE: slow zoom in` (and `DURATION:` inside a panel) | Action line | 1.1.0 (ADR-0046) |
 | Scene pause | `PAUSE:` or `PAUSE: 2s` | Action line | 1.1.0 |
 | Sound cues | `SFX:`, `MUSIC:`, `AMB:` | Action line | 0.x |
-| Tag | `[tag]` after the colon of `SHOT:`, `SFX:`, `MUSIC:`, `AMB:` | Text within an action line | cues 1.0.0, shots 1.1.0 |
+| On-screen text | `SUPER:`, `TITLE CARD:`, `CHYRON:` | Action line | after 1.1.0 (Core) |
+| Tag | `[tag]` after the colon of `SHOT:`, `SFX:`, `MUSIC:`, `AMB:`, `SUPER:`, `TITLE CARD:`, `CHYRON:` | Text within an action line | cues 1.0.0, shots 1.1.0 |
 | Entity link | `[[Name]]` | Fountain note | 0.x |
 | Episode keys | `Order:`, `Production Code:` | Title-page key | 0.x (ADR-0023) |
 
@@ -67,6 +68,14 @@ ADR-0046 here, ADR-0003 in LoreFountain-Core. A narrated ("motion") comic is mad
 - A character's own pause stays a parenthetical in their speech: `(beat)`, `(a beat)`, `(long beat)`, `(pause)`, `(a pause)`, `(long pause)`, `(silence)`.
 - Plain action such as `Beat.` stays action. LoreFountain reports an informational note (`bare-pause-line`) suggesting `PAUSE:`.
 
+### On-screen text
+
+- `SUPER: Richmond, Virginia, 1894` is text over the picture, `CHYRON: DR. ADA OKAFOR - Linguist` is a lower-third caption, and `TITLE CARD: ACT ONE` is a title card.
+- An optional `[tag]` right after the colon picks a text style: `SUPER: [place] Richmond, 1894`. The Producer maps the tag to `textStyles` in `producer.lfp.json`; with no tag, the style for the kind is used.
+- Output: the shot's `onScreen` list in `<script>.shots.json`: `{ "kind": "super" | "titleCard" | "chyron", "tag"?, "text", "line" }`, in script order beside Fountain centered text (`kind: "centered"`). A line with no text writes nothing.
+- The lines are ordinary screenplay action, so every export keeps them; only a `[tag]` is dropped when tags are off.
+- An all-caps line with text directly under it is read by other Fountain apps as a character cue (`misread-as-character`); start it with `!` or leave a blank line after it.
+
 ### Sound cues
 
 - `SFX:` a sound effect. `MUSIC:` a music cue. `AMB:` an ambience bed.
@@ -75,10 +84,10 @@ ADR-0046 here, ADR-0003 in LoreFountain-Core. A narrated ("motion") comic is mad
 
 ### Tags
 
-- A tag is `[tag]` directly after the colon of `SHOT:`, `SFX:`, `MUSIC:` or `AMB:`. On `MUSIC:` it comes before the role and timing.
+- A tag is `[tag]` directly after the colon of `SHOT:`, `SFX:`, `MUSIC:`, `AMB:`, `SUPER:`, `TITLE CARD:` or `CHYRON:`. On `MUSIC:` it comes before the role and timing.
 - Characters: lowercase letters, digits and single hyphens. It can't start or end with a hyphen. Anything else, such as `[Door Slam]`, is part of the description.
-- A tag is a stable handle into a manifest: `assets/manifests/shots.json` for shots and `assets/manifests/audio.json` for sound. Tags are optional.
-- Convention: prefix a tag used in one episode with its production code (`1x03-archive-wide`); leave the code off a tag reused across episodes. Never put scene or shot numbers in a tag.
+- A tag is a stable handle into a manifest: `assets/manifests/shots.json` for shots and `assets/manifests/audio.json` for sound. On `SUPER:`, `TITLE CARD:` and `CHYRON:` it names a text style in `producer.lfp.json`, not a file. Cue tags are optional; a `SHOT:` line should carry one (an untagged shot is a warning, ADR-0054).
+- Convention: prefix a tag used in one episode with its production code (`1x03-archive-wide`); leave the code off a tag reused across episodes. Never put scene or shot numbers in a tag you choose yourself. The one exception is a generated ID (`1x03-04-02`, from **Tag All Shots**), which records where the shot was when it was tagged and is never recomputed.
 - `POSE:`, `LIGHT:`, `DURATION:` and `PAUSE:` take no tags.
 
 ## Entity links

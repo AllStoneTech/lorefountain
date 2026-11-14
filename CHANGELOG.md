@@ -5,7 +5,15 @@ All notable changes to LoreFountain are documented here. This project follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **"Check for LoreFountain File Updates" no longer stops at the first file that fails** (ADR-0054). One failing file (such as the large `agents/validate.js`) ended the whole review, so the README templates after it were never offered; each file is now reviewed on its own and failures are listed. Large generated files skip the diff view.
+
 ### Added
+
+- **`SUPER:`, `TITLE CARD:` and `CHYRON:` prefix lines** (Core `onScreen`). Syntax highlighting (the `[tag]` shows as a tag), `super`, `chyron` and `titlecard` snippets, and the convention in the Fountain extensions doc, the syntax help and the script-writer agent file. The shot sidecar carries them once the extension pins a Core release that parses them; exports keep the lines.
+- **The validator flags cue-line extensions written as a parenthetical** (ADR-0054, Core ADR-0010). `(V.O., FILTERED — not Lucien)` directly under a cue is a warning, in the Problems panel and in `node agents/validate.js`. A quick fix, and Fix All Script Formatting Issues, move only `V.O.`, `O.S.`, `O.C.` and `FILTERED` onto the cue line (`THE ARCHIVE (V.O.) (FILTERED)`), keep the rest as `(not Lucien)`, and leave ambiguous ones, such as `(V.O. reading)`, for you.
+- **Shot tags are now expected, with Tag All Shots** (ADR-0054, Core ADR-0010). An untagged `SHOT:` line, and a scene whose opening content has no `SHOT:` line to carry a tag, are warnings. **LoreFountain: Tag All Shots** (also a quick fix) writes generated IDs such as `[1x03-04-02]` after a refactor preview, for this script or the whole project. A tag is written once and never changes, so inserting a shot later renumbers nothing. Cue tags stay optional.
 
 - **A one-time "generated files" offer** (ADR-0053). Once per project, after an
   update or when **Initialize Workspace** creates it, a notification says that
