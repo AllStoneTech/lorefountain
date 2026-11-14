@@ -6,6 +6,25 @@ revisit.
 
 ---
 
+## ADR-0053 — File ownership, naming, and the one-time generated-files offer
+
+**Date:** 2026-11-14 · **Status:** Accepted (owner decided 2026-11-14).
+
+LoreFountain and LoreFountain-Producer each own their own files. Each tool may read the other's files and neither edits them.
+
+1. **LoreFountain's generated files** are `*.shots.json`, `*.cues.json`, `*.pages.json`, `.lorefountain/` and `*.lorefountain.db`. They are rebuilt from the scripts and need not be kept in version control or backups. The sidecar names do not change (the Producer already reads them).
+2. **Writer-authored LoreFountain documents** end in `.lf.md` (ADR-0047) and are kept.
+3. **Producer files end in `*.lfp.json`.** They hold production state that cannot be rebuilt, so they are kept. The Producer repo is responsible for using this name.
+4. **LoreFountain never touches source control.** A project may not use git at all. The root README (version 3) documents the above and which files need not be tracked. Once per project, after an update or when Initialize Workspace creates it, a notification says the same. Only if a `.gitignore` already exists, a button appends the missing patterns to that text file (idempotent, existing lines untouched). It never runs a source-control command, never creates a `.gitignore`, and never untracks files already committed. The decision is remembered per project in workspace state, and `lorefountain.notifications.generatedFiles` turns it off.
+
+**Why:** Orun tracked 32 sidecars, so one script change produced a diff of over 1,100 lines of derived data. The fix belongs to the writer's own source control, and LoreFountain's part is telling them which files are derived.
+
+**Revisit if** the Producer is found to write into a LoreFountain sidecar (that would break rule 1), or a second ignore-file format is worth supporting.
+
+Not done here: a live check of the notification in the Extension Development Host.
+
+---
+
 ## ADR-0052 — Comic script layout in the PDF, Word and HTML exports
 
 **Date:** 2026-11-13 · **Status:** Accepted (owner approved the design on 2026-11-13). Core side: Core ADR-0008.
