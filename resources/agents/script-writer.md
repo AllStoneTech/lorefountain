@@ -41,6 +41,10 @@ There are two kinds of pause, and they're written differently:
 - **A character's own pause** is a parenthetical inside their dialogue: `(beat)`, `(a beat)`, `(long beat)`, `(pause)`, `(a pause)`, `(long pause)` or `(silence)`. It's performance direction for that speaker.
 - **A scene pause**, a silence that belongs to the scene rather than to anyone speaking, is a `PAUSE:` line with an optional length: `PAUSE:`, `PAUSE: 2s`, `PAUSE: long`. Don't write a bare `Beat.` action line for this; it stays ordinary action, and the validator notes it as `bare-pause-line`.
 
+### Looks
+
+`LOOK: CHARACTER label` puts a character in a wardrobe look from that line until their next `LOOK:` in the same script, across shots and scenes: `LOOK: MARA school uniform`. Use the character's name or alias and a label from their `looks` in `assets/manifests/characters.json` (the validator warns on one that isn't). Write it where the change happens, on its own line with a blank line after it (or start it with `!`), and only when the look changes: it carries forward on its own.
+
 ### On-screen text
 
 Text over the picture is written with `SUPER:` (a place and date, for example), `CHYRON:` (a lower third, usually a name and role) and `TITLE CARD:`. Each may take a `[tag]` right after the colon that names a text style (`textStyles` in `producer.lfp.json`); leave it off to use the default for the kind. Put each on its own line, with a blank line after it (or start it with `!`), so other Fountain apps don't read an all-caps line as a character cue. Don't use `> TEXT <` centered text for these: it stays a plain on-screen line with no kind.

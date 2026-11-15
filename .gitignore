@@ -22,6 +22,7 @@ coverage/
 # Cue sidecars (Spec Section 15) — derived from scripts, regenerated on every reindex
 *.cues.json
 *.shots.json
+*.breakdown.json
 *.pages.json
 
 # OS / editor cruft

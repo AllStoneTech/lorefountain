@@ -11,6 +11,11 @@
  * on-disk shape. No `vscode` dependency, just `fs`, so it's callable
  * directly from `index/build.ts`.
  *
+ * Alongside it, `<script>.breakdown.json` (Core `shots/breakdown`) lists each
+ * scene's cast and looks, locations, props, sounds and on-screen text. It is
+ * written whenever the shot sidecar is, or when the script has any `LOOK:` line,
+ * and removed, moved and regenerated with it.
+ *
  * The content comes from `shotMap.ts`. Entity resolution (mentions,
  * speakers, heading locations) uses whatever entities the caller passes,
  * so after an entity is added or renamed, a script's sidecar catches up the
@@ -20,10 +25,15 @@
 import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
 import { buildShotMapFromPages } from 'lorefountain-core/comics/panelShots';
+import { extractCues } from 'lorefountain-core/cues/parseCues';
+import { breakdownPathFor, buildBreakdown } from './breakdown';
 import { panelTagPrefixFor } from '../comics/tagPrefix';
 import { buildShotMap, type ShotMapEntity, type ShotMapEntry, type ShotMapResult } from './shotMap';
 
 const SCHEMA_VERSION = 1;
+
+/** Embedded in each generated file: JSON has no comments. */
+const GENERATED_BY = 'LoreFountain — auto-generated from the script; do not edit by hand, it will be overwritten';
 
 /** The shot sidecar's on-disk JSON shape. */
 export interface ShotSidecar {
@@ -65,15 +75,29 @@ export async function updateShotSidecar(
       })
     : buildShotMap(scriptText, entities, { sfxAsCue: options.sfxAsCue });
 
+  const hasLooks = result.shots.some((shot) => shot.looks !== undefined);
+  if (hasLooks || result.hasExplicitShots || result.derivedFromPanels) {
+    const breakdown = buildBreakdown(result, entities, extractCues(scriptText, { sfxAsCue: options.sfxAsCue }));
+    const body = {
+      schema_version: SCHEMA_VERSION,
+      script: path.basename(scriptPath),
+      generated_by: GENERATED_BY,
+      scenes: breakdown.scenes,
+    };
+    await fsp.writeFile(breakdownPathFor(scriptPath), `${JSON.stringify(body, null, 2)}\n`, 'utf8');
+  } else {
+    await removeFileIfPresent(breakdownPathFor(scriptPath));
+  }
+
   if (!result.hasExplicitShots && !result.derivedFromPanels) {
-    await removeShotSidecar(scriptPath);
+    await removeFileIfPresent(shotSidecarPathFor(scriptPath));
     return result;
   }
 
   const sidecar: ShotSidecar = {
     schema_version: SCHEMA_VERSION,
     script: path.basename(scriptPath),
-    generated_by: 'LoreFountain — auto-generated from the script; do not edit by hand, it will be overwritten',
+    generated_by: GENERATED_BY,
     shots: result.shots,
   };
   await fsp.writeFile(shotSidecarPathFor(scriptPath), `${JSON.stringify(sidecar, null, 2)}\n`, 'utf8');
@@ -87,8 +111,14 @@ export async function updateShotSidecar(
  * @throws Re-throws filesystem errors other than the sidecar not existing.
  */
 export async function removeShotSidecar(scriptPath: string): Promise<void> {
+  await removeFileIfPresent(shotSidecarPathFor(scriptPath));
+  await removeFileIfPresent(breakdownPathFor(scriptPath));
+}
+
+/** Delete a file, ignoring one that isn't there. */
+async function removeFileIfPresent(filePath: string): Promise<void> {
   try {
-    await fsp.unlink(shotSidecarPathFor(scriptPath));
+    await fsp.unlink(filePath);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
   }
@@ -103,13 +133,15 @@ export async function removeShotSidecar(scriptPath: string): Promise<void> {
  * @throws Re-throws filesystem errors other than the sidecar not existing.
  */
 export async function relocateShotSidecar(oldScriptPath: string, newScriptPath: string): Promise<void> {
-  const oldSidecarPath = shotSidecarPathFor(oldScriptPath);
-  const newSidecarPath = shotSidecarPathFor(newScriptPath);
-  if (oldSidecarPath === newSidecarPath) return;
-
-  try {
-    await fsp.rename(oldSidecarPath, newSidecarPath);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+  for (const [from, to] of [
+    [shotSidecarPathFor(oldScriptPath), shotSidecarPathFor(newScriptPath)],
+    [breakdownPathFor(oldScriptPath), breakdownPathFor(newScriptPath)],
+  ]) {
+    if (from === to) continue;
+    try {
+      await fsp.rename(from, to);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+    }
   }
 }

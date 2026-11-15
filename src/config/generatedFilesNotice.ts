@@ -19,6 +19,7 @@ export const GENERATED_FILE_PATTERNS: readonly string[] = [
   '*.shots.json',
   '*.cues.json',
   '*.pages.json',
+  '*.breakdown.json',
   '.lorefountain/',
   '*.lorefountain.db',
   '*.lorefountain.db-journal',

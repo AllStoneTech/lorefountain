@@ -22,6 +22,7 @@ LoreFountain **extends Fountain and never changes it** (ADR-0040).
 | Scene pause | `PAUSE:` or `PAUSE: 2s` | Action line | 1.1.0 |
 | Sound cues | `SFX:`, `MUSIC:`, `AMB:` | Action line | 0.x |
 | On-screen text | `SUPER:`, `TITLE CARD:`, `CHYRON:` | Action line | after 1.1.0 (Core) |
+| Look | `LOOK: CHARACTER label` | Action line | after 1.1.0 (Core) |
 | Tag | `[tag]` after the colon of `SHOT:`, `SFX:`, `MUSIC:`, `AMB:`, `SUPER:`, `TITLE CARD:`, `CHYRON:` | Text within an action line | cues 1.0.0, shots 1.1.0 |
 | Entity link | `[[Name]]` | Fountain note | 0.x |
 | Episode keys | `Order:`, `Production Code:` | Title-page key | 0.x (ADR-0023) |
@@ -68,6 +69,14 @@ ADR-0046 here, ADR-0003 in LoreFountain-Core. A narrated ("motion") comic is mad
 - A character's own pause stays a parenthetical in their speech: `(beat)`, `(a beat)`, `(long beat)`, `(pause)`, `(a pause)`, `(long pause)`, `(silence)`.
 - Plain action such as `Beat.` stays action. LoreFountain reports an informational note (`bare-pause-line`) suggesting `PAUSE:`.
 
+### Looks
+
+- `LOOK: MARA school uniform` puts a character in a look (wardrobe) from that line until their next `LOOK:` in the same script, across shots and scenes.
+- The character is the longest character name or alias the line starts with (`LOOK: DR. ADA OKAFOR lab coat`); a `-`, dash or `:` before the label is dropped, and the label's spaces are tidied.
+- The label should be one of the character's `looks` in `assets/manifests/characters.json`. A label that isn't, when the character lists looks, is the warning `unknown-look` (checked in the full index build, not on every save). A character with no looks listed isn't checked, so a look can be written before its image exists.
+- Output: the shot's `looks` (the lines written in it) and `activeLooks` (each character's look at the end of the shot) in `<script>.shots.json`, present only when a script uses `LOOK:`; and the per-script breakdown `<script>.breakdown.json`: for each scene, its cast with the looks they wear, locations, props, sounds and on-screen text. The breakdown is written beside the shot map, or alone for a script that has a `LOOK:` line but no `SHOT:`.
+- `LOOK:` is production direction: the Pure Fountain export removes it with the shot lines.
+
 ### On-screen text
 
 - `SUPER: Richmond, Virginia, 1894` is text over the picture, `CHYRON: DR. ADA OKAFOR - Linguist` is a lower-third caption, and `TITLE CARD: ACT ONE` is a title card.
@@ -84,6 +93,7 @@ ADR-0046 here, ADR-0003 in LoreFountain-Core. A narrated ("motion") comic is mad
 
 ### Tags
 
+- `LOOK:` takes no tag.
 - A tag is `[tag]` directly after the colon of `SHOT:`, `SFX:`, `MUSIC:`, `AMB:`, `SUPER:`, `TITLE CARD:` or `CHYRON:`. On `MUSIC:` it comes before the role and timing.
 - Characters: lowercase letters, digits and single hyphens. It can't start or end with a hyphen. Anything else, such as `[Door Slam]`, is part of the description.
 - A tag is a stable handle into a manifest: `assets/manifests/shots.json` for shots and `assets/manifests/audio.json` for sound. On `SUPER:`, `TITLE CARD:` and `CHYRON:` it names a text style in `producer.lfp.json`, not a file. Cue tags are optional; a `SHOT:` line should carry one (an untagged shot is a warning, ADR-0054).
@@ -122,6 +132,8 @@ Reported in the Problems panel, the Output channel and `node agents/validate.js`
 | `page-out-of-order` | Warning | A page number lower than the one before it |
 | `panel-before-page`, `content-outside-panel`, `missing-page-label` | Warning | A panel with no page, lettering outside a panel, or a `PAGE:` with no label |
 | `duplicate-panel-tag` | Warning | A panel tag, written or derived, used by more than one panel in a script |
+| `look-unknown-character`, `look-missing-label` | Warning | A `LOOK:` line that doesn't start with a known character, or has no look after the name; it is ignored |
+| `unknown-look` | Warning | A `LOOK:` label that isn't one of the character's `looks` in `characters.json` |
 | `misread-as-character` | Warning | An all-caps convention line (`SHOT: CLOSE-UP`, `PAGE: 7`) with a blank line above and text directly under it, which other Fountain apps read as a character cue |
 | `panels-not-derived` | Note | `comic.panelsAsShots` is on but the comic has explicit `SHOT:` lines, so its panels are not turned into shots |
 | `bare-pause-line` | Note | Plain action that looks like a scene pause |

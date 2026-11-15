@@ -118,6 +118,7 @@ import type { ResolvedComicSettings } from 'lorefountain-core/comics/limits';
 import type { PageMapResult, ScriptPageIssue } from 'lorefountain-core/comics/pageMap';
 import { blankBoneyard } from '../fountain/boneyard';
 import type { ScriptShotIssue, ShotMapEntity, ShotMapResult } from '../shots/shotMap';
+import { findLookIssues } from '../shots/looks';
 import { updateShotSidecar } from '../shots/sidecar';
 import type { ValidationIssue } from '../model/errors';
 import { parseEntityFile, type EntityWarning } from '../model/entity';
@@ -362,6 +363,8 @@ export async function buildIndexFromDisk(
         sfxAsCue: comic?.sfxAsCue,
         panelsAsShots: comic?.panelsAsShots,
       });
+      // A LOOK: label is checked against characters.json, a manifest cross-check, so only the full build does it.
+      shotMap.issues.push(...findLookIssues(shotMap.shots, assetManifests.characters ?? {}));
       const pageMap = await updatePageSidecar(filePath, text, shotEntities, comic);
       if (pageMap.hasPages) {
         summary.pageStats.scripts += 1;

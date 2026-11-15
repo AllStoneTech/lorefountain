@@ -547,6 +547,33 @@ A line of plain action such as `Beat.` or `A long silence.` stays action.
 LoreFountain adds a note suggesting `PAUSE:` if a scene pause is what you
 meant.
 
+### Looks: LOOK
+
+`LOOK:` puts a character in a look (a wardrobe) from that line until
+their next `LOOK:` in the same script, across shots and scenes.
+
+```fountain
+SHOT: [1x01-wide] WIDE, the schoolyard
+
+LOOK: MARA school uniform
+
+Mara crosses the yard.
+
+SHOT: [1x01-close] CLOSE on Mara
+
+She is still in the uniform.
+
+LOOK: MARA rain coat
+```
+
+Write the character's name or alias, then the look. The look should be
+one of the character's looks in `characters.json`: LoreFountain warns
+when it isn't (if the character lists any). The shot map records which
+look each character is in, and a `<script>.breakdown.json` file lists
+each scene's cast with the looks they wear, plus its locations, objects,
+sounds and on-screen text. The Pure Fountain export removes `LOOK:`
+lines.
+
 ### On-screen text: SUPER, CHYRON and TITLE CARD
 
 Text that appears over or instead of the picture has its own lines:
@@ -631,6 +658,7 @@ AMB: [rain-tin-roof] steady rain
   (`1x03-archive-wide`), and leave the code off a tag you reuse across
   episodes (`archive-theme`). Never put scene or shot numbers in a tag;
   they change whenever you add a shot.
+- `LOOK:` takes no tag.
 - `SUPER:`, `TITLE CARD:` and `CHYRON:` take a tag too, but it names a text style, not a file.
 - `POSE:`, `LIGHT:`, `DURATION:` and `PAUSE:` don't take tags.
 

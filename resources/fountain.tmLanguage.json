@@ -90,7 +90,7 @@
       }
     },
     "shot-prefix": {
-      "match": "^\\s*(!)?(?:(SHOT:)\\s*(\\[[a-z0-9]+(?:-[a-z0-9]+)*\\])?|((?:POSE|LIGHT|DURATION|PAUSE):))",
+      "match": "^\\s*(!)?(?:(SHOT:)\\s*(\\[[a-z0-9]+(?:-[a-z0-9]+)*\\])?|((?:POSE|LIGHT|DURATION|PAUSE|LOOK):))",
       "name": "support.function.shot-prefix.lorefountain",
       "captures": {
         "1": { "name": "keyword.operator.forced-action.fountain" },

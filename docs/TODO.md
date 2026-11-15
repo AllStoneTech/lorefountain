@@ -36,7 +36,7 @@ Agreed with the Producer spec on 2026-11-05 (`LoreFountain-Producer/docs/LOREFOU
 - [x] Shot sidecar fields for 1.1.0: parentheticals as `direction` entries, lyrics, `line` on every entry, per-shot `action`, `onScreen` and `transition`, and the `unforced-transition` note and fix (ADR-0041).
 - [ ] **Required shot tags:** a warning on an untagged `SHOT:` (and on content before a scene's first `SHOT:`), with a "Tag all shots" quick fix that writes permanent IDs such as `1x03-04-02`.
 - [x] **`SUPER:`, `TITLE CARD:`, `CHYRON:`** prefix lines with an optional `[tag]`: parsed in Core (written to `onScreen`), highlighted, snippets, documented. Takes effect in the extension's sidecars once it pins a Core release that includes them.
-- [ ] **`LOOK: CHARACTER label`** lines, checked against the character's `looks`, and a generated per-script breakdown file.
+- [x] **`LOOK: CHARACTER label`** lines, checked against the character's `looks` (full build), highlighted, a snippet, and a generated `<script>.breakdown.json`.
 - [ ] **Scene numbers:** lock (writes Fountain `#n#`, new scenes become `4A`), unlock and renumber, writing an old-to-new map.
 - [ ] **Shot-tag renames** write an old-to-new map for the Producer.
 - [ ] **Reference images:** several per character version and look, each with an optional angle label.

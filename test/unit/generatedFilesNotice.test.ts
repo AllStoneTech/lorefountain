@@ -37,7 +37,7 @@ describe('decideGeneratedFilesNotice', () => {
 describe('missingPatterns', () => {
   it('ignores comments and treats a leading slash as the same pattern', () => {
     const text = '# *.shots.json\n/*.cues.json\n  *.pages.json  \n';
-    expect(missingPatterns(text)).toEqual(['*.shots.json', '.lorefountain/', '*.lorefountain.db', '*.lorefountain.db-journal']);
+    expect(missingPatterns(text)).toEqual(['*.shots.json', '*.breakdown.json', '.lorefountain/', '*.lorefountain.db', '*.lorefountain.db-journal']);
   });
 
   it('never includes Producer files', () => {

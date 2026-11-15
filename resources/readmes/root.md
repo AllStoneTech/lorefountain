@@ -1,4 +1,4 @@
-<!-- lorefountain-docs-version: 3 -->
+<!-- lorefountain-docs-version: 4 -->
 # {{PROJECT_NAME}}
 
 This project uses **[LoreFountain](https://github.com/AllStoneTech/lorefountain)** — a worldbuilding methodology for Fountain-format writing. At its core, it's just plain Markdown files (with YAML frontmatter) and standard Fountain scripts, checked by a small validator — no proprietary format, nothing locked to one tool. The [LoreFountain VS Code extension](https://github.com/AllStoneTech/lorefountain) is the richest way to use it (hover previews, a form-based editor for entities, one-click rename, structured search), but every file here is readable and editable in any text editor, and an AI coding agent can work in this project with no VS Code involved at all.
@@ -32,6 +32,7 @@ LoreFountain never touches your source control. This section only tells you whic
 | Name | What it is |
 | --- | --- |
 | `<script>.shots.json` | The shot map derived from a script's `SHOT:` lines (or panels). |
+| `<script>.breakdown.json` | Each scene's cast and looks, locations, objects, sounds and on-screen text, derived from a script's shots and `LOOK:` lines. |
 | `<script>.cues.json` | The audio cues derived from `SFX:`, `MUSIC:` and `AMB:` lines. |
 | `<script>.pages.json` | The page and panel map derived from a comic script. |
 | `.lorefountain/`, `*.lorefountain.db` | The local search index, specific to your machine. |

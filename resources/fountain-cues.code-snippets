@@ -44,6 +44,11 @@
     "body": "PAUSE: ${1:2s}",
     "description": "Insert a scene-level pause — a silence that belongs to the scene, not a speaker. The length is optional ('2s', 'long'). For a character's own pause inside their dialogue, use a (beat) parenthetical instead."
   },
+  "Look": {
+    "prefix": "look",
+    "body": "LOOK: ${1:CHARACTER} ${2:look}",
+    "description": "Put a character in a look (wardrobe) from this line until their next LOOK: in the script. The look is the label of one of the character's looks in characters.json, e.g. LOOK: MARA school uniform."
+  },
   "Super": {
     "prefix": "super",
     "body": "SUPER: ${1:text}",

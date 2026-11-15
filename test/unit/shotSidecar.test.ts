@@ -8,6 +8,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { breakdownPathFor } from '../../src/shots/breakdown';
 import {
   relocateShotSidecar,
   removeShotSidecar,
@@ -82,6 +83,32 @@ describe('updateShotSidecar', () => {
   it('writes nothing for a script that never had shots', async () => {
     await updateShotSidecar(scriptPath, 'INT. A - DAY\n\nMara waits.\n', []);
     expect(existsSync(shotSidecarPathFor(scriptPath))).toBe(false);
+    expect(existsSync(breakdownPathFor(scriptPath))).toBe(false);
+  });
+
+  it('writes a breakdown beside the shots, with each scene\'s cast and looks', async () => {
+    const entities = [{ id: 'mara', type: 'character', names: ['Mara'] }];
+    await updateShotSidecar(scriptPath, 'INT. A - DAY\n\nSHOT: [a] WIDE\n\nLOOK: Mara school uniform\n\nMara waits.\n', entities);
+    const breakdown = JSON.parse(readFileSync(breakdownPathFor(scriptPath), 'utf8'));
+    expect(breakdown).toMatchObject({ schema_version: 1, script: '1x01.fountain' });
+    expect(breakdown.scenes).toEqual([
+      expect.objectContaining({ scene: 1, shots: ['a'], cast: [{ entity: 'mara', looks: ['school uniform'] }] }),
+    ]);
+    expect(breakdownPathFor(scriptPath)).toBe(join(dir, '1x01.breakdown.json'));
+  });
+
+  it('writes a breakdown for a script with a LOOK: line but no SHOT: line, and no shot sidecar', async () => {
+    const entities = [{ id: 'mara', type: 'character', names: ['Mara'] }];
+    await updateShotSidecar(scriptPath, 'INT. A - DAY\n\nLOOK: Mara school uniform\n\nMara waits.\n', entities);
+    expect(existsSync(breakdownPathFor(scriptPath))).toBe(true);
+    expect(existsSync(shotSidecarPathFor(scriptPath))).toBe(false);
+  });
+
+  it('removes the breakdown with the shots', async () => {
+    await updateShotSidecar(scriptPath, 'INT. A - DAY\n\nSHOT: WIDE\n', []);
+    expect(existsSync(breakdownPathFor(scriptPath))).toBe(true);
+    await updateShotSidecar(scriptPath, 'INT. A - DAY\n\nMara waits.\n', []);
+    expect(existsSync(breakdownPathFor(scriptPath))).toBe(false);
   });
 });
 
@@ -108,6 +135,15 @@ describe('removeShotSidecar / relocateShotSidecar', () => {
     await relocateShotSidecar(oldPath, newPath);
     expect(existsSync(shotSidecarPathFor(oldPath))).toBe(false);
     expect(existsSync(shotSidecarPathFor(newPath))).toBe(true);
+    expect(existsSync(breakdownPathFor(oldPath))).toBe(false);
+    expect(existsSync(breakdownPathFor(newPath))).toBe(true);
+  });
+
+  it('removes the breakdown with the shot sidecar', async () => {
+    const scriptPath = join(dir, 'gone.fountain');
+    await updateShotSidecar(scriptPath, 'INT. A - DAY\n\nSHOT: WIDE\n', []);
+    await removeShotSidecar(scriptPath);
+    expect(existsSync(breakdownPathFor(scriptPath))).toBe(false);
   });
 
   it('is safe to relocate when there is no sidecar', async () => {

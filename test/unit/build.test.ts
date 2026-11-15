@@ -265,6 +265,28 @@ describe('buildIndexFromDisk', () => {
     });
   });
 
+  it('warns when a LOOK: label is not one of the character\'s looks in characters.json (full build only)', async () => {
+    await writeFile(tmpRoot, 'world/mara.md', characterMd('Mara'));
+    const scriptPath = await writeFile(
+      tmpRoot,
+      'scripts/1x01.fountain',
+      'Title: S\nProduction Code: 1x01\n\nINT. A - DAY\n\nSHOT: [a] WIDE\n\nLOOK: Mara tuxedo\n\nLOOK: Mara rain coat\n',
+    );
+    const folders = {
+      world: path.join(tmpRoot, 'world'),
+      glossary: path.join(tmpRoot, 'world', 'glossary'),
+      timeline: path.join(tmpRoot, 'world', 'timeline'),
+      scripts: path.join(tmpRoot, 'scripts'),
+    };
+    const characters = { mara: { versions: [{ version: 1, file: 'm.png' }], looks: [{ label: 'rain coat', file: 'r.png' }] } };
+
+    const summary = await buildIndexFromDisk(store, folders, { characters });
+
+    const warnings = summary.warnings.find((entry) => entry.filePath === scriptPath)?.warnings ?? [];
+    expect(warnings.map((warning) => ('code' in warning ? warning.code : undefined))).toContain('unknown-look');
+    expect(warnings.filter((warning) => 'code' in warning && warning.code === 'unknown-look')).toHaveLength(1);
+  });
+
   it('does not report a relation whose target resolves to a known entity', async () => {
     await writeFile(tmpRoot, 'world/sango.md', ['---', 'name: Sango', 'type: character', '---', ''].join('\n'));
     await writeFile(
